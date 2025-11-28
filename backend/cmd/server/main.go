@@ -68,6 +68,7 @@ func main() {
 		api.DELETE("/notes/:id", h.DeleteNote)
 		api.POST("/notes/:id/restore", h.RestoreNote)
 		api.DELETE("/notes/:id/permanent", h.PermanentDeleteNote)
+		api.GET("/notes/deleted", h.GetDeletedNotes)
 		api.GET("/accounts/:id/notes", h.GetNotesByAccount)
 
 		// Todos

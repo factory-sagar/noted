@@ -464,6 +464,43 @@ func (h *Handler) PermanentDeleteNote(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Note permanently deleted"})
 }
 
+func (h *Handler) GetDeletedNotes(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT n.id, n.title, n.account_id, n.template_type, n.created_at, n.updated_at, 
+		       n.deleted_at, COALESCE(a.name, '') as account_name
+		FROM notes n
+		LEFT JOIN accounts a ON n.account_id = a.id
+		WHERE n.deleted_at IS NOT NULL
+		ORDER BY n.deleted_at DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	notes := []map[string]interface{}{}
+	for rows.Next() {
+		var id, title, accountID, templateType, accountName string
+		var deletedAt sql.NullString
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(&id, &title, &accountID, &templateType, &createdAt, &updatedAt, &deletedAt, &accountName); err != nil {
+			continue
+		}
+		notes = append(notes, map[string]interface{}{
+			"id":            id,
+			"title":         title,
+			"account_id":    accountID,
+			"account_name":  accountName,
+			"template_type": templateType,
+			"created_at":    createdAt,
+			"updated_at":    updatedAt,
+			"deleted_at":    deletedAt.String,
+		})
+	}
+	c.JSON(http.StatusOK, notes)
+}
+
 func (h *Handler) GetNotesByAccount(c *gin.Context) {
 	accountID := c.Param("id")
 	rows, err := h.db.Query(`

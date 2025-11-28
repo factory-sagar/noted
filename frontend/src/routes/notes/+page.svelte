@@ -8,20 +8,24 @@
     ChevronDown,
     MoreVertical,
     Trash2,
+    Trash,
     Edit3,
     Search,
     ArrowRightLeft,
     Merge,
     LayoutList,
     LayoutGrid,
-    Building2
+    Building2,
+    RefreshCw
   } from 'lucide-svelte';
   import { api, type Account, type Note } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
 
   let accounts: Account[] = [];
   let notes: Note[] = [];
+  let deletedNotes: Note[] = [];
   let loading = true;
+  let showTrash = false;
   let expandedAccounts: Set<string> = new Set();
   let selectedNoteId: string | null = null;
   let showNewAccountModal = false;
@@ -57,12 +61,14 @@
   async function loadData() {
     try {
       loading = true;
-      const [accountsData, notesData] = await Promise.all([
+      const [accountsData, notesData, deleted] = await Promise.all([
         api.getAccounts(),
-        api.getNotes()
+        api.getNotes(),
+        api.getDeletedNotes()
       ]);
       accounts = accountsData;
       notes = notesData;
+      deletedNotes = deleted;
       // Expand all accounts by default
       expandedAccounts = new Set(accounts.map(a => a.id));
     } catch (e) {
@@ -133,13 +139,41 @@
   }
 
   async function deleteNote(noteId: string) {
-    if (!confirm('Delete this note?')) return;
     try {
+      const deletedNote = notes.find(n => n.id === noteId);
       await api.deleteNote(noteId);
       notes = notes.filter(n => n.id !== noteId);
-      addToast('success', 'Note deleted');
+      if (deletedNote) {
+        deletedNotes = [deletedNote, ...deletedNotes];
+      }
+      addToast('success', 'Moved to trash');
     } catch (e) {
       addToast('error', 'Failed to delete note');
+    }
+  }
+
+  async function restoreNote(noteId: string) {
+    try {
+      await api.restoreNote(noteId);
+      const note = deletedNotes.find(n => n.id === noteId);
+      if (note) {
+        deletedNotes = deletedNotes.filter(n => n.id !== noteId);
+        notes = [note, ...notes];
+      }
+      addToast('success', 'Note restored');
+    } catch (e) {
+      addToast('error', 'Failed to restore note');
+    }
+  }
+
+  async function permanentDeleteNote(noteId: string) {
+    if (!confirm('Permanently delete this note? This cannot be undone.')) return;
+    try {
+      await api.permanentDeleteNote(noteId);
+      deletedNotes = deletedNotes.filter(n => n.id !== noteId);
+      addToast('success', 'Permanently deleted');
+    } catch (e) {
+      addToast('error', 'Failed to delete');
     }
   }
 
@@ -563,6 +597,57 @@
           {/if}
         </div>
       {/each}
+    </div>
+  {/if}
+
+  <!-- Trash Section (shown for all view modes) -->
+  {#if deletedNotes.length > 0}
+    <div class="mt-8">
+      <button 
+        class="flex items-center gap-2 mb-4 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+        on:click={() => showTrash = !showTrash}
+      >
+        <Trash class="w-4 h-4" />
+        <span class="font-medium">Trash</span>
+        <span class="text-sm">({deletedNotes.length})</span>
+        <ChevronDown class="w-4 h-4 transition-transform {showTrash ? 'rotate-180' : ''}" />
+      </button>
+      
+      {#if showTrash}
+        <div class="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl border-dashed">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {#each deletedNotes as note (note.id)}
+              <div class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3 opacity-50 hover:opacity-100 transition-opacity group">
+                <div class="flex items-start justify-between gap-2 mb-2">
+                  <span class="text-sm font-medium line-through truncate">{note.title}</span>
+                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
+                    <button 
+                      class="p-1 hover:bg-green-500/20 rounded"
+                      title="Restore"
+                      on:click={() => restoreNote(note.id)}
+                    >
+                      <RefreshCw class="w-3.5 h-3.5 text-green-500" />
+                    </button>
+                    <button 
+                      class="p-1 hover:bg-red-500/20 rounded"
+                      title="Delete permanently"
+                      on:click={() => permanentDeleteNote(note.id)}
+                    >
+                      <Trash2 class="w-3.5 h-3.5 text-red-500" />
+                    </button>
+                  </div>
+                </div>
+                {#if note.account_name}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500 rounded">
+                    <Building2 class="w-3 h-3" />
+                    {note.account_name}
+                  </span>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

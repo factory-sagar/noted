@@ -215,6 +215,7 @@ export const api = {
     request<{ message: string }>(`/notes/${id}/restore`, { method: 'POST' }),
   permanentDeleteNote: (id: string) =>
     request<{ message: string }>(`/notes/${id}/permanent`, { method: 'DELETE' }),
+  getDeletedNotes: () => request<Note[]>('/notes/deleted'),
   exportNote: (id: string, type: 'full' | 'minimal' = 'full') =>
     request<any>(`/notes/${id}/export?type=${type}`),
 
