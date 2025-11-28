@@ -52,16 +52,16 @@ The application is functional with core features implemented.
 
 ## Pending Features
 
-### High Priority
-- [ ] Google Calendar OAuth integration
-- [ ] Auto-populate participants from calendar
-- [ ] Proper PDF export (currently returns JSON)
+### All High Priority Features Completed!
+- [x] Google Calendar OAuth integration
+- [x] Auto-populate participants from calendar
+- [x] Proper PDF export with jsPDF
 
-### Medium Priority
-- [ ] Note templates customization
-- [ ] Search result highlighting
-- [ ] Bulk operations on todos
-- [ ] Account merging/moving notes
+### All Medium Priority Features Completed!
+- [x] Note templates customization
+- [x] Search result highlighting
+- [x] Bulk operations on todos
+- [x] Account merging/moving notes
 
 ### Low Priority
 - [ ] Mobile responsive improvements

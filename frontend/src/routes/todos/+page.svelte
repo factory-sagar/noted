@@ -8,7 +8,11 @@
     FileText, 
     Calendar,
     Trash2,
-    Link
+    Link,
+    CheckSquare,
+    Square,
+    X,
+    ArrowRight
   } from 'lucide-svelte';
   import { api, type Todo, type Note } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -33,6 +37,10 @@
   let newTodoPriority = 'medium';
   let linkTodoId = '';
   let availableNotes: Note[] = [];
+  
+  // Bulk selection state
+  let selectionMode = false;
+  let selectedTodos: Set<string> = new Set();
 
   const flipDurationMs = 200;
 
@@ -168,6 +176,95 @@
       day: 'numeric'
     });
   }
+
+  // Bulk selection functions
+  function toggleSelectionMode() {
+    selectionMode = !selectionMode;
+    if (!selectionMode) {
+      selectedTodos = new Set();
+    }
+  }
+
+  function toggleTodoSelection(todoId: string) {
+    if (selectedTodos.has(todoId)) {
+      selectedTodos.delete(todoId);
+    } else {
+      selectedTodos.add(todoId);
+    }
+    selectedTodos = selectedTodos; // Trigger reactivity
+  }
+
+  function selectAllInColumn(columnId: string) {
+    const column = columns.find(c => c.id === columnId);
+    if (column) {
+      column.items.forEach(item => selectedTodos.add(item.id));
+      selectedTodos = selectedTodos;
+    }
+  }
+
+  function deselectAll() {
+    selectedTodos = new Set();
+  }
+
+  async function bulkDelete() {
+    if (selectedTodos.size === 0) return;
+    if (!confirm(`Delete ${selectedTodos.size} todo(s)?`)) return;
+
+    try {
+      const promises = Array.from(selectedTodos).map(id => api.deleteTodo(id));
+      await Promise.all(promises);
+      
+      // Remove from columns
+      columns = columns.map(col => ({
+        ...col,
+        items: col.items.filter(t => !selectedTodos.has(t.id))
+      }));
+      
+      addToast('success', `${selectedTodos.size} todo(s) deleted`);
+      selectedTodos = new Set();
+    } catch (e) {
+      addToast('error', 'Failed to delete some todos');
+    }
+  }
+
+  async function bulkMoveToStatus(newStatus: string) {
+    if (selectedTodos.size === 0) return;
+
+    try {
+      const promises = Array.from(selectedTodos).map(id => 
+        api.updateTodo(id, { status: newStatus })
+      );
+      await Promise.all(promises);
+      
+      // Move items between columns
+      const movedItems: Todo[] = [];
+      columns = columns.map(col => ({
+        ...col,
+        items: col.items.filter(t => {
+          if (selectedTodos.has(t.id)) {
+            t.status = newStatus;
+            movedItems.push(t);
+            return false;
+          }
+          return true;
+        })
+      }));
+      
+      // Add to target column
+      const targetColumn = columns.find(c => c.id === newStatus);
+      if (targetColumn) {
+        targetColumn.items = [...targetColumn.items, ...movedItems];
+        columns = columns;
+      }
+      
+      addToast('success', `${selectedTodos.size} todo(s) moved`);
+      selectedTodos = new Set();
+    } catch (e) {
+      addToast('error', 'Failed to move some todos');
+    }
+  }
+
+  $: selectedCount = selectedTodos.size;
 </script>
 
 <svelte:head>
@@ -180,11 +277,67 @@
       <h1 class="page-title">Todos</h1>
       <p class="page-subtitle">Track your follow-up items</p>
     </div>
-    <button class="btn-primary" on:click={() => showNewTodoModal = true}>
-      <Plus class="w-4 h-4" />
-      New Todo
-    </button>
+    <div class="flex items-center gap-3">
+      <button 
+        class="btn-secondary"
+        class:bg-primary-500={selectionMode}
+        class:text-white={selectionMode}
+        on:click={toggleSelectionMode}
+      >
+        <CheckSquare class="w-4 h-4" />
+        {selectionMode ? 'Done Selecting' : 'Select'}
+      </button>
+      <button class="btn-primary" on:click={() => showNewTodoModal = true}>
+        <Plus class="w-4 h-4" />
+        New Todo
+      </button>
+    </div>
   </div>
+
+  <!-- Bulk Actions Bar -->
+  {#if selectionMode && selectedCount > 0}
+    <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-2xl p-4 flex items-center gap-4 animate-slide-up">
+      <span class="text-sm font-medium">{selectedCount} selected</span>
+      <div class="h-6 w-px bg-[var(--color-border)]"></div>
+      <div class="flex items-center gap-2">
+        <button 
+          class="btn-secondary text-sm py-1.5"
+          on:click={() => bulkMoveToStatus('not_started')}
+        >
+          <ArrowRight class="w-4 h-4" />
+          Not Started
+        </button>
+        <button 
+          class="btn-secondary text-sm py-1.5"
+          on:click={() => bulkMoveToStatus('in_progress')}
+        >
+          <ArrowRight class="w-4 h-4" />
+          In Progress
+        </button>
+        <button 
+          class="btn-secondary text-sm py-1.5"
+          on:click={() => bulkMoveToStatus('completed')}
+        >
+          <ArrowRight class="w-4 h-4" />
+          Completed
+        </button>
+      </div>
+      <div class="h-6 w-px bg-[var(--color-border)]"></div>
+      <button 
+        class="btn text-sm py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20"
+        on:click={bulkDelete}
+      >
+        <Trash2 class="w-4 h-4" />
+        Delete
+      </button>
+      <button 
+        class="btn-ghost p-1.5"
+        on:click={deselectAll}
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+  {/if}
 
   {#if loading}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -204,10 +357,20 @@
       {#each columns as column (column.id)}
         <div class="flex flex-col">
           <!-- Column Header -->
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-3 h-3 rounded-full {getColumnColor(column.id)}"></div>
-            <h2 class="font-semibold">{column.title}</h2>
-            <span class="text-sm text-[var(--color-muted)]">({column.items.length})</span>
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full {getColumnColor(column.id)}"></div>
+              <h2 class="font-semibold">{column.title}</h2>
+              <span class="text-sm text-[var(--color-muted)]">({column.items.length})</span>
+            </div>
+            {#if selectionMode && column.items.length > 0}
+              <button 
+                class="text-xs text-primary-500 hover:underline"
+                on:click={() => selectAllInColumn(column.id)}
+              >
+                Select all
+              </button>
+            {/if}
           </div>
 
           <!-- Column Content -->
@@ -223,12 +386,30 @@
           >
             {#each column.items as todo (todo.id)}
               <div 
-                class="bg-[var(--color-bg)] border border-[var(--color-border)] border-l-4 {getPriorityColor(todo.priority)} rounded-lg p-4 mb-3 cursor-grab active:cursor-grabbing group"
+                class="bg-[var(--color-bg)] border border-[var(--color-border)] border-l-4 {getPriorityColor(todo.priority)} rounded-lg p-4 mb-3 group"
+                class:cursor-grab={!selectionMode}
+                class:cursor-pointer={selectionMode}
+                class:ring-2={selectedTodos.has(todo.id)}
+                class:ring-primary-500={selectedTodos.has(todo.id)}
                 animate:flip={{ duration: flipDurationMs }}
+                on:click={() => selectionMode && toggleTodoSelection(todo.id)}
               >
                 <div class="flex items-start justify-between mb-2">
                   <div class="flex items-center gap-2">
-                    <GripVertical class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {#if selectionMode}
+                      <button 
+                        class="p-0.5"
+                        on:click|stopPropagation={() => toggleTodoSelection(todo.id)}
+                      >
+                        {#if selectedTodos.has(todo.id)}
+                          <CheckSquare class="w-4 h-4 text-primary-500" />
+                        {:else}
+                          <Square class="w-4 h-4 text-[var(--color-muted)]" />
+                        {/if}
+                      </button>
+                    {:else}
+                      <GripVertical class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {/if}
                     <h3 class="font-medium text-sm">{todo.title}</h3>
                   </div>
                   <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

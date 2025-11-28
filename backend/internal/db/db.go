@@ -104,6 +104,13 @@ func Migrate(db *sql.DB) error {
 			INSERT INTO notes_fts(docid, title, content) VALUES (NEW.rowid, NEW.title, NEW.content);
 		END`,
 
+		// Settings table for OAuth tokens and preferences
+		`CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+
 		// Indexes
 		`CREATE INDEX IF NOT EXISTS idx_notes_account_id ON notes(account_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_notes_meeting_date ON notes(meeting_date)`,

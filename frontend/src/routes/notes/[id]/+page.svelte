@@ -18,6 +18,7 @@
   } from 'lucide-svelte';
   import { api, type Note, type Todo, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
+  import { generateNotePDF } from '$lib/utils/pdf';
   import { Editor } from '@tiptap/core';
   import StarterKit from '@tiptap/starter-kit';
   import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
@@ -170,19 +171,22 @@
   }
 
   async function exportPDF(type: 'full' | 'minimal') {
+    if (!note || !editor) return;
+    
     try {
-      const data = await api.exportNote(noteId, type);
-      // For now, just download as JSON - PDF generation would need additional library
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${title.replace(/\s+/g, '-')}-${type}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      addToast('info', 'Exported as JSON (PDF coming soon)');
+      // Save current content before export
+      const currentContent = editor.getHTML();
+      
+      await generateNotePDF({
+        note: { ...note, content: currentContent, title },
+        account: account || undefined,
+        todos: type === 'full' ? todos : undefined
+      }, type);
+      
+      addToast('success', `Exported ${type === 'full' ? 'full' : 'minimal'} PDF`);
     } catch (e) {
-      addToast('error', 'Failed to export');
+      console.error('PDF export error:', e);
+      addToast('error', 'Failed to export PDF');
     }
   }
 

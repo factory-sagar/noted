@@ -110,6 +110,27 @@ export interface SearchResult {
   account_id?: string;
 }
 
+// Calendar types
+export interface CalendarConfig {
+  connected: boolean;
+  email?: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  attendees: string[];
+  meet_link?: string;
+}
+
+export interface ParsedParticipants {
+  internal: string[];
+  external: string[];
+}
+
 // API functions
 export const api = {
   // Accounts
@@ -156,4 +177,22 @@ export const api = {
   // Analytics
   getAnalytics: () => request<Analytics>('/analytics'),
   getIncompleteFields: () => request<IncompleteField[]>('/analytics/incomplete'),
+
+  // Calendar
+  getCalendarAuthURL: () => request<{ url: string }>('/calendar/auth'),
+  getCalendarConfig: () => request<CalendarConfig>('/calendar/config'),
+  disconnectCalendar: () => request<{ message: string }>('/calendar/disconnect', { method: 'DELETE' }),
+  getCalendarEvents: (start?: string, end?: string) => {
+    const params = new URLSearchParams();
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    const query = params.toString();
+    return request<CalendarEvent[]>(`/calendar/events${query ? `?${query}` : ''}`);
+  },
+  getCalendarEvent: (eventId: string) => request<CalendarEvent>(`/calendar/events/${eventId}`),
+  parseParticipants: (attendees: string[], internalDomain?: string) =>
+    request<ParsedParticipants>('/calendar/parse-participants', {
+      method: 'POST',
+      body: JSON.stringify({ attendees, internal_domain: internalDomain })
+    }),
 };

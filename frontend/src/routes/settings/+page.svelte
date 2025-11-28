@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { 
     Moon, 
     Sun, 
@@ -12,13 +14,14 @@
     AlertCircle
   } from 'lucide-svelte';
   import { addToast } from '$lib/stores';
+  import { api, type CalendarConfig } from '$lib/utils/api';
 
   let darkMode = false;
   let autoSave = true;
   let defaultTemplate = 'initial';
-  let calendarConnected = false;
+  let calendarConfig: CalendarConfig = { connected: false };
 
-  onMount(() => {
+  onMount(async () => {
     if (typeof window !== 'undefined') {
       darkMode = document.documentElement.classList.contains('dark');
       const savedAutoSave = localStorage.getItem('autoSave');
@@ -29,6 +32,19 @@
       if (savedTemplate) {
         defaultTemplate = savedTemplate;
       }
+    }
+    
+    // Check for OAuth callback
+    if ($page.url.searchParams.get('calendar') === 'connected') {
+      addToast('success', 'Google Calendar connected!');
+      goto('/settings', { replaceState: true });
+    }
+    
+    // Load calendar config
+    try {
+      calendarConfig = await api.getCalendarConfig();
+    } catch (e) {
+      console.error('Failed to load calendar config:', e);
     }
   });
 
@@ -53,13 +69,27 @@
     addToast('success', 'Default template updated');
   }
 
-  function connectCalendar() {
-    addToast('info', 'Google Calendar integration coming soon!');
+  async function connectCalendar() {
+    try {
+      const { url } = await api.getCalendarAuthURL();
+      window.location.href = url;
+    } catch (e: any) {
+      if (e.message.includes('not configured')) {
+        addToast('error', 'Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.');
+      } else {
+        addToast('error', 'Failed to connect calendar');
+      }
+    }
   }
 
-  function disconnectCalendar() {
-    calendarConnected = false;
-    addToast('success', 'Calendar disconnected');
+  async function disconnectCalendar() {
+    try {
+      await api.disconnectCalendar();
+      calendarConfig = { connected: false };
+      addToast('success', 'Calendar disconnected');
+    } catch (e) {
+      addToast('error', 'Failed to disconnect calendar');
+    }
   }
 
   async function exportAllData() {
@@ -150,7 +180,7 @@
         </button>
       </div>
 
-      <div class="py-3">
+      <div class="py-3 border-b border-[var(--color-border)]">
         <div class="flex items-center justify-between mb-2">
           <div>
             <p class="font-medium">Default Template</p>
@@ -166,6 +196,16 @@
           <option value="followup">Follow-up Call - Simplified</option>
         </select>
       </div>
+
+      <div class="flex items-center justify-between py-3">
+        <div>
+          <p class="font-medium">Customize Templates</p>
+          <p class="text-sm text-[var(--color-muted)]">Create and edit note templates</p>
+        </div>
+        <a href="/settings/templates" class="btn-secondary text-sm">
+          Manage Templates
+        </a>
+      </div>
     </div>
 
     <!-- Calendar Integration -->
@@ -179,10 +219,16 @@
         <div>
           <p class="font-medium">Google Calendar</p>
           <p class="text-sm text-[var(--color-muted)]">
-            {calendarConnected ? 'Connected' : 'Connect to sync meetings'}
+            {#if calendarConfig.connected && calendarConfig.email}
+              Connected as {calendarConfig.email}
+            {:else if calendarConfig.connected}
+              Connected
+            {:else}
+              Connect to sync meetings and auto-populate participants
+            {/if}
           </p>
         </div>
-        {#if calendarConnected}
+        {#if calendarConfig.connected}
           <div class="flex items-center gap-3">
             <span class="flex items-center gap-1 text-sm text-green-500">
               <Check class="w-4 h-4" />

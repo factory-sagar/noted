@@ -9,7 +9,9 @@
     MoreVertical,
     Trash2,
     Edit3,
-    Search
+    Search,
+    ArrowRightLeft,
+    Merge
   } from 'lucide-svelte';
   import { api, type Account, type Note } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -21,10 +23,20 @@
   let selectedNoteId: string | null = null;
   let showNewAccountModal = false;
   let showNewNoteModal = false;
+  let showMoveNoteModal = false;
+  let showMergeAccountsModal = false;
   let newAccountName = '';
   let newNoteName = '';
   let newNoteAccountId = '';
   let filterQuery = '';
+  
+  // Move note state
+  let moveNoteId = '';
+  let moveTargetAccountId = '';
+  
+  // Merge accounts state
+  let mergeSourceAccountId = '';
+  let mergeTargetAccountId = '';
 
   onMount(async () => {
     await loadData();
@@ -119,6 +131,79 @@
     }
   }
 
+  function openMoveNoteModal(noteId: string) {
+    moveNoteId = noteId;
+    const note = notes.find(n => n.id === noteId);
+    moveTargetAccountId = note?.account_id || '';
+    showMoveNoteModal = true;
+  }
+
+  async function moveNote() {
+    if (!moveNoteId || !moveTargetAccountId) return;
+    
+    const note = notes.find(n => n.id === moveNoteId);
+    if (!note || note.account_id === moveTargetAccountId) {
+      showMoveNoteModal = false;
+      return;
+    }
+    
+    try {
+      await api.updateNote(moveNoteId, { account_id: moveTargetAccountId });
+      
+      // Update local state
+      notes = notes.map(n => 
+        n.id === moveNoteId 
+          ? { ...n, account_id: moveTargetAccountId }
+          : n
+      );
+      
+      showMoveNoteModal = false;
+      addToast('success', 'Note moved to new account');
+    } catch (e) {
+      addToast('error', 'Failed to move note');
+    }
+  }
+
+  async function mergeAccounts() {
+    if (!mergeSourceAccountId || !mergeTargetAccountId || mergeSourceAccountId === mergeTargetAccountId) {
+      addToast('error', 'Please select different accounts');
+      return;
+    }
+    
+    if (!confirm(`Move all notes from "${accounts.find(a => a.id === mergeSourceAccountId)?.name}" to "${accounts.find(a => a.id === mergeTargetAccountId)?.name}" and delete the source account?`)) {
+      return;
+    }
+    
+    try {
+      // Move all notes from source to target
+      const notesToMove = notes.filter(n => n.account_id === mergeSourceAccountId);
+      
+      await Promise.all(
+        notesToMove.map(note => 
+          api.updateNote(note.id, { account_id: mergeTargetAccountId })
+        )
+      );
+      
+      // Delete source account
+      await api.deleteAccount(mergeSourceAccountId);
+      
+      // Update local state
+      notes = notes.map(n => 
+        n.account_id === mergeSourceAccountId 
+          ? { ...n, account_id: mergeTargetAccountId }
+          : n
+      );
+      accounts = accounts.filter(a => a.id !== mergeSourceAccountId);
+      
+      showMergeAccountsModal = false;
+      mergeSourceAccountId = '';
+      mergeTargetAccountId = '';
+      addToast('success', `Merged ${notesToMove.length} notes and deleted source account`);
+    } catch (e) {
+      addToast('error', 'Failed to merge accounts');
+    }
+  }
+
   $: filteredAccounts = filterQuery 
     ? accounts.filter(a => 
         a.name.toLowerCase().includes(filterQuery.toLowerCase()) ||
@@ -146,6 +231,15 @@
       <p class="page-subtitle">Organize your meeting notes by account</p>
     </div>
     <div class="flex items-center gap-3">
+      {#if accounts.length >= 2}
+        <button 
+          class="btn-ghost"
+          on:click={() => showMergeAccountsModal = true}
+        >
+          <Merge class="w-4 h-4" />
+          Merge Accounts
+        </button>
+      {/if}
       <button 
         class="btn-secondary"
         on:click={() => showNewAccountModal = true}
@@ -251,12 +345,20 @@
                       {note.template_type}
                     </span>
                   </div>
-                  <div class="flex items-center gap-4">
-                    <span class="text-sm text-[var(--color-muted)]">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm text-[var(--color-muted)] mr-2">
                       {formatDate(note.created_at)}
                     </span>
                     <button 
                       class="p-1.5 hover:bg-[var(--color-border)] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Move to another account"
+                      on:click|preventDefault|stopPropagation={() => openMoveNoteModal(note.id)}
+                    >
+                      <ArrowRightLeft class="w-4 h-4 text-[var(--color-muted)]" />
+                    </button>
+                    <button 
+                      class="p-1.5 hover:bg-[var(--color-border)] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete note"
                       on:click|preventDefault|stopPropagation={() => deleteNote(note.id)}
                     >
                       <Trash2 class="w-4 h-4 text-red-500" />
@@ -361,6 +463,103 @@
             disabled={!newNoteName.trim() || !newNoteAccountId}
           >
             Create Note
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Move Note Modal -->
+{#if showMoveNoteModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => showMoveNoteModal = false}
+    ></button>
+    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <ArrowRightLeft class="w-5 h-5" />
+        Move Note
+      </h2>
+      <form on:submit|preventDefault={moveNote}>
+        <div class="mb-4">
+          <label class="label">Move to Account</label>
+          <select class="input" bind:value={moveTargetAccountId}>
+            {#each accounts as account}
+              <option value={account.id}>{account.name}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button 
+            type="button"
+            class="btn-secondary"
+            on:click={() => showMoveNoteModal = false}
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary">
+            Move Note
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Merge Accounts Modal -->
+{#if showMergeAccountsModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => showMergeAccountsModal = false}
+    ></button>
+    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <Merge class="w-5 h-5" />
+        Merge Accounts
+      </h2>
+      <p class="text-sm text-[var(--color-muted)] mb-4">
+        Move all notes from one account to another, then delete the source account.
+      </p>
+      <form on:submit|preventDefault={mergeAccounts}>
+        <div class="mb-4">
+          <label class="label">Source Account (will be deleted)</label>
+          <select class="input" bind:value={mergeSourceAccountId}>
+            <option value="">Select account to merge from</option>
+            {#each accounts as account}
+              <option value={account.id}>
+                {account.name} ({getNotesForAccount(account.id).length} notes)
+              </option>
+            {/each}
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="label">Target Account (notes will be moved here)</label>
+          <select class="input" bind:value={mergeTargetAccountId}>
+            <option value="">Select account to merge into</option>
+            {#each accounts.filter(a => a.id !== mergeSourceAccountId) as account}
+              <option value={account.id}>
+                {account.name} ({getNotesForAccount(account.id).length} notes)
+              </option>
+            {/each}
+          </select>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button 
+            type="button"
+            class="btn-secondary"
+            on:click={() => showMergeAccountsModal = false}
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="btn-primary"
+            disabled={!mergeSourceAccountId || !mergeTargetAccountId}
+          >
+            Merge Accounts
           </button>
         </div>
       </form>

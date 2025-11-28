@@ -77,6 +77,15 @@ func main() {
 
 		// PDF Export
 		api.GET("/notes/:id/export", h.ExportNotePDF)
+
+		// Calendar
+		api.GET("/calendar/auth", h.GetCalendarAuthURL)
+		api.GET("/calendar/callback", h.HandleCalendarCallback)
+		api.GET("/calendar/config", h.GetCalendarConfig)
+		api.DELETE("/calendar/disconnect", h.DisconnectCalendar)
+		api.GET("/calendar/events", h.GetCalendarEvents)
+		api.GET("/calendar/events/:eventId", h.GetCalendarEvent)
+		api.POST("/calendar/parse-participants", h.ParseParticipants)
 	}
 
 	// Get port from environment or default
