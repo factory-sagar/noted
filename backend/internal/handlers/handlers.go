@@ -38,9 +38,13 @@ func (h *Handler) GetAccounts(c *gin.Context) {
 	accounts := []models.Account{}
 	for rows.Next() {
 		var a models.Account
-		if err := rows.Scan(&a.ID, &a.Name, &a.AccountOwner, &a.Budget, &a.EstEngineers, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		var accountOwner sql.NullString
+		if err := rows.Scan(&a.ID, &a.Name, &accountOwner, &a.Budget, &a.EstEngineers, &a.CreatedAt, &a.UpdatedAt); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
+		}
+		if accountOwner.Valid {
+			a.AccountOwner = accountOwner.String
 		}
 		accounts = append(accounts, a)
 	}
@@ -51,10 +55,15 @@ func (h *Handler) GetAccounts(c *gin.Context) {
 func (h *Handler) GetAccount(c *gin.Context) {
 	id := c.Param("id")
 	var a models.Account
+	var accountOwner sql.NullString
 	err := h.db.QueryRow(`
 		SELECT id, name, account_owner, budget, est_engineers, created_at, updated_at 
 		FROM accounts WHERE id = ?
-	`, id).Scan(&a.ID, &a.Name, &a.AccountOwner, &a.Budget, &a.EstEngineers, &a.CreatedAt, &a.UpdatedAt)
+	`, id).Scan(&a.ID, &a.Name, &accountOwner, &a.Budget, &a.EstEngineers, &a.CreatedAt, &a.UpdatedAt)
+
+	if accountOwner.Valid {
+		a.AccountOwner = accountOwner.String
+	}
 
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
