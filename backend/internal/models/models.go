@@ -17,19 +17,19 @@ type Account struct {
 
 // Note represents a meeting note
 type Note struct {
-	ID                   string       `json:"id"`
-	Title                string       `json:"title"`
-	AccountID            string       `json:"account_id"`
-	Account              *Account     `json:"account,omitempty"`
-	TemplateType         string       `json:"template_type"` // "initial" or "followup"
-	InternalParticipants []string     `json:"internal_participants"`
-	ExternalParticipants []string     `json:"external_participants"`
-	Content              string       `json:"content"` // Rich text JSON from TipTap
-	MeetingID            *string      `json:"meeting_id,omitempty"`
-	MeetingDate          *time.Time   `json:"meeting_date,omitempty"`
-	CreatedAt            time.Time    `json:"created_at"`
-	UpdatedAt            time.Time    `json:"updated_at"`
-	Todos                []Todo       `json:"todos,omitempty"`
+	ID                   string     `json:"id"`
+	Title                string     `json:"title"`
+	AccountID            string     `json:"account_id"`
+	Account              *Account   `json:"account,omitempty"`
+	TemplateType         string     `json:"template_type"` // "initial" or "followup"
+	InternalParticipants []string   `json:"internal_participants"`
+	ExternalParticipants []string   `json:"external_participants"`
+	Content              string     `json:"content"` // Rich text JSON from TipTap
+	MeetingID            *string    `json:"meeting_id,omitempty"`
+	MeetingDate          *time.Time `json:"meeting_date,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+	Todos                []Todo     `json:"todos,omitempty"`
 }
 
 // Todo represents a task/follow-up item
@@ -37,9 +37,11 @@ type Todo struct {
 	ID          string     `json:"id"`
 	Title       string     `json:"title"`
 	Description string     `json:"description,omitempty"`
-	Status      string     `json:"status"` // "not_started", "in_progress", "completed"
+	Status      string     `json:"status"`             // "not_started", "in_progress", "completed"
 	Priority    string     `json:"priority,omitempty"` // "low", "medium", "high"
 	DueDate     *time.Time `json:"due_date,omitempty"`
+	AccountID   *string    `json:"account_id,omitempty"`   // Optional account tag
+	AccountName string     `json:"account_name,omitempty"` // Populated from join
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 	Notes       []Note     `json:"notes,omitempty"` // Linked notes
@@ -47,10 +49,10 @@ type Todo struct {
 
 // Participant represents a meeting participant
 type Participant struct {
-	Name   string `json:"name"`
-	Email  string `json:"email"`
-	Title  string `json:"title,omitempty"`
-	IsInternal bool `json:"is_internal"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	Title      string `json:"title,omitempty"`
+	IsInternal bool   `json:"is_internal"`
 }
 
 // CreateAccountRequest for creating an account
@@ -100,7 +102,8 @@ type CreateTodoRequest struct {
 	Status      string  `json:"status"`
 	Priority    string  `json:"priority"`
 	DueDate     *string `json:"due_date"`
-	NoteID      *string `json:"note_id"` // Optional: link to a note on creation
+	NoteID      *string `json:"note_id"`    // Optional: link to a note on creation
+	AccountID   *string `json:"account_id"` // Optional: tag with account
 }
 
 // UpdateTodoRequest for updating a todo
@@ -110,16 +113,17 @@ type UpdateTodoRequest struct {
 	Status      *string `json:"status"`
 	Priority    *string `json:"priority"`
 	DueDate     *string `json:"due_date"`
+	AccountID   *string `json:"account_id"`
 }
 
 // Analytics response
 type Analytics struct {
-	TotalNotes       int                    `json:"total_notes"`
-	TotalAccounts    int                    `json:"total_accounts"`
-	TotalTodos       int                    `json:"total_todos"`
-	TodosByStatus    map[string]int         `json:"todos_by_status"`
-	NotesByAccount   []AccountNoteCount     `json:"notes_by_account"`
-	IncompleteCount  int                    `json:"incomplete_count"`
+	TotalNotes      int                `json:"total_notes"`
+	TotalAccounts   int                `json:"total_accounts"`
+	TotalTodos      int                `json:"total_todos"`
+	TodosByStatus   map[string]int     `json:"todos_by_status"`
+	NotesByAccount  []AccountNoteCount `json:"notes_by_account"`
+	IncompleteCount int                `json:"incomplete_count"`
 }
 
 // AccountNoteCount for analytics

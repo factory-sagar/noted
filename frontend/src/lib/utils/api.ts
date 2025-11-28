@@ -71,6 +71,8 @@ export interface Todo {
   status: 'not_started' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   due_date?: string;
+  account_id?: string;
+  account_name?: string;
   created_at: string;
   updated_at: string;
   linked_notes?: { id: string; title: string }[];
@@ -83,6 +85,7 @@ export interface CreateTodoRequest {
   priority?: string;
   due_date?: string;
   note_id?: string;
+  account_id?: string;
 }
 
 // Analytics types

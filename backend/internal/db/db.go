@@ -117,6 +117,10 @@ func Migrate(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_todos_status ON todos(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_note_todos_note_id ON note_todos(note_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_note_todos_todo_id ON note_todos(todo_id)`,
+
+		// Add account_id to todos (migration)
+		`ALTER TABLE todos ADD COLUMN account_id TEXT REFERENCES accounts(id)`,
+		`CREATE INDEX IF NOT EXISTS idx_todos_account_id ON todos(account_id)`,
 	}
 
 	for _, migration := range migrations {

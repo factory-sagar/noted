@@ -12,9 +12,10 @@
     CheckSquare,
     Square,
     X,
-    ArrowRight
+    ArrowRight,
+    Building2
   } from 'lucide-svelte';
-  import { api, type Todo, type Note } from '$lib/utils/api';
+  import { api, type Todo, type Note, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
 
   interface Column {
@@ -35,8 +36,10 @@
   let newTodoTitle = '';
   let newTodoDescription = '';
   let newTodoPriority = 'medium';
+  let newTodoAccountId = '';
   let linkTodoId = '';
   let availableNotes: Note[] = [];
+  let accounts: Account[] = [];
   
   // Bulk selection state
   let selectionMode = false;
@@ -51,7 +54,12 @@
   async function loadData() {
     try {
       loading = true;
-      const todos = await api.getTodos();
+      const [todos, accountsData] = await Promise.all([
+        api.getTodos(),
+        api.getAccounts()
+      ]);
+      
+      accounts = accountsData;
       
       // Distribute todos into columns
       columns = columns.map(col => ({
@@ -100,7 +108,8 @@
         title: newTodoTitle.trim(),
         description: newTodoDescription.trim(),
         priority: newTodoPriority,
-        status: 'not_started'
+        status: 'not_started',
+        account_id: newTodoAccountId || undefined
       });
       
       columns[0].items = [...columns[0].items, todo];
@@ -109,6 +118,7 @@
       newTodoTitle = '';
       newTodoDescription = '';
       newTodoPriority = 'medium';
+      newTodoAccountId = '';
       showNewTodoModal = false;
       addToast('success', 'Todo created');
     } catch (e) {
@@ -167,6 +177,15 @@
       case 'in_progress': return 'bg-blue-500';
       case 'completed': return 'bg-green-500';
       default: return 'bg-gray-400';
+    }
+  }
+
+  function getColumnOutlineColor(columnId: string): string {
+    switch (columnId) {
+      case 'not_started': return '#6b7280'; // gray-500
+      case 'in_progress': return '#3b82f6'; // blue-500
+      case 'completed': return '#22c55e'; // green-500
+      default: return '#9ca3af';
     }
   }
 
@@ -379,7 +398,7 @@
             use:dndzone={{
               items: column.items,
               flipDurationMs,
-              dropTargetStyle: { outline: '2px dashed var(--color-border)' }
+              dropTargetStyle: { outline: `2px dashed ${getColumnOutlineColor(column.id)}`, outlineOffset: '-2px' }
             }}
             on:consider={(e) => handleDndConsider(column.id, e)}
             on:finalize={(e) => handleDndFinalize(column.id, e)}
@@ -431,6 +450,16 @@
                 
                 {#if todo.description}
                   <p class="text-xs text-[var(--color-muted)] mb-3 line-clamp-2">{todo.description}</p>
+                {/if}
+
+                <!-- Account Tag -->
+                {#if todo.account_name}
+                  <div class="mb-2">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded">
+                      <Building2 class="w-3 h-3" />
+                      {todo.account_name}
+                    </span>
+                  </div>
                 {/if}
 
                 <!-- Linked Notes -->
@@ -506,6 +535,15 @@
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="label">Account Tag (optional)</label>
+          <select class="input" bind:value={newTodoAccountId}>
+            <option value="">No account</option>
+            {#each accounts as account}
+              <option value={account.id}>{account.name}</option>
+            {/each}
           </select>
         </div>
         <div class="flex justify-end gap-3">

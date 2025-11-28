@@ -457,16 +457,18 @@ func (h *Handler) GetNotesByAccount(c *gin.Context) {
 func (h *Handler) GetTodos(c *gin.Context) {
 	status := c.Query("status")
 	query := `
-		SELECT id, title, description, status, priority, due_date, created_at, updated_at
-		FROM todos
+		SELECT t.id, t.title, t.description, t.status, t.priority, t.due_date, t.account_id, 
+		       COALESCE(a.name, '') as account_name, t.created_at, t.updated_at
+		FROM todos t
+		LEFT JOIN accounts a ON t.account_id = a.id
 	`
 	args := []interface{}{}
 
 	if status != "" {
-		query += " WHERE status = ?"
+		query += " WHERE t.status = ?"
 		args = append(args, status)
 	}
-	query += " ORDER BY created_at DESC"
+	query += " ORDER BY t.created_at DESC"
 
 	rows, err := h.db.Query(query, args...)
 	if err != nil {
@@ -478,7 +480,8 @@ func (h *Handler) GetTodos(c *gin.Context) {
 	todos := []map[string]interface{}{}
 	for rows.Next() {
 		var t models.Todo
-		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.Priority, &t.DueDate, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		var accountName string
+		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.Priority, &t.DueDate, &t.AccountID, &accountName, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			continue
 		}
 
@@ -506,6 +509,8 @@ func (h *Handler) GetTodos(c *gin.Context) {
 			"status":       t.Status,
 			"priority":     t.Priority,
 			"due_date":     t.DueDate,
+			"account_id":   t.AccountID,
+			"account_name": accountName,
 			"created_at":   t.CreatedAt,
 			"updated_at":   t.UpdatedAt,
 			"linked_notes": linkedNotes,
@@ -518,10 +523,14 @@ func (h *Handler) GetTodos(c *gin.Context) {
 func (h *Handler) GetTodo(c *gin.Context) {
 	id := c.Param("id")
 	var t models.Todo
+	var accountName string
 	err := h.db.QueryRow(`
-		SELECT id, title, description, status, priority, due_date, created_at, updated_at
-		FROM todos WHERE id = ?
-	`, id).Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.Priority, &t.DueDate, &t.CreatedAt, &t.UpdatedAt)
+		SELECT t.id, t.title, t.description, t.status, t.priority, t.due_date, t.account_id,
+		       COALESCE(a.name, '') as account_name, t.created_at, t.updated_at
+		FROM todos t
+		LEFT JOIN accounts a ON t.account_id = a.id
+		WHERE t.id = ?
+	`, id).Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.Priority, &t.DueDate, &t.AccountID, &accountName, &t.CreatedAt, &t.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Todo not found"})
@@ -556,6 +565,8 @@ func (h *Handler) GetTodo(c *gin.Context) {
 		"status":       t.Status,
 		"priority":     t.Priority,
 		"due_date":     t.DueDate,
+		"account_id":   t.AccountID,
+		"account_name": accountName,
 		"created_at":   t.CreatedAt,
 		"updated_at":   t.UpdatedAt,
 		"linked_notes": linkedNotes,
@@ -588,9 +599,9 @@ func (h *Handler) CreateTodo(c *gin.Context) {
 	}
 
 	_, err := h.db.Exec(`
-		INSERT INTO todos (id, title, description, status, priority, due_date, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, id, req.Title, req.Description, req.Status, req.Priority, dueDate, now, now)
+		INSERT INTO todos (id, title, description, status, priority, due_date, account_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, id, req.Title, req.Description, req.Status, req.Priority, dueDate, req.AccountID, now, now)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -602,15 +613,23 @@ func (h *Handler) CreateTodo(c *gin.Context) {
 		h.db.Exec("INSERT INTO note_todos (note_id, todo_id) VALUES (?, ?)", *req.NoteID, id)
 	}
 
+	// Get account name if account_id was provided
+	var accountName string
+	if req.AccountID != nil {
+		h.db.QueryRow("SELECT name FROM accounts WHERE id = ?", *req.AccountID).Scan(&accountName)
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
-		"id":          id,
-		"title":       req.Title,
-		"description": req.Description,
-		"status":      req.Status,
-		"priority":    req.Priority,
-		"due_date":    dueDate,
-		"created_at":  now,
-		"updated_at":  now,
+		"id":           id,
+		"title":        req.Title,
+		"description":  req.Description,
+		"status":       req.Status,
+		"priority":     req.Priority,
+		"due_date":     dueDate,
+		"account_id":   req.AccountID,
+		"account_name": accountName,
+		"created_at":   now,
+		"updated_at":   now,
 	})
 }
 
@@ -645,6 +664,10 @@ func (h *Handler) UpdateTodo(c *gin.Context) {
 		parsed, _ := time.Parse(time.RFC3339, *req.DueDate)
 		updates = append(updates, "due_date = ?")
 		args = append(args, parsed)
+	}
+	if req.AccountID != nil {
+		updates = append(updates, "account_id = ?")
+		args = append(args, *req.AccountID)
 	}
 
 	if len(updates) == 0 {
