@@ -1,0 +1,384 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { dndzone } from 'svelte-dnd-action';
+  import { flip } from 'svelte/animate';
+  import { 
+    Plus, 
+    GripVertical, 
+    FileText, 
+    Calendar,
+    Trash2,
+    Link
+  } from 'lucide-svelte';
+  import { api, type Todo, type Note } from '$lib/utils/api';
+  import { addToast } from '$lib/stores';
+
+  interface Column {
+    id: string;
+    title: string;
+    items: Todo[];
+  }
+
+  let columns: Column[] = [
+    { id: 'not_started', title: 'Not Started', items: [] },
+    { id: 'in_progress', title: 'In Progress', items: [] },
+    { id: 'completed', title: 'Completed', items: [] },
+  ];
+
+  let loading = true;
+  let showNewTodoModal = false;
+  let showLinkModal = false;
+  let newTodoTitle = '';
+  let newTodoDescription = '';
+  let newTodoPriority = 'medium';
+  let linkTodoId = '';
+  let availableNotes: Note[] = [];
+
+  const flipDurationMs = 200;
+
+  onMount(async () => {
+    await loadData();
+  });
+
+  async function loadData() {
+    try {
+      loading = true;
+      const todos = await api.getTodos();
+      
+      // Distribute todos into columns
+      columns = columns.map(col => ({
+        ...col,
+        items: todos.filter(t => t.status === col.id)
+      }));
+    } catch (e) {
+      addToast('error', 'Failed to load todos');
+    } finally {
+      loading = false;
+    }
+  }
+
+  function handleDndConsider(columnId: string, e: CustomEvent) {
+    const column = columns.find(c => c.id === columnId);
+    if (column) {
+      column.items = e.detail.items;
+      columns = columns;
+    }
+  }
+
+  async function handleDndFinalize(columnId: string, e: CustomEvent) {
+    const column = columns.find(c => c.id === columnId);
+    if (column) {
+      column.items = e.detail.items;
+      columns = columns;
+
+      // Update the status of moved items
+      for (const item of e.detail.items) {
+        if (item.status !== columnId) {
+          try {
+            await api.updateTodo(item.id, { status: columnId });
+            item.status = columnId;
+          } catch (err) {
+            addToast('error', 'Failed to update todo status');
+          }
+        }
+      }
+    }
+  }
+
+  async function createTodo() {
+    if (!newTodoTitle.trim()) return;
+    try {
+      const todo = await api.createTodo({
+        title: newTodoTitle.trim(),
+        description: newTodoDescription.trim(),
+        priority: newTodoPriority,
+        status: 'not_started'
+      });
+      
+      columns[0].items = [...columns[0].items, todo];
+      columns = columns;
+      
+      newTodoTitle = '';
+      newTodoDescription = '';
+      newTodoPriority = 'medium';
+      showNewTodoModal = false;
+      addToast('success', 'Todo created');
+    } catch (e) {
+      addToast('error', 'Failed to create todo');
+    }
+  }
+
+  async function deleteTodo(todoId: string, columnId: string) {
+    if (!confirm('Delete this todo?')) return;
+    try {
+      await api.deleteTodo(todoId);
+      const column = columns.find(c => c.id === columnId);
+      if (column) {
+        column.items = column.items.filter(t => t.id !== todoId);
+        columns = columns;
+      }
+      addToast('success', 'Todo deleted');
+    } catch (e) {
+      addToast('error', 'Failed to delete todo');
+    }
+  }
+
+  async function openLinkModal(todoId: string) {
+    linkTodoId = todoId;
+    try {
+      availableNotes = await api.getNotes();
+      showLinkModal = true;
+    } catch (e) {
+      addToast('error', 'Failed to load notes');
+    }
+  }
+
+  async function linkToNote(noteId: string) {
+    try {
+      await api.linkTodoToNote(linkTodoId, noteId);
+      await loadData(); // Reload to get updated linked_notes
+      showLinkModal = false;
+      addToast('success', 'Todo linked to note');
+    } catch (e) {
+      addToast('error', 'Failed to link todo');
+    }
+  }
+
+  function getPriorityColor(priority: string): string {
+    switch (priority) {
+      case 'high': return 'border-l-red-500';
+      case 'medium': return 'border-l-yellow-500';
+      case 'low': return 'border-l-green-500';
+      default: return 'border-l-gray-400';
+    }
+  }
+
+  function getColumnColor(columnId: string): string {
+    switch (columnId) {
+      case 'not_started': return 'bg-gray-500';
+      case 'in_progress': return 'bg-blue-500';
+      case 'completed': return 'bg-green-500';
+      default: return 'bg-gray-400';
+    }
+  }
+
+  function formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+</script>
+
+<svelte:head>
+  <title>Todos - SE Notes</title>
+</svelte:head>
+
+<div class="max-w-full mx-auto">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="page-title">Todos</h1>
+      <p class="page-subtitle">Track your follow-up items</p>
+    </div>
+    <button class="btn-primary" on:click={() => showNewTodoModal = true}>
+      <Plus class="w-4 h-4" />
+      New Todo
+    </button>
+  </div>
+
+  {#if loading}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {#each [1, 2, 3] as _}
+        <div class="card animate-pulse">
+          <div class="h-6 bg-[var(--color-border)] rounded w-32 mb-4"></div>
+          <div class="space-y-3">
+            {#each [1, 2] as __}
+              <div class="h-24 bg-[var(--color-border)] rounded"></div>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {#each columns as column (column.id)}
+        <div class="flex flex-col">
+          <!-- Column Header -->
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-3 h-3 rounded-full {getColumnColor(column.id)}"></div>
+            <h2 class="font-semibold">{column.title}</h2>
+            <span class="text-sm text-[var(--color-muted)]">({column.items.length})</span>
+          </div>
+
+          <!-- Column Content -->
+          <div 
+            class="flex-1 min-h-[400px] p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl"
+            use:dndzone={{
+              items: column.items,
+              flipDurationMs,
+              dropTargetStyle: { outline: '2px dashed var(--color-border)' }
+            }}
+            on:consider={(e) => handleDndConsider(column.id, e)}
+            on:finalize={(e) => handleDndFinalize(column.id, e)}
+          >
+            {#each column.items as todo (todo.id)}
+              <div 
+                class="bg-[var(--color-bg)] border border-[var(--color-border)] border-l-4 {getPriorityColor(todo.priority)} rounded-lg p-4 mb-3 cursor-grab active:cursor-grabbing group"
+                animate:flip={{ duration: flipDurationMs }}
+              >
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <GripVertical class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <h3 class="font-medium text-sm">{todo.title}</h3>
+                  </div>
+                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      class="p-1 hover:bg-[var(--color-border)] rounded"
+                      title="Link to note"
+                      on:click|stopPropagation={() => openLinkModal(todo.id)}
+                    >
+                      <Link class="w-3.5 h-3.5 text-[var(--color-muted)]" />
+                    </button>
+                    <button 
+                      class="p-1 hover:bg-[var(--color-border)] rounded"
+                      on:click|stopPropagation={() => deleteTodo(todo.id, column.id)}
+                    >
+                      <Trash2 class="w-3.5 h-3.5 text-red-500" />
+                    </button>
+                  </div>
+                </div>
+                
+                {#if todo.description}
+                  <p class="text-xs text-[var(--color-muted)] mb-3 line-clamp-2">{todo.description}</p>
+                {/if}
+
+                <!-- Linked Notes -->
+                {#if todo.linked_notes && todo.linked_notes.length > 0}
+                  <div class="flex flex-wrap gap-1 mb-2">
+                    {#each todo.linked_notes as note}
+                      <a 
+                        href="/notes/{note.id}"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary-500/10 text-primary-500 rounded hover:bg-primary-500/20 transition-colors"
+                        on:click|stopPropagation
+                      >
+                        <FileText class="w-3 h-3" />
+                        {note.title}
+                      </a>
+                    {/each}
+                  </div>
+                {/if}
+
+                <div class="flex items-center justify-between text-xs text-[var(--color-muted)]">
+                  <span class="capitalize">{todo.priority} priority</span>
+                  {#if todo.due_date}
+                    <span class="flex items-center gap-1">
+                      <Calendar class="w-3 h-3" />
+                      {formatDate(todo.due_date)}
+                    </span>
+                  {/if}
+                </div>
+              </div>
+            {:else}
+              <div class="flex items-center justify-center h-32 text-[var(--color-muted)] text-sm">
+                Drop items here
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+</div>
+
+<!-- New Todo Modal -->
+{#if showNewTodoModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => showNewTodoModal = false}
+    ></button>
+    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
+      <h2 class="text-lg font-semibold mb-4">New Todo</h2>
+      <form on:submit|preventDefault={createTodo}>
+        <div class="mb-4">
+          <label class="label">Title</label>
+          <input 
+            type="text"
+            class="input"
+            placeholder="What needs to be done?"
+            bind:value={newTodoTitle}
+            autofocus
+          />
+        </div>
+        <div class="mb-4">
+          <label class="label">Description (optional)</label>
+          <textarea 
+            class="input"
+            rows="3"
+            placeholder="Add more details..."
+            bind:value={newTodoDescription}
+          ></textarea>
+        </div>
+        <div class="mb-4">
+          <label class="label">Priority</label>
+          <select class="input" bind:value={newTodoPriority}>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button 
+            type="button"
+            class="btn-secondary"
+            on:click={() => showNewTodoModal = false}
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" disabled={!newTodoTitle.trim()}>
+            Create Todo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Link to Note Modal -->
+{#if showLinkModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => showLinkModal = false}
+    ></button>
+    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
+      <h2 class="text-lg font-semibold mb-4">Link to Note</h2>
+      {#if availableNotes.length === 0}
+        <p class="text-[var(--color-muted)]">No notes available. Create a note first.</p>
+      {:else}
+        <div class="max-h-80 overflow-y-auto space-y-2">
+          {#each availableNotes as note}
+            <button 
+              class="w-full flex items-center gap-3 p-3 bg-[var(--color-bg)] rounded-lg hover:bg-[var(--color-border)] transition-colors text-left"
+              on:click={() => linkToNote(note.id)}
+            >
+              <FileText class="w-5 h-5 text-primary-500" />
+              <div>
+                <p class="font-medium">{note.title}</p>
+                <p class="text-sm text-[var(--color-muted)]">{note.account_name || 'No account'}</p>
+              </div>
+            </button>
+          {/each}
+        </div>
+      {/if}
+      <div class="flex justify-end mt-4">
+        <button 
+          class="btn-secondary"
+          on:click={() => showLinkModal = false}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
