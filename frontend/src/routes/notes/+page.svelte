@@ -46,6 +46,11 @@
   let viewMode: ViewMode = 'folders';
 
   onMount(async () => {
+    // Load saved view preference
+    const savedView = localStorage.getItem('defaultNotesView');
+    if (savedView && ['folders', 'cards', 'organized'].includes(savedView)) {
+      viewMode = savedView as ViewMode;
+    }
     await loadData();
   });
 

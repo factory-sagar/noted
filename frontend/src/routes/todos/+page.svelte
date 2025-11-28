@@ -16,7 +16,10 @@
     Building2,
     Filter,
     SortAsc,
-    SortDesc
+    SortDesc,
+    Check,
+    AlertTriangle,
+    ChevronDown
   } from 'lucide-svelte';
   import { api, type Todo, type Note, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -175,14 +178,98 @@
     if (!confirm('Delete this todo?')) return;
     try {
       await api.deleteTodo(todoId);
-      const column = columns.find(c => c.id === columnId);
-      if (column) {
-        column.items = column.items.filter(t => t.id !== todoId);
-        columns = columns;
+      if (columnId === 'completed') {
+        completedColumn.items = completedColumn.items.filter(t => t.id !== todoId);
+        completedColumn = completedColumn;
+      } else {
+        const column = columns.find(c => c.id === columnId);
+        if (column) {
+          column.items = column.items.filter(t => t.id !== todoId);
+          columns = columns;
+        }
       }
       addToast('success', 'Todo deleted');
     } catch (e) {
       addToast('error', 'Failed to delete todo');
+    }
+  }
+
+  // Quick actions for todos
+  async function quickMarkComplete(todo: Todo, fromColumnId: string) {
+    try {
+      await api.updateTodo(todo.id, { status: 'completed' });
+      
+      // Remove from current column
+      const fromColumn = columns.find(c => c.id === fromColumnId);
+      if (fromColumn) {
+        fromColumn.items = fromColumn.items.filter(t => t.id !== todo.id);
+        columns = columns;
+      }
+      
+      // Add to completed
+      todo.status = 'completed';
+      completedColumn.items = [todo, ...completedColumn.items];
+      completedColumn = completedColumn;
+      
+      addToast('success', 'Marked as complete');
+    } catch (e) {
+      addToast('error', 'Failed to update todo');
+    }
+  }
+
+  async function quickMarkStuck(todo: Todo, fromColumnId: string) {
+    try {
+      await api.updateTodo(todo.id, { status: 'stuck' });
+      
+      // Remove from current column
+      const fromColumn = columns.find(c => c.id === fromColumnId);
+      if (fromColumn) {
+        fromColumn.items = fromColumn.items.filter(t => t.id !== todo.id);
+        columns = columns;
+      }
+      
+      // Add to stuck column
+      const stuckColumn = columns.find(c => c.id === 'stuck');
+      if (stuckColumn) {
+        todo.status = 'stuck';
+        stuckColumn.items = [todo, ...stuckColumn.items];
+        columns = columns;
+      }
+      
+      addToast('success', 'Moved to Stuck');
+    } catch (e) {
+      addToast('error', 'Failed to update todo');
+    }
+  }
+
+  async function quickSetAccount(todo: Todo, accountId: string, columnId: string) {
+    try {
+      const account = accounts.find(a => a.id === accountId);
+      await api.updateTodo(todo.id, { account_id: accountId || null });
+      
+      // Update local state
+      const updateInColumn = (items: Todo[]) => {
+        const item = items.find(t => t.id === todo.id);
+        if (item) {
+          item.account_id = accountId || undefined;
+          item.account_name = account?.name || '';
+        }
+      };
+      
+      if (columnId === 'completed') {
+        updateInColumn(completedColumn.items);
+        completedColumn = completedColumn;
+      } else {
+        const column = columns.find(c => c.id === columnId);
+        if (column) {
+          updateInColumn(column.items);
+          columns = columns;
+        }
+      }
+      
+      addToast('success', accountId ? `Tagged with ${account?.name}` : 'Account removed');
+    } catch (e) {
+      addToast('error', 'Failed to update account');
     }
   }
 
@@ -632,6 +719,26 @@
                     <h3 class="font-medium text-sm">{todo.title}</h3>
                   </div>
                   <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <!-- Quick complete button (show on in_progress and not_started) -->
+                    {#if column.id === 'in_progress' || column.id === 'not_started'}
+                      <button 
+                        class="p-1 hover:bg-green-500/20 rounded"
+                        title="Mark complete"
+                        on:click|stopPropagation={() => quickMarkComplete(todo, column.id)}
+                      >
+                        <Check class="w-3.5 h-3.5 text-green-500" />
+                      </button>
+                    {/if}
+                    <!-- Quick stuck button (show on in_progress) -->
+                    {#if column.id === 'in_progress'}
+                      <button 
+                        class="p-1 hover:bg-red-500/20 rounded"
+                        title="Mark as stuck"
+                        on:click|stopPropagation={() => quickMarkStuck(todo, column.id)}
+                      >
+                        <AlertTriangle class="w-3.5 h-3.5 text-red-500" />
+                      </button>
+                    {/if}
                     <button 
                       class="p-1 hover:bg-[var(--color-border)] rounded"
                       title="Link to note"
@@ -652,15 +759,37 @@
                   <p class="text-xs text-[var(--color-muted)] mb-3 line-clamp-2">{todo.description}</p>
                 {/if}
 
-                <!-- Account Tag -->
-                {#if todo.account_name}
-                  <div class="mb-2">
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded">
+                <!-- Account Tag / Quick Selector -->
+                <div class="mb-2">
+                  <div class="relative inline-block group/account">
+                    <button
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded transition-colors {todo.account_name ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-border)]/80'}"
+                      on:click|stopPropagation
+                    >
                       <Building2 class="w-3 h-3" />
-                      {todo.account_name}
-                    </span>
+                      {todo.account_name || 'Add account'}
+                      <ChevronDown class="w-3 h-3" />
+                    </button>
+                    <div class="absolute left-0 top-full mt-1 z-10 hidden group-hover/account:block">
+                      <div class="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg shadow-xl py-1 min-w-[140px]">
+                        <button
+                          class="w-full px-3 py-1.5 text-xs text-left hover:bg-[var(--color-bg)] transition-colors {!todo.account_id ? 'text-primary-500 font-medium' : ''}"
+                          on:click|stopPropagation={() => quickSetAccount(todo, '', column.id)}
+                        >
+                          No account
+                        </button>
+                        {#each accounts as account}
+                          <button
+                            class="w-full px-3 py-1.5 text-xs text-left hover:bg-[var(--color-bg)] transition-colors {todo.account_id === account.id ? 'text-primary-500 font-medium' : ''}"
+                            on:click|stopPropagation={() => quickSetAccount(todo, account.id, column.id)}
+                          >
+                            {account.name}
+                          </button>
+                        {/each}
+                      </div>
+                    </div>
                   </div>
-                {/if}
+                </div>
 
                 <!-- Linked Notes -->
                 {#if todo.linked_notes && todo.linked_notes.length > 0}
