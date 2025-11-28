@@ -189,6 +189,7 @@ func (h *Handler) GetNotes(c *gin.Context) {
 			   n.created_at, n.updated_at, a.name as account_name
 		FROM notes n
 		LEFT JOIN accounts a ON n.account_id = a.id
+		WHERE n.deleted_at IS NULL
 		ORDER BY n.created_at DESC
 	`)
 	if err != nil {
@@ -417,7 +418,8 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 
 func (h *Handler) DeleteNote(c *gin.Context) {
 	id := c.Param("id")
-	result, err := h.db.Exec("DELETE FROM notes WHERE id = ?", id)
+	// Soft delete - set deleted_at timestamp
+	result, err := h.db.Exec("UPDATE notes SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL", id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -430,6 +432,36 @@ func (h *Handler) DeleteNote(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Note deleted"})
+}
+
+func (h *Handler) RestoreNote(c *gin.Context) {
+	id := c.Param("id")
+	result, err := h.db.Exec("UPDATE notes SET deleted_at = NULL WHERE id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Note restored"})
+}
+
+func (h *Handler) PermanentDeleteNote(c *gin.Context) {
+	id := c.Param("id")
+	result, err := h.db.Exec("DELETE FROM notes WHERE id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Note permanently deleted"})
 }
 
 func (h *Handler) GetNotesByAccount(c *gin.Context) {
@@ -470,11 +502,12 @@ func (h *Handler) GetTodos(c *gin.Context) {
 		       COALESCE(a.name, '') as account_name, t.created_at, t.updated_at
 		FROM todos t
 		LEFT JOIN accounts a ON t.account_id = a.id
+		WHERE t.deleted_at IS NULL
 	`
 	args := []interface{}{}
 
 	if status != "" {
-		query += " WHERE t.status = ?"
+		query += " AND t.status = ?"
 		args = append(args, status)
 	}
 	query += " ORDER BY t.created_at DESC"
@@ -706,7 +739,8 @@ func (h *Handler) UpdateTodo(c *gin.Context) {
 
 func (h *Handler) DeleteTodo(c *gin.Context) {
 	id := c.Param("id")
-	result, err := h.db.Exec("DELETE FROM todos WHERE id = ?", id)
+	// Soft delete - set deleted_at timestamp
+	result, err := h.db.Exec("UPDATE todos SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL", id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -719,6 +753,81 @@ func (h *Handler) DeleteTodo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Todo deleted"})
+}
+
+func (h *Handler) RestoreTodo(c *gin.Context) {
+	id := c.Param("id")
+	result, err := h.db.Exec("UPDATE todos SET deleted_at = NULL WHERE id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Todo not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Todo restored"})
+}
+
+func (h *Handler) PermanentDeleteTodo(c *gin.Context) {
+	id := c.Param("id")
+	result, err := h.db.Exec("DELETE FROM todos WHERE id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Todo not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Todo permanently deleted"})
+}
+
+func (h *Handler) GetDeletedTodos(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT t.id, t.title, t.description, t.status, t.priority, t.due_date, 
+			   t.account_id, COALESCE(a.name, '') as account_name, t.created_at, t.updated_at, t.deleted_at
+		FROM todos t
+		LEFT JOIN accounts a ON t.account_id = a.id
+		WHERE t.deleted_at IS NOT NULL
+		ORDER BY t.deleted_at DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	todos := []map[string]interface{}{}
+	for rows.Next() {
+		var id, title, description, status, priority, accountName string
+		var dueDate, accountID, deletedAt sql.NullString
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(&id, &title, &description, &status, &priority, &dueDate, &accountID, &accountName, &createdAt, &updatedAt, &deletedAt); err != nil {
+			continue
+		}
+		todo := map[string]interface{}{
+			"id":           id,
+			"title":        title,
+			"description":  description,
+			"status":       status,
+			"priority":     priority,
+			"account_name": accountName,
+			"created_at":   createdAt,
+			"updated_at":   updatedAt,
+			"deleted_at":   deletedAt.String,
+		}
+		if dueDate.Valid {
+			todo["due_date"] = dueDate.String
+		}
+		if accountID.Valid {
+			todo["account_id"] = accountID.String
+		}
+		todos = append(todos, todo)
+	}
+	c.JSON(http.StatusOK, todos)
 }
 
 func (h *Handler) LinkTodoToNote(c *gin.Context) {

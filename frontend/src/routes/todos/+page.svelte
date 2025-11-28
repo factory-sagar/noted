@@ -12,7 +12,9 @@
     Check,
     AlertTriangle,
     ChevronDown,
-    RotateCcw
+    RotateCcw,
+    Trash,
+    RefreshCw
   } from 'lucide-svelte';
   import { api, type Todo, type Note, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -30,7 +32,9 @@
   ];
   
   let completedItems: Todo[] = [];
+  let deletedItems: Todo[] = [];
   let loading = true;
+  let showTrash = false;
   let showNewTodoModal = false;
   let showLinkModal = false;
   let newTodoTitle = '';
@@ -49,12 +53,14 @@
   async function loadData() {
     try {
       loading = true;
-      const [todos, accountsData] = await Promise.all([
+      const [todos, accountsData, deleted] = await Promise.all([
         api.getTodos(),
-        api.getAccounts()
+        api.getAccounts(),
+        api.getDeletedTodos()
       ]);
       
       accounts = accountsData;
+      deletedItems = deleted;
       
       columns = [
         { id: 'not_started', title: 'Not Started', items: todos.filter(t => t.status === 'not_started') },
@@ -141,21 +147,67 @@
   }
 
   async function deleteTodo(todoId: string, columnId: string) {
-    if (!confirm('Delete this todo?')) return;
     try {
       await api.deleteTodo(todoId);
+      
+      // Find the todo to move to trash
+      let deletedTodo: Todo | undefined;
       if (columnId === 'completed') {
+        deletedTodo = completedItems.find(t => t.id === todoId);
         completedItems = completedItems.filter(t => t.id !== todoId);
       } else {
         const colIndex = columns.findIndex(c => c.id === columnId);
         if (colIndex !== -1) {
+          deletedTodo = columns[colIndex].items.find(t => t.id === todoId);
           columns[colIndex].items = columns[colIndex].items.filter(t => t.id !== todoId);
           columns = columns;
         }
       }
-      addToast('success', 'Todo deleted');
+      
+      // Add to deleted items
+      if (deletedTodo) {
+        deletedItems = [deletedTodo, ...deletedItems];
+      }
+      
+      addToast('success', 'Moved to trash');
     } catch (e) {
       addToast('error', 'Failed to delete todo');
+    }
+  }
+
+  async function restoreFromTrash(todoId: string) {
+    try {
+      await api.restoreTodo(todoId);
+      const todo = deletedItems.find(t => t.id === todoId);
+      if (todo) {
+        deletedItems = deletedItems.filter(t => t.id !== todoId);
+        // Add back to appropriate column based on status
+        const colIndex = columns.findIndex(c => c.id === todo.status);
+        if (todo.status === 'completed') {
+          completedItems = [todo, ...completedItems];
+        } else if (colIndex !== -1) {
+          columns[colIndex].items = [todo, ...columns[colIndex].items];
+          columns = columns;
+        } else {
+          // Default to not_started
+          columns[0].items = [todo, ...columns[0].items];
+          columns = columns;
+        }
+      }
+      addToast('success', 'Todo restored');
+    } catch (e) {
+      addToast('error', 'Failed to restore');
+    }
+  }
+
+  async function permanentDelete(todoId: string) {
+    if (!confirm('Permanently delete this todo? This cannot be undone.')) return;
+    try {
+      await api.permanentDeleteTodo(todoId);
+      deletedItems = deletedItems.filter(t => t.id !== todoId);
+      addToast('success', 'Permanently deleted');
+    } catch (e) {
+      addToast('error', 'Failed to delete');
     }
   }
 
@@ -511,6 +563,59 @@
         {/each}
       </div>
     </div>
+
+    <!-- Trash Section -->
+    {#if deletedItems.length > 0}
+      <div class="mt-8">
+        <button 
+          class="flex items-center gap-2 mb-4 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+          on:click={() => showTrash = !showTrash}
+        >
+          <Trash class="w-4 h-4" />
+          <span class="font-medium">Trash</span>
+          <span class="text-sm">({deletedItems.length})</span>
+          <ChevronDown class="w-4 h-4 transition-transform {showTrash ? 'rotate-180' : ''}" />
+        </button>
+        
+        {#if showTrash}
+          <div class="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl border-dashed">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {#each deletedItems as todo (todo.id)}
+                <div class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3 opacity-50 hover:opacity-100 transition-opacity group">
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-sm line-through truncate">{todo.title}</span>
+                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
+                      <button 
+                        class="p-1 hover:bg-green-500/20 rounded"
+                        title="Restore"
+                        on:click={() => restoreFromTrash(todo.id)}
+                      >
+                        <RefreshCw class="w-3.5 h-3.5 text-green-500" />
+                      </button>
+                      <button 
+                        class="p-1 hover:bg-red-500/20 rounded"
+                        title="Delete permanently"
+                        on:click={() => permanentDelete(todo.id)}
+                      >
+                        <Trash2 class="w-3.5 h-3.5 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                  {#if todo.account_name}
+                    <div class="mt-2">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500 rounded">
+                        <Building2 class="w-3 h-3" />
+                        {todo.account_name}
+                      </span>
+                    </div>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      </div>
+    {/if}
   {/if}
 </div>
 

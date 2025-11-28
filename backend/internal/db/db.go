@@ -234,5 +234,19 @@ func Migrate(db *sql.DB) error {
 		}
 	}
 
+	// Add deleted_at to notes (soft delete)
+	if !columnExists(db, "notes", "deleted_at") {
+		if _, err := db.Exec(`ALTER TABLE notes ADD COLUMN deleted_at DATETIME`); err != nil {
+			return err
+		}
+	}
+
+	// Add deleted_at to todos (soft delete)
+	if !columnExists(db, "todos", "deleted_at") {
+		if _, err := db.Exec(`ALTER TABLE todos ADD COLUMN deleted_at DATETIME`); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

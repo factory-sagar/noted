@@ -66,6 +66,8 @@ func main() {
 		api.POST("/notes", h.CreateNote)
 		api.PUT("/notes/:id", h.UpdateNote)
 		api.DELETE("/notes/:id", h.DeleteNote)
+		api.POST("/notes/:id/restore", h.RestoreNote)
+		api.DELETE("/notes/:id/permanent", h.PermanentDeleteNote)
 		api.GET("/accounts/:id/notes", h.GetNotesByAccount)
 
 		// Todos
@@ -74,6 +76,9 @@ func main() {
 		api.POST("/todos", h.CreateTodo)
 		api.PUT("/todos/:id", h.UpdateTodo)
 		api.DELETE("/todos/:id", h.DeleteTodo)
+		api.POST("/todos/:id/restore", h.RestoreTodo)
+		api.DELETE("/todos/:id/permanent", h.PermanentDeleteTodo)
+		api.GET("/todos/deleted", h.GetDeletedTodos)
 		api.POST("/todos/:id/notes/:noteId", h.LinkTodoToNote)
 		api.DELETE("/todos/:id/notes/:noteId", h.UnlinkTodoFromNote)
 

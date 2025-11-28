@@ -211,6 +211,10 @@ export const api = {
     request<Note>(`/notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteNote: (id: string) =>
     request<{ message: string }>(`/notes/${id}`, { method: 'DELETE' }),
+  restoreNote: (id: string) =>
+    request<{ message: string }>(`/notes/${id}/restore`, { method: 'POST' }),
+  permanentDeleteNote: (id: string) =>
+    request<{ message: string }>(`/notes/${id}/permanent`, { method: 'DELETE' }),
   exportNote: (id: string, type: 'full' | 'minimal' = 'full') =>
     request<any>(`/notes/${id}/export?type=${type}`),
 
@@ -224,6 +228,11 @@ export const api = {
     request<Todo>(`/todos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTodo: (id: string) =>
     request<{ message: string }>(`/todos/${id}`, { method: 'DELETE' }),
+  restoreTodo: (id: string) =>
+    request<{ message: string }>(`/todos/${id}/restore`, { method: 'POST' }),
+  permanentDeleteTodo: (id: string) =>
+    request<{ message: string }>(`/todos/${id}/permanent`, { method: 'DELETE' }),
+  getDeletedTodos: () => request<Todo[]>('/todos/deleted'),
   linkTodoToNote: (todoId: string, noteId: string) =>
     request<{ message: string }>(`/todos/${todoId}/notes/${noteId}`, { method: 'POST' }),
   unlinkTodoFromNote: (todoId: string, noteId: string) =>
