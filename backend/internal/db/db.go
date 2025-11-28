@@ -82,26 +82,26 @@ func Migrate(db *sql.DB) error {
 			FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
 		)`,
 
-		// Full-text search for notes
-		`CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+		// Full-text search for notes (using FTS4 for broader compatibility)
+		`CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts4(
 			title,
 			content,
 			content='notes',
-			content_rowid='rowid'
+			tokenize=porter
 		)`,
 
 		// Triggers to keep FTS in sync
 		`CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
-			INSERT INTO notes_fts(rowid, title, content) VALUES (NEW.rowid, NEW.title, NEW.content);
+			INSERT INTO notes_fts(docid, title, content) VALUES (NEW.rowid, NEW.title, NEW.content);
 		END`,
 
 		`CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
-			INSERT INTO notes_fts(notes_fts, rowid, title, content) VALUES('delete', OLD.rowid, OLD.title, OLD.content);
+			DELETE FROM notes_fts WHERE docid = OLD.rowid;
 		END`,
 
 		`CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
-			INSERT INTO notes_fts(notes_fts, rowid, title, content) VALUES('delete', OLD.rowid, OLD.title, OLD.content);
-			INSERT INTO notes_fts(rowid, title, content) VALUES (NEW.rowid, NEW.title, NEW.content);
+			DELETE FROM notes_fts WHERE docid = OLD.rowid;
+			INSERT INTO notes_fts(docid, title, content) VALUES (NEW.rowid, NEW.title, NEW.content);
 		END`,
 
 		// Indexes

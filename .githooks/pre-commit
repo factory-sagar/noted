@@ -7,7 +7,7 @@
 # To bypass (not recommended): git commit --no-verify
 # =============================================================================
 
-set -e
+# Don't use set -e as we handle errors ourselves
 
 # Colors for output
 RED='\033[0;31m'
@@ -233,7 +233,7 @@ if [[ -n "$STAGED_GO_FILES" ]]; then
         
         # Check for common Go issues
         print_info "Checking for common issues..."
-        local go_issues=false
+        go_issues=false
         
         for file in $STAGED_GO_FILES; do
             # Check for fmt.Println (should use log)

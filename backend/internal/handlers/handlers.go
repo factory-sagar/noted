@@ -55,7 +55,7 @@ func (h *Handler) GetAccount(c *gin.Context) {
 		SELECT id, name, account_owner, budget, est_engineers, created_at, updated_at 
 		FROM accounts WHERE id = ?
 	`, id).Scan(&a.ID, &a.Name, &a.AccountOwner, &a.Budget, &a.EstEngineers, &a.CreatedAt, &a.UpdatedAt)
-	
+
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
 		return
@@ -82,7 +82,7 @@ func (h *Handler) CreateAccount(c *gin.Context) {
 		INSERT INTO accounts (id, name, account_owner, budget, est_engineers, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`, id, req.Name, req.AccountOwner, req.Budget, req.EstEngineers, now, now)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -461,7 +461,7 @@ func (h *Handler) GetTodos(c *gin.Context) {
 		FROM todos
 	`
 	args := []interface{}{}
-	
+
 	if status != "" {
 		query += " WHERE status = ?"
 		args = append(args, status)
@@ -488,7 +488,7 @@ func (h *Handler) GetTodos(c *gin.Context) {
 			JOIN note_todos nt ON n.id = nt.note_id
 			WHERE nt.todo_id = ?
 		`, t.ID)
-		
+
 		linkedNotes := []map[string]string{}
 		if noteRows != nil {
 			for noteRows.Next() {
@@ -726,11 +726,11 @@ func (h *Handler) Search(c *gin.Context) {
 
 	results := []models.SearchResult{}
 
-	// Search notes using FTS5
+	// Search notes using FTS4
 	noteRows, err := h.db.Query(`
-		SELECT n.id, n.title, snippet(notes_fts, 1, '<mark>', '</mark>', '...', 32) as snippet
+		SELECT n.id, n.title, snippet(notes_fts, '<mark>', '</mark>', '...') as snippet
 		FROM notes_fts
-		JOIN notes n ON notes_fts.rowid = n.rowid
+		JOIN notes n ON notes_fts.docid = n.rowid
 		WHERE notes_fts MATCH ?
 		LIMIT 20
 	`, q)
