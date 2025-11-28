@@ -78,7 +78,7 @@
 
 {#if open}
   <div class="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-    <button class="modal-backdrop" on:click={close}></button>
+    <button class="modal-backdrop" on:click={close} aria-label="Close modal"></button>
     
     <div class="relative z-[101] w-full max-w-lg mx-4 bg-[var(--color-card)] border border-[var(--color-border)] shadow-editorial-lg animate-scale-in" style="border-radius: 2px;">
       <!-- Header -->
@@ -124,8 +124,10 @@
       <form on:submit|preventDefault={handleSubmit} class="p-6">
         <div class="space-y-5">
           <div>
-            <label class="label">Title</label>
+            <label class="label" for="quick-capture-title">Title</label>
+            <!-- svelte-ignore a11y-autofocus -->
             <input
+              id="quick-capture-title"
               type="text"
               class="input"
               placeholder={captureType === 'note' ? 'Note title...' : 'What needs to be done?'}
@@ -135,8 +137,9 @@
           </div>
 
           <div>
-            <label class="label">{captureType === 'note' ? 'Quick notes' : 'Description'} (optional)</label>
+            <label class="label" for="quick-capture-content">{captureType === 'note' ? 'Quick notes' : 'Description'} (optional)</label>
             <textarea
+              id="quick-capture-content"
               class="input"
               rows="3"
               placeholder={captureType === 'note' ? 'Jot down quick thoughts...' : 'Add more details...'}
@@ -146,8 +149,8 @@
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="label">Account (optional)</label>
-              <select class="input" bind:value={accountId}>
+              <label class="label" for="quick-capture-account">Account (optional)</label>
+              <select id="quick-capture-account" class="input" bind:value={accountId}>
                 <option value="">No account</option>
                 {#each accounts as account}
                   <option value={account.id}>{account.name}</option>
@@ -157,8 +160,8 @@
 
             {#if captureType === 'todo'}
               <div>
-                <label class="label">Priority</label>
-                <select class="input" bind:value={priority}>
+                <label class="label" for="quick-capture-priority">Priority</label>
+                <select id="quick-capture-priority" class="input" bind:value={priority}>
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>

@@ -498,8 +498,9 @@
             </h3>
             <div class="space-y-3">
               <div>
-                <label class="label">Account Owner</label>
+                <label class="label" for="note-account-owner">Account Owner</label>
                 <input 
+                  id="note-account-owner"
                   type="text"
                   class="input text-sm"
                   bind:value={account.account_owner}
@@ -508,10 +509,11 @@
                 />
               </div>
               <div>
-                <label class="label">Budget</label>
+                <label class="label" for="note-account-budget">Budget</label>
                 <div class="relative">
                   <DollarSign class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted)]" />
                   <input 
+                    id="note-account-budget"
                     type="number"
                     class="input text-sm pl-8"
                     bind:value={account.budget}
@@ -521,8 +523,9 @@
                 </div>
               </div>
               <div>
-                <label class="label">Est. Engineers (POC Size)</label>
+                <label class="label" for="note-account-engineers">Est. Engineers (POC Size)</label>
                 <input 
+                  id="note-account-engineers"
                   type="number"
                   class="input text-sm"
                   bind:value={account.est_engineers}
@@ -616,13 +619,16 @@
     <button 
       class="absolute inset-0 bg-black/50 backdrop-blur-sm"
       on:click={() => showNewTodoModal = false}
+      aria-label="Close modal"
     ></button>
     <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
       <h2 class="text-lg font-semibold mb-4">New Follow-up Item</h2>
       <form on:submit|preventDefault={createTodo}>
         <div class="mb-4">
-          <label class="label">Todo Title</label>
+          <label class="label" for="note-new-todo-title">Todo Title</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="note-new-todo-title"
             type="text"
             class="input"
             placeholder="e.g., Send technical documentation"
@@ -631,8 +637,9 @@
           />
         </div>
         <div class="mb-4">
-          <label class="label">Description (optional)</label>
+          <label class="label" for="note-new-todo-desc">Description (optional)</label>
           <textarea
+            id="note-new-todo-desc"
             class="input"
             rows="3"
             placeholder="Add more details about this follow-up..."

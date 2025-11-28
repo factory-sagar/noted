@@ -205,6 +205,7 @@
           class:bg-primary-600={darkMode}
           class:bg-[var(--color-border)]={!darkMode}
           on:click={toggleDarkMode}
+          aria-label="Toggle dark mode"
         >
           <span 
             class="absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow"
@@ -232,6 +233,7 @@
           class:bg-primary-600={autoSave}
           class:bg-[var(--color-border)]={!autoSave}
           on:click={() => { autoSave = !autoSave; saveAutoSave(); }}
+          aria-label="Toggle auto-save"
         >
           <span 
             class="absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow"
@@ -456,6 +458,7 @@
     <button 
       class="absolute inset-0 bg-black/50 backdrop-blur-sm"
       on:click={() => showTagModal = false}
+      aria-label="Close modal"
     ></button>
     <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
       <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -464,8 +467,10 @@
       </h2>
       <form on:submit|preventDefault={createTag}>
         <div class="mb-4">
-          <label class="label">Tag Name</label>
+          <label class="label" for="new-tag-name">Tag Name</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="new-tag-name"
             type="text"
             class="input"
             placeholder="e.g., Follow-up, Urgent, Demo"
@@ -474,8 +479,9 @@
           />
         </div>
         <div class="mb-4">
-          <label class="label">Color</label>
-          <div class="flex flex-wrap gap-2 mt-2">
+          <!-- svelte-ignore a11y-label-has-associated-control -->
+          <label class="label" id="tag-color-label">Color</label>
+          <div class="flex flex-wrap gap-2 mt-2" role="group" aria-labelledby="tag-color-label">
             {#each tagColors as color}
               <button
                 type="button"
@@ -486,6 +492,7 @@
                 class:ring-offset-2={newTagColor === color}
                 style="background-color: {color}; --tw-ring-color: {color}"
                 on:click={() => newTagColor = color}
+                aria-label="Select color {color}"
               ></button>
             {/each}
           </div>

@@ -259,8 +259,9 @@
 
       <div class="space-y-6">
         <div>
-          <label class="label">Template Name</label>
+          <label class="label" for="template-name">Template Name</label>
           <input 
+            id="template-name"
             type="text" 
             class="input" 
             bind:value={editingTemplate.name}
@@ -269,7 +270,8 @@
         </div>
 
         <div>
-          <label class="label">Suggested Fields</label>
+          <!-- svelte-ignore a11y-label-has-associated-control -->
+          <label class="label" id="template-fields-label">Suggested Fields</label>
           <p class="text-sm text-[var(--color-muted)] mb-3">
             Select which fields to include in this template
           </p>
@@ -291,7 +293,7 @@
 
         <div>
           <div class="flex items-center justify-between mb-2">
-            <label class="label mb-0">Default Content (HTML)</label>
+            <label class="label mb-0" for="template-content">Default Content (HTML)</label>
             <button 
               class="btn-ghost btn-sm"
               on:click={() => showVariablesHelp = !showVariablesHelp}
@@ -391,13 +393,16 @@
     <button 
       class="absolute inset-0 bg-black/50 backdrop-blur-sm"
       on:click={() => showNewTemplateModal = false}
+      aria-label="Close modal"
     ></button>
     <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
       <h2 class="text-lg font-semibold mb-4">New Template</h2>
       <form on:submit|preventDefault={createTemplate}>
         <div class="mb-4">
-          <label class="label">Template Name</label>
+          <label class="label" for="new-template-name">Template Name</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="new-template-name"
             type="text"
             class="input"
             placeholder="e.g., Technical Deep Dive"

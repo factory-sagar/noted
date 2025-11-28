@@ -403,6 +403,7 @@
     <button 
       class="absolute inset-0 bg-black/50 backdrop-blur-sm"
       on:click={() => showEventModal = false}
+      aria-label="Close modal"
     ></button>
     <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-lg animate-slide-up">
       <h2 class="text-lg font-semibold mb-2">{selectedEvent.title}</h2>

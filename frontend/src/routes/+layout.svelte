@@ -254,6 +254,7 @@
     <button 
       class="modal-backdrop"
       on:click={() => searchOpen = false}
+      aria-label="Close search"
     ></button>
     
     <div class="relative z-[101] w-full max-w-2xl mx-4 bg-[var(--color-card)] border border-[var(--color-border)] shadow-editorial-lg animate-scale-in" style="border-radius: 2px;">
@@ -263,6 +264,7 @@
         {:else}
           <Search class="w-5 h-5 text-[var(--color-muted)]" strokeWidth={1.5} />
         {/if}
+        <!-- svelte-ignore a11y-autofocus -->
         <input 
           type="text"
           placeholder="Search notes, accounts, todos..."

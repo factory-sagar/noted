@@ -412,13 +412,15 @@
 <!-- New Account Modal -->
 {#if showNewAccountModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showNewAccountModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showNewAccountModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title">New Account</h2>
       <form on:submit|preventDefault={createAccount}>
         <div class="mb-6">
-          <label class="label">Account Name</label>
+          <label class="label" for="new-account-name">Account Name</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="new-account-name"
             type="text"
             class="input"
             placeholder="e.g., Acme Corp"
@@ -427,8 +429,9 @@
           />
         </div>
         <div class="mb-6">
-          <label class="label">Account Owner (optional)</label>
+          <label class="label" for="new-account-owner">Account Owner (optional)</label>
           <input 
+            id="new-account-owner"
             type="text"
             class="input"
             placeholder="Sales rep name"
@@ -451,13 +454,15 @@
 <!-- Edit Account Modal -->
 {#if showEditAccountModal && editingAccount}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showEditAccountModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showEditAccountModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title">Edit Account</h2>
       <form on:submit|preventDefault={updateAccount}>
         <div class="mb-6">
-          <label class="label">Account Name</label>
+          <label class="label" for="edit-account-name">Account Name</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="edit-account-name"
             type="text"
             class="input"
             bind:value={editingAccount.name}
@@ -465,8 +470,9 @@
           />
         </div>
         <div class="mb-6">
-          <label class="label">Account Owner</label>
+          <label class="label" for="edit-account-owner">Account Owner</label>
           <input 
+            id="edit-account-owner"
             type="text"
             class="input"
             bind:value={editingAccount.account_owner}

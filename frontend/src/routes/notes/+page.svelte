@@ -621,13 +621,15 @@
 <!-- New Account Modal -->
 {#if showNewAccountModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showNewAccountModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showNewAccountModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title">New Account</h2>
       <form on:submit|preventDefault={createAccount}>
         <div class="mb-6">
-          <label class="label">Account Name</label>
+          <label class="label" for="notes-new-account-name">Account Name</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="notes-new-account-name"
             type="text"
             class="input"
             placeholder="e.g., Acme Corp"
@@ -651,13 +653,13 @@
 <!-- New Note Modal -->
 {#if showNewNoteModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showNewNoteModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showNewNoteModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title">New Note</h2>
       <form on:submit|preventDefault={createNote}>
         <div class="mb-6">
-          <label class="label">Account</label>
-          <select class="input" bind:value={newNoteAccountId}>
+          <label class="label" for="new-note-account">Account</label>
+          <select id="new-note-account" class="input" bind:value={newNoteAccountId}>
             <option value="">Select an account</option>
             {#each accounts as account}
               <option value={account.id}>{account.name}</option>
@@ -665,8 +667,9 @@
           </select>
         </div>
         <div class="mb-6">
-          <label class="label">Note Title</label>
+          <label class="label" for="new-note-title">Note Title</label>
           <input 
+            id="new-note-title"
             type="text"
             class="input"
             placeholder="e.g., Initial Discovery Call"
@@ -689,7 +692,7 @@
 <!-- Move Note Modal -->
 {#if showMoveNoteModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showMoveNoteModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showMoveNoteModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title flex items-center gap-2">
         <ArrowRightLeft class="w-5 h-5" strokeWidth={1.5} />
@@ -697,8 +700,8 @@
       </h2>
       <form on:submit|preventDefault={moveNote}>
         <div class="mb-6">
-          <label class="label">Move to Account</label>
-          <select class="input" bind:value={moveTargetAccountId}>
+          <label class="label" for="move-note-account">Move to Account</label>
+          <select id="move-note-account" class="input" bind:value={moveTargetAccountId}>
             {#each accounts as account}
               <option value={account.id}>{account.name}</option>
             {/each}
@@ -718,7 +721,7 @@
 <!-- Merge Accounts Modal -->
 {#if showMergeAccountsModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showMergeAccountsModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showMergeAccountsModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title flex items-center gap-2">
         <Merge class="w-5 h-5" strokeWidth={1.5} />
@@ -729,8 +732,8 @@
       </p>
       <form on:submit|preventDefault={mergeAccounts}>
         <div class="mb-6">
-          <label class="label">Source Account (will be deleted)</label>
-          <select class="input" bind:value={mergeSourceAccountId}>
+          <label class="label" for="merge-source-account">Source Account (will be deleted)</label>
+          <select id="merge-source-account" class="input" bind:value={mergeSourceAccountId}>
             <option value="">Select source</option>
             {#each accounts as account}
               <option value={account.id}>
@@ -740,8 +743,8 @@
           </select>
         </div>
         <div class="mb-6">
-          <label class="label">Target Account</label>
-          <select class="input" bind:value={mergeTargetAccountId}>
+          <label class="label" for="merge-target-account">Target Account</label>
+          <select id="merge-target-account" class="input" bind:value={mergeTargetAccountId}>
             <option value="">Select target</option>
             {#each accounts.filter(a => a.id !== mergeSourceAccountId) as account}
               <option value={account.id}>

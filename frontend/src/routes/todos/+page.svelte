@@ -654,13 +654,15 @@
 <!-- New Todo Modal -->
 {#if showNewTodoModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showNewTodoModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showNewTodoModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title">New Todo</h2>
       <form on:submit|preventDefault={createTodo}>
         <div class="mb-6">
-          <label class="label">Title</label>
+          <label class="label" for="todos-new-title">Title</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="todos-new-title"
             type="text"
             class="input"
             placeholder="What needs to be done?"
@@ -669,8 +671,9 @@
           />
         </div>
         <div class="mb-6">
-          <label class="label">Description (optional)</label>
+          <label class="label" for="todos-new-desc">Description (optional)</label>
           <textarea 
+            id="todos-new-desc"
             class="input"
             rows="3"
             placeholder="Add more details..."
@@ -678,8 +681,8 @@
           ></textarea>
         </div>
         <div class="mb-6">
-          <label class="label">Account (optional)</label>
-          <select class="input" bind:value={newTodoAccountId}>
+          <label class="label" for="todos-new-account">Account (optional)</label>
+          <select id="todos-new-account" class="input" bind:value={newTodoAccountId}>
             <option value="">No account</option>
             {#each accounts as account}
               <option value={account.id}>{account.name}</option>
@@ -702,7 +705,7 @@
 <!-- Link to Note Modal -->
 {#if showLinkModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showLinkModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showLinkModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title">Link to Note</h2>
       {#if availableNotes.length === 0}
@@ -734,13 +737,15 @@
 <!-- Edit Todo Modal -->
 {#if showEditModal && editingTodo}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button class="modal-backdrop" on:click={() => showEditModal = false}></button>
+    <button class="modal-backdrop" on:click={() => showEditModal = false} aria-label="Close modal"></button>
     <div class="relative modal-content animate-scale-in">
       <h2 class="modal-title">Edit Todo</h2>
       <form on:submit|preventDefault={saveEditTodo}>
         <div class="mb-4">
-          <label class="label">Title</label>
+          <label class="label" for="todos-edit-title">Title</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="todos-edit-title"
             type="text"
             class="input"
             bind:value={editTitle}
@@ -748,8 +753,9 @@
           />
         </div>
         <div class="mb-6">
-          <label class="label">Description (optional)</label>
+          <label class="label" for="todos-edit-desc">Description (optional)</label>
           <textarea
+            id="todos-edit-desc"
             class="input"
             rows="3"
             placeholder="Add more details..."
