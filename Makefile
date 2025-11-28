@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build build-backend build-frontend docker docker-build docker-up docker-down clean help
+.PHONY: dev dev-backend dev-frontend build build-backend build-frontend docker docker-build docker-up docker-down clean help setup setup-hooks
 
 # Default target
 help:
@@ -63,8 +63,23 @@ docker-up:
 docker-down:
 	docker-compose down
 
+# Setup
+setup: setup-hooks
+	@echo "Installing dependencies..."
+	cd backend && go mod download
+	cd frontend && npm install
+	@echo ""
+	@echo "Setup complete! Run 'make dev' to start development servers."
+
+setup-hooks:
+	@echo "Configuring git hooks..."
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-commit .githooks/post-commit .githooks/commit-msg
+	@echo "Git hooks configured!"
+
 # Clean
 clean:
 	rm -f backend/server
 	rm -rf frontend/build
 	rm -rf frontend/.svelte-kit
+	rm -rf .dashcode_queue

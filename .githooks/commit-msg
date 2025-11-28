@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# =============================================================================
+# SE Notes - Commit Message Hook
+# =============================================================================
+# Validates commit message format (conventional commits)
+# =============================================================================
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}  Commit Message Validation${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# Skip merge commits
+if echo "$COMMIT_MSG" | grep -qE '^Merge'; then
+    echo -e "  ${GREEN}✓${NC} Merge commit, skipping validation"
+    exit 0
+fi
+
+# Conventional commit pattern
+# type(scope): description
+PATTERN='^(feat|fix|docs|style|refactor|test|chore|init|perf|ci|build|revert)(\(.+\))?: .{1,}'
+
+if echo "$COMMIT_MSG" | head -1 | grep -qE "$PATTERN"; then
+    echo -e "  ${GREEN}✓${NC} Commit message format is valid"
+    
+    # Extract type for info
+    TYPE=$(echo "$COMMIT_MSG" | head -1 | grep -oE '^[a-z]+')
+    echo -e "  ${GREEN}→${NC} Type: $TYPE"
+else
+    echo -e "  ${RED}✗${NC} Invalid commit message format"
+    echo ""
+    echo -e "  Expected format: ${YELLOW}<type>(<scope>): <description>${NC}"
+    echo ""
+    echo -e "  Valid types:"
+    echo -e "    ${BLUE}feat${NC}     - A new feature"
+    echo -e "    ${BLUE}fix${NC}      - A bug fix"
+    echo -e "    ${BLUE}docs${NC}     - Documentation changes"
+    echo -e "    ${BLUE}style${NC}    - Code style changes (formatting, etc)"
+    echo -e "    ${BLUE}refactor${NC} - Code refactoring"
+    echo -e "    ${BLUE}test${NC}     - Adding or updating tests"
+    echo -e "    ${BLUE}chore${NC}    - Maintenance tasks"
+    echo -e "    ${BLUE}init${NC}     - Initial commit"
+    echo -e "    ${BLUE}perf${NC}     - Performance improvements"
+    echo -e "    ${BLUE}ci${NC}       - CI/CD changes"
+    echo -e "    ${BLUE}build${NC}    - Build system changes"
+    echo -e "    ${BLUE}revert${NC}   - Revert a previous commit"
+    echo ""
+    echo -e "  Examples:"
+    echo -e "    ${GREEN}feat(notes): add rich text editor${NC}"
+    echo -e "    ${GREEN}fix(api): handle null account_id${NC}"
+    echo -e "    ${GREEN}docs: update README with setup instructions${NC}"
+    echo ""
+    exit 1
+fi
+
+# Check message length
+FIRST_LINE=$(echo "$COMMIT_MSG" | head -1)
+LENGTH=${#FIRST_LINE}
+
+if [[ $LENGTH -gt 72 ]]; then
+    echo -e "  ${YELLOW}⚠${NC} First line is $LENGTH chars (recommended max: 72)"
+elif [[ $LENGTH -lt 10 ]]; then
+    echo -e "  ${YELLOW}⚠${NC} Message seems too short ($LENGTH chars)"
+else
+    echo -e "  ${GREEN}✓${NC} Message length OK ($LENGTH chars)"
+fi
+
+echo ""
+exit 0

@@ -1,0 +1,142 @@
+#!/bin/bash
+
+# =============================================================================
+# SE Notes - Post-commit Hook
+# =============================================================================
+# Posts commit data to dashcode on localhost:3001 for tracking
+# =============================================================================
+
+DASHCODE_URL="http://localhost:3001/api/commits"
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Get commit information
+COMMIT_HASH=$(git rev-parse HEAD)
+COMMIT_SHORT=$(git rev-parse --short HEAD)
+COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+COMMIT_EMAIL=$(git log -1 --pretty=%ae)
+COMMIT_DATE=$(git log -1 --pretty=%ci)
+COMMIT_TIMESTAMP=$(git log -1 --pretty=%ct)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+REPO_NAME=$(basename "$(git rev-parse --show-toplevel)")
+REPO_PATH=$(git rev-parse --show-toplevel)
+
+# Get files changed
+FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ',' | sed 's/,$//')
+FILES_ADDED=$(git diff-tree --no-commit-id --name-only --diff-filter=A -r HEAD | wc -l | tr -d ' ')
+FILES_MODIFIED=$(git diff-tree --no-commit-id --name-only --diff-filter=M -r HEAD | wc -l | tr -d ' ')
+FILES_DELETED=$(git diff-tree --no-commit-id --name-only --diff-filter=D -r HEAD | wc -l | tr -d ' ')
+
+# Get diff stats
+STATS=$(git diff-tree --stat --no-commit-id HEAD 2>/dev/null | tail -1)
+INSERTIONS=$(echo "$STATS" | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
+DELETIONS=$(echo "$STATS" | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' || echo "0")
+
+# Get parent commit (for comparison)
+PARENT_HASH=$(git rev-parse HEAD^ 2>/dev/null || echo "")
+
+# Determine commit type from conventional commits
+COMMIT_TYPE="other"
+if echo "$COMMIT_MESSAGE" | grep -qE '^feat(\(.+\))?:'; then
+    COMMIT_TYPE="feature"
+elif echo "$COMMIT_MESSAGE" | grep -qE '^fix(\(.+\))?:'; then
+    COMMIT_TYPE="fix"
+elif echo "$COMMIT_MESSAGE" | grep -qE '^docs(\(.+\))?:'; then
+    COMMIT_TYPE="docs"
+elif echo "$COMMIT_MESSAGE" | grep -qE '^style(\(.+\))?:'; then
+    COMMIT_TYPE="style"
+elif echo "$COMMIT_MESSAGE" | grep -qE '^refactor(\(.+\))?:'; then
+    COMMIT_TYPE="refactor"
+elif echo "$COMMIT_MESSAGE" | grep -qE '^test(\(.+\))?:'; then
+    COMMIT_TYPE="test"
+elif echo "$COMMIT_MESSAGE" | grep -qE '^chore(\(.+\))?:'; then
+    COMMIT_TYPE="chore"
+elif echo "$COMMIT_MESSAGE" | grep -qE '^init(\(.+\))?:'; then
+    COMMIT_TYPE="init"
+fi
+
+# Build JSON payload
+JSON_PAYLOAD=$(cat <<EOF
+{
+  "commit": {
+    "hash": "$COMMIT_HASH",
+    "short_hash": "$COMMIT_SHORT",
+    "message": $(echo "$COMMIT_MESSAGE" | head -1 | jq -Rs .),
+    "full_message": $(echo "$COMMIT_MESSAGE" | jq -Rs .),
+    "author": {
+      "name": "$COMMIT_AUTHOR",
+      "email": "$COMMIT_EMAIL"
+    },
+    "date": "$COMMIT_DATE",
+    "timestamp": $COMMIT_TIMESTAMP,
+    "branch": "$BRANCH",
+    "parent_hash": "$PARENT_HASH",
+    "type": "$COMMIT_TYPE"
+  },
+  "repository": {
+    "name": "$REPO_NAME",
+    "path": "$REPO_PATH"
+  },
+  "changes": {
+    "files": "$FILES_CHANGED",
+    "added": $FILES_ADDED,
+    "modified": $FILES_MODIFIED,
+    "deleted": $FILES_DELETED,
+    "insertions": ${INSERTIONS:-0},
+    "deletions": ${DELETIONS:-0}
+  },
+  "metadata": {
+    "hook_version": "1.0.0",
+    "sent_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  }
+}
+EOF
+)
+
+# Post to dashcode
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}  Dashcode Tracking${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# Check if dashcode is reachable
+if curl -s --connect-timeout 2 "$DASHCODE_URL" > /dev/null 2>&1 || curl -s --connect-timeout 2 "http://localhost:3001" > /dev/null 2>&1; then
+    # Send the commit data
+    RESPONSE=$(curl -s -w "\n%{http_code}" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d "$JSON_PAYLOAD" \
+        --connect-timeout 5 \
+        --max-time 10 \
+        "$DASHCODE_URL" 2>&1)
+    
+    HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+    BODY=$(echo "$RESPONSE" | sed '$d')
+    
+    if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "201" ]]; then
+        echo -e "  ${GREEN}✓${NC} Commit tracked successfully"
+        echo -e "  ${GREEN}→${NC} $COMMIT_SHORT: $(echo "$COMMIT_MESSAGE" | head -1 | cut -c1-50)"
+    else
+        echo -e "  ${YELLOW}⚠${NC} Failed to track commit (HTTP $HTTP_CODE)"
+        echo -e "  ${YELLOW}→${NC} Response: $BODY"
+    fi
+else
+    echo -e "  ${YELLOW}⚠${NC} Dashcode not reachable at $DASHCODE_URL"
+    echo -e "  ${YELLOW}→${NC} Commit recorded locally: $COMMIT_SHORT"
+    
+    # Optionally save to a local file for later sync
+    LOCAL_LOG_DIR="$REPO_PATH/.dashcode_queue"
+    mkdir -p "$LOCAL_LOG_DIR"
+    echo "$JSON_PAYLOAD" > "$LOCAL_LOG_DIR/$COMMIT_HASH.json"
+    echo -e "  ${BLUE}ℹ${NC} Saved to queue for later sync"
+fi
+
+echo ""
+
+# Always exit 0 - post-commit should never block
+exit 0
