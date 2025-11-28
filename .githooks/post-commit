@@ -64,6 +64,8 @@ fi
 # Build JSON payload
 JSON_PAYLOAD=$(cat <<EOF
 {
+  "repoName": "$REPO_NAME",
+  "repoPath": "$REPO_PATH",
   "commit": {
     "hash": "$COMMIT_HASH",
     "short_hash": "$COMMIT_SHORT",
@@ -78,10 +80,6 @@ JSON_PAYLOAD=$(cat <<EOF
     "branch": "$BRANCH",
     "parent_hash": "$PARENT_HASH",
     "type": "$COMMIT_TYPE"
-  },
-  "repository": {
-    "name": "$REPO_NAME",
-    "path": "$REPO_PATH"
   },
   "changes": {
     "files": "$FILES_CHANGED",
