@@ -6,7 +6,7 @@
 # Posts commit data to dashcode on localhost:3001 for tracking
 # =============================================================================
 
-DASHCODE_URL="http://localhost:3001/api/commits"
+DASHCODE_URL="http://localhost:3001/api/hooks/report"
 
 # Colors
 GREEN='\033[0;32m'
