@@ -61,41 +61,41 @@
     </div>
   {:else if analytics}
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <a href="/notes" class="card hover:border-primary-500/50 transition-colors cursor-pointer group">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 stagger-children">
+      <a href="/notes" class="card card-hover group">
         <div class="flex items-center justify-between mb-4">
           <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-primary-500 transition-colors">Total Notes</span>
-          <div class="p-2 bg-primary-500/10 rounded-lg">
+          <div class="p-2 bg-primary-500/10 rounded-lg group-hover:scale-110 transition-transform">
             <FileText class="w-5 h-5 text-primary-500" />
           </div>
         </div>
         <p class="text-3xl font-semibold">{analytics.total_notes}</p>
       </a>
 
-      <a href="/accounts" class="card hover:border-green-500/50 transition-colors cursor-pointer group">
+      <a href="/accounts" class="card card-hover group">
         <div class="flex items-center justify-between mb-4">
           <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-green-500 transition-colors">Accounts</span>
-          <div class="p-2 bg-green-500/10 rounded-lg">
+          <div class="p-2 bg-green-500/10 rounded-lg group-hover:scale-110 transition-transform">
             <Users class="w-5 h-5 text-green-500" />
           </div>
         </div>
         <p class="text-3xl font-semibold">{analytics.total_accounts}</p>
       </a>
 
-      <a href="/todos" class="card hover:border-orange-500/50 transition-colors cursor-pointer group">
+      <a href="/todos" class="card card-hover group">
         <div class="flex items-center justify-between mb-4">
           <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-orange-500 transition-colors">Total Todos</span>
-          <div class="p-2 bg-orange-500/10 rounded-lg">
+          <div class="p-2 bg-orange-500/10 rounded-lg group-hover:scale-110 transition-transform">
             <CheckSquare class="w-5 h-5 text-orange-500" />
           </div>
         </div>
         <p class="text-3xl font-semibold">{analytics.total_todos}</p>
       </a>
 
-      <a href="/todos" class="card hover:border-purple-500/50 transition-colors cursor-pointer group">
+      <a href="/todos" class="card card-hover group">
         <div class="flex items-center justify-between mb-4">
           <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-purple-500 transition-colors">Completion Rate</span>
-          <div class="p-2 bg-purple-500/10 rounded-lg">
+          <div class="p-2 bg-purple-500/10 rounded-lg group-hover:scale-110 transition-transform">
             <TrendingUp class="w-5 h-5 text-purple-500" />
           </div>
         </div>

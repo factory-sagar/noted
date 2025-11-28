@@ -32,27 +32,31 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95;
   }
 
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-500/25 focus:ring-primary-500;
   }
 
   .btn-secondary {
-    @apply btn bg-[var(--color-card)] border border-[var(--color-border)] hover:bg-[var(--color-border)] focus:ring-primary-500;
+    @apply btn bg-[var(--color-card)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:border-[var(--color-muted)] focus:ring-primary-500;
   }
 
   .btn-ghost {
     @apply btn hover:bg-[var(--color-card)] focus:ring-primary-500;
   }
 
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700 hover:shadow-lg hover:shadow-red-500/25 focus:ring-red-500;
+  }
+
   .card {
-    @apply bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6;
+    @apply bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 transition-all duration-200;
   }
 
   .input {
-    @apply w-full px-4 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] placeholder-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+    @apply w-full px-4 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] placeholder-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all duration-200;
   }
 
   .label {
@@ -81,32 +85,130 @@
 }
 
 @layer utilities {
+  /* Base animations */
   .animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
+    animation: fadeIn 0.3s ease-out;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.3s ease-out;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .animate-slide-in {
-    animation: slideIn 0.2s ease-out;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-bounce-in {
+    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .animate-shake {
+    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+
+  .animate-pulse-soft {
+    animation: pulseSoft 2s ease-in-out infinite;
+  }
+
+  .animate-spin-slow {
+    animation: spin 1.5s linear infinite;
+  }
+
+  /* Stagger children - apply to parent */
+  .stagger-children > * {
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+  .stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+  .stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+  .stagger-children > *:nth-child(8) { animation-delay: 0.4s; }
+
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+  .card-hover:hover {
+    @apply -translate-y-1 shadow-lg shadow-black/5;
+  }
+
+  .card-interactive {
+    @apply transition-all duration-200 cursor-pointer;
+  }
+  .card-interactive:hover {
+    @apply bg-[var(--color-bg)] border-primary-500/50;
+  }
+  .card-interactive:active {
+    @apply scale-[0.98];
+  }
+
+  /* Button press effect */
+  .btn-press {
+    @apply transition-transform duration-100;
+  }
+  .btn-press:active {
+    @apply scale-95;
+  }
+
+  /* Glow effects */
+  .glow-primary {
+    box-shadow: 0 0 20px -5px theme('colors.primary.500');
+  }
+
+  .focus-glow:focus {
+    box-shadow: 0 0 0 3px theme('colors.primary.500' / 20%);
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply bg-gradient-to-r from-[var(--color-card)] via-[var(--color-border)] to-[var(--color-card)] bg-[length:200%_100%];
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* Loading dots */
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.5s steps(4) infinite;
+  }
+
+  /* Success checkmark */
+  .checkmark {
+    animation: checkmark 0.4s cubic-bezier(0.65, 0, 0.45, 1) forwards;
   }
 }
 
+/* Keyframes */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
   }
   to {
     opacity: 1;
@@ -117,12 +219,77 @@
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: translateX(-20px);
   }
   to {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes pulseSoft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+
+@keyframes checkmark {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* TipTap Editor Styles */

@@ -158,11 +158,11 @@
     <div class="flex flex-col h-full">
       <!-- Logo -->
       <div class="flex items-center justify-between h-16 px-6 border-b border-[var(--color-border)]">
-        <a href="/" class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+        <a href="/" class="flex items-center gap-2 group">
+          <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:shadow-primary-500/40 group-hover:scale-105 transition-all duration-200">
             <FileText class="w-5 h-5 text-white" />
           </div>
-          <span class="text-lg font-semibold">Noted</span>
+          <span class="text-lg font-semibold bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">Noted</span>
         </a>
         <button 
           class="lg:hidden p-1 hover:bg-[var(--color-border)] rounded"
@@ -232,7 +232,7 @@
 
           <!-- Quick Capture -->
           <button 
-            class="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 hover:shadow-lg hover:shadow-primary-500/25 active:scale-95 transition-all duration-200"
             on:click={() => quickCaptureOpen = true}
             title="Quick Capture (⌘⇧C)"
           >
