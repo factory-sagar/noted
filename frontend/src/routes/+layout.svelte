@@ -159,9 +159,11 @@
       <!-- Logo -->
       <div class="flex items-center justify-between h-16 px-6 border-b border-[var(--color-border)]">
         <a href="/" class="flex items-center gap-2 group">
-          <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:shadow-primary-500/40 group-hover:scale-105 transition-all duration-200">
-            <FileText class="w-5 h-5 text-white" />
-          </div>
+          <img 
+            src="https://cdn.jsdelivr.net/gh/selfhst/icons@master/png/flatnotes-dark.png" 
+            alt="Noted" 
+            class="w-8 h-8 group-hover:scale-105 transition-all duration-200"
+          />
           <span class="text-lg font-semibold bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">Noted</span>
         </a>
         <button 

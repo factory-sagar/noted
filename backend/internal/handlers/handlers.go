@@ -1398,12 +1398,12 @@ func (h *Handler) QuickCapture(c *gin.Context) {
 	if req.Type == "note" {
 		accountID := req.AccountID
 		if accountID == nil {
-			// Create a default "Quick Notes" account if none provided
+			// Create a default "Unassigned" account if none provided
 			var defaultAccountID string
-			err := h.db.QueryRow("SELECT id FROM accounts WHERE name = 'Quick Notes'").Scan(&defaultAccountID)
+			err := h.db.QueryRow("SELECT id FROM accounts WHERE name = 'Unassigned'").Scan(&defaultAccountID)
 			if err == sql.ErrNoRows {
 				defaultAccountID = uuid.New().String()
-				h.db.Exec("INSERT INTO accounts (id, name, created_at, updated_at) VALUES (?, 'Quick Notes', ?, ?)",
+				h.db.Exec("INSERT INTO accounts (id, name, created_at, updated_at) VALUES (?, 'Unassigned', ?, ?)",
 					defaultAccountID, now, now)
 			}
 			accountID = &defaultAccountID
