@@ -247,7 +247,7 @@
 </script>
 
 <svelte:head>
-  <title>Calendar - SE Notes</title>
+  <title>Calendar - Noted</title>
 </svelte:head>
 
 <div class="max-w-7xl mx-auto">

@@ -1,4 +1,4 @@
-# SE Notes
+# Noted
 
 A minimalist notes application for Solutions Engineers to organize meeting notes, track follow-ups, and manage customer accounts.
 

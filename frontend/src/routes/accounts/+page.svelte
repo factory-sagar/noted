@@ -155,7 +155,7 @@
 </script>
 
 <svelte:head>
-  <title>Accounts - SE Notes</title>
+  <title>Accounts - Noted</title>
 </svelte:head>
 
 <div class="max-w-7xl mx-auto">

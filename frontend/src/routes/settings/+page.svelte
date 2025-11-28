@@ -174,7 +174,7 @@
 </script>
 
 <svelte:head>
-  <title>Settings - SE Notes</title>
+  <title>Settings - Noted</title>
 </svelte:head>
 
 <div class="max-w-3xl mx-auto">
@@ -442,7 +442,7 @@
     <div class="card">
       <h2 class="text-lg font-semibold mb-4">About</h2>
       <div class="space-y-2 text-sm text-[var(--color-muted)]">
-        <p><strong>SE Notes</strong> - Solutions Engineer Notes App</p>
+        <p><strong>Noted</strong> - Solutions Engineer Notes App</p>
         <p>Version 1.0.0</p>
         <p>Built with SvelteKit, Go, and SQLite</p>
       </div>

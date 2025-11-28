@@ -2,7 +2,7 @@
 
 # Default target
 help:
-	@echo "SE Notes - Development Commands"
+	@echo "Noted - Development Commands"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev           - Run both backend and frontend in development mode"

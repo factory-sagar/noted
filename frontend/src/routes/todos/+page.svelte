@@ -417,7 +417,7 @@
 </script>
 
 <svelte:head>
-  <title>Todos - SE Notes</title>
+  <title>Todos - Noted</title>
 </svelte:head>
 
 <div class="max-w-full mx-auto">

@@ -162,7 +162,7 @@
           <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
             <FileText class="w-5 h-5 text-white" />
           </div>
-          <span class="text-lg font-semibold">SE Notes</span>
+          <span class="text-lg font-semibold">Noted</span>
         </a>
         <button 
           class="lg:hidden p-1 hover:bg-[var(--color-border)] rounded"

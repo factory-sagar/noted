@@ -1,4 +1,4 @@
-# Contributing to SE Notes
+# Contributing to Noted
 
 ## Quick Start
 

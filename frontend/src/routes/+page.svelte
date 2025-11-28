@@ -31,7 +31,7 @@
 </script>
 
 <svelte:head>
-  <title>Dashboard - SE Notes</title>
+  <title>Dashboard - Noted</title>
 </svelte:head>
 
 <div class="max-w-7xl mx-auto">

@@ -1,4 +1,4 @@
-# Project Status - SE Notes
+# Project Status - Noted
 
 **Last Updated**: November 2024
 

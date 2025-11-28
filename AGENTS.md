@@ -1,10 +1,10 @@
-# Agent Guide - SE Notes
+# Agent Guide - Noted
 
 This document provides context for AI agents working on this repository.
 
 ## Project Overview
 
-**SE Notes** is a local-first notes application designed for Solutions Engineers to manage customer meeting notes, track follow-ups, and organize accounts.
+**Noted** is a local-first notes application designed for Solutions Engineers to manage customer meeting notes, track follow-ups, and organize accounts.
 
 ### Tech Stack
 - **Frontend**: SvelteKit 2.x + Tailwind CSS 3.x + TipTap (rich text editor)

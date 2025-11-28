@@ -250,7 +250,7 @@
 </script>
 
 <svelte:head>
-  <title>Notes - SE Notes</title>
+  <title>Notes - Noted</title>
 </svelte:head>
 
 <div class="max-w-7xl mx-auto">

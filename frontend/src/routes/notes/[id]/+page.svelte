@@ -209,7 +209,7 @@
 </script>
 
 <svelte:head>
-  <title>{title || 'Note'} - SE Notes</title>
+  <title>{title || 'Note'} - Noted</title>
 </svelte:head>
 
 {#if loading}

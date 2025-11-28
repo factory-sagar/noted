@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# SE Notes - Git Hooks Setup
+# Noted - Git Hooks Setup
 # =============================================================================
 # Run this script to configure git hooks for this repository
 # =============================================================================
@@ -11,7 +11,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
-echo "Setting up git hooks for SE Notes..."
+echo "Setting up git hooks for Noted..."
 echo ""
 
 # Configure git to use .githooks directory
