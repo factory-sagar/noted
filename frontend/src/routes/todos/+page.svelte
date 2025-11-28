@@ -290,7 +290,7 @@
     }
   }
 
-  async function restoreTodo(todo: Todo, toStatus: string) {
+  async function restoreTodo(todo: Todo, toStatus: Todo['status']) {
     try {
       await api.updateTodo(todo.id, { status: toStatus });
       completedItems = completedItems.filter(t => t.id !== todo.id);
@@ -307,7 +307,7 @@
   async function setAccount(todo: Todo, accountId: string, columnId: string) {
     try {
       const account = accounts.find(a => a.id === accountId);
-      await api.updateTodo(todo.id, { account_id: accountId || null });
+      await api.updateTodo(todo.id, { account_id: accountId || undefined });
       todo.account_id = accountId || undefined;
       todo.account_name = account?.name || '';
       if (columnId === 'completed') {

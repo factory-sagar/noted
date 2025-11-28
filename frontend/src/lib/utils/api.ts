@@ -68,7 +68,7 @@ export interface Todo {
   id: string;
   title: string;
   description: string;
-  status: 'not_started' | 'in_progress' | 'completed';
+  status: 'not_started' | 'in_progress' | 'stuck' | 'completed';
   priority: 'low' | 'medium' | 'high';
   due_date?: string;
   account_id?: string;

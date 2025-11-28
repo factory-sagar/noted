@@ -53,9 +53,13 @@
   let newTodoTitle = '';
   let newTodoDescription = '';
 
-  $: noteId = $page.params.id;
+  $: noteId = $page.params.id as string;
 
   onMount(async () => {
+    if (!noteId) {
+      goto('/notes');
+      return;
+    }
     await loadNote();
   });
 
