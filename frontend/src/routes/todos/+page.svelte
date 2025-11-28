@@ -13,7 +13,10 @@
     Square,
     X,
     ArrowRight,
-    Building2
+    Building2,
+    Filter,
+    SortAsc,
+    SortDesc
   } from 'lucide-svelte';
   import { api, type Todo, type Note, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -44,6 +47,14 @@
   // Bulk selection state
   let selectionMode = false;
   let selectedTodos: Set<string> = new Set();
+  
+  // Filter & Sort state
+  let filterAccount = '';
+  let filterPriority = '';
+  let filterHasNotes = ''; // 'yes', 'no', or ''
+  let sortBy = 'created_at'; // 'created_at', 'priority', 'title'
+  let sortOrder: 'asc' | 'desc' = 'desc';
+  let showFilters = false;
 
   const flipDurationMs = 200;
 
@@ -284,6 +295,61 @@
   }
 
   $: selectedCount = selectedTodos.size;
+
+  // Filter and sort todos
+  function filterAndSortTodos(todos: Todo[]): Todo[] {
+    let filtered = todos;
+    
+    // Apply filters
+    if (filterAccount) {
+      filtered = filtered.filter(t => t.account_id === filterAccount);
+    }
+    if (filterPriority) {
+      filtered = filtered.filter(t => t.priority === filterPriority);
+    }
+    if (filterHasNotes === 'yes') {
+      filtered = filtered.filter(t => t.linked_notes && t.linked_notes.length > 0);
+    } else if (filterHasNotes === 'no') {
+      filtered = filtered.filter(t => !t.linked_notes || t.linked_notes.length === 0);
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'priority':
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          comparison = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+          break;
+        case 'title':
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case 'created_at':
+        default:
+          comparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          break;
+      }
+      return sortOrder === 'asc' ? -comparison : comparison;
+    });
+    
+    return filtered;
+  }
+
+  function clearFilters() {
+    filterAccount = '';
+    filterPriority = '';
+    filterHasNotes = '';
+    sortBy = 'created_at';
+    sortOrder = 'desc';
+  }
+
+  $: hasActiveFilters = filterAccount || filterPriority || filterHasNotes;
+  
+  // Apply filters to columns
+  $: filteredColumns = columns.map(col => ({
+    ...col,
+    items: filterAndSortTodos(col.items)
+  }));
 </script>
 
 <svelte:head>
@@ -299,6 +365,18 @@
     <div class="flex items-center gap-3">
       <button 
         class="btn-secondary"
+        class:bg-primary-500={showFilters}
+        class:text-white={showFilters}
+        on:click={() => showFilters = !showFilters}
+      >
+        <Filter class="w-4 h-4" />
+        Filter
+        {#if hasActiveFilters}
+          <span class="ml-1 w-2 h-2 bg-orange-500 rounded-full"></span>
+        {/if}
+      </button>
+      <button 
+        class="btn-secondary"
         class:bg-primary-500={selectionMode}
         class:text-white={selectionMode}
         on:click={toggleSelectionMode}
@@ -312,6 +390,64 @@
       </button>
     </div>
   </div>
+
+  <!-- Filter Bar -->
+  {#if showFilters}
+    <div class="card mb-6 animate-slide-up">
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium">Account:</label>
+          <select class="input py-1.5 text-sm w-40" bind:value={filterAccount}>
+            <option value="">All</option>
+            {#each accounts as account}
+              <option value={account.id}>{account.name}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium">Priority:</label>
+          <select class="input py-1.5 text-sm w-32" bind:value={filterPriority}>
+            <option value="">All</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium">Linked Notes:</label>
+          <select class="input py-1.5 text-sm w-32" bind:value={filterHasNotes}>
+            <option value="">All</option>
+            <option value="yes">Has Notes</option>
+            <option value="no">No Notes</option>
+          </select>
+        </div>
+        <div class="h-6 w-px bg-[var(--color-border)]"></div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium">Sort:</label>
+          <select class="input py-1.5 text-sm w-32" bind:value={sortBy}>
+            <option value="created_at">Date Created</option>
+            <option value="priority">Priority</option>
+            <option value="title">Title</option>
+          </select>
+          <button 
+            class="btn-ghost p-1.5"
+            on:click={() => sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'}
+          >
+            {#if sortOrder === 'asc'}
+              <SortAsc class="w-4 h-4" />
+            {:else}
+              <SortDesc class="w-4 h-4" />
+            {/if}
+          </button>
+        </div>
+        {#if hasActiveFilters}
+          <button class="btn-ghost text-sm text-red-500" on:click={clearFilters}>
+            Clear Filters
+          </button>
+        {/if}
+      </div>
+    </div>
+  {/if}
 
   <!-- Bulk Actions Bar -->
   {#if selectionMode && selectedCount > 0}
@@ -373,7 +509,7 @@
     </div>
   {:else}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {#each columns as column (column.id)}
+      {#each filteredColumns as column (column.id)}
         <div class="flex flex-col">
           <!-- Column Header -->
           <div class="flex items-center justify-between mb-4">

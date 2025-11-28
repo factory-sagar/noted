@@ -11,7 +11,10 @@
     Edit3,
     Search,
     ArrowRightLeft,
-    Merge
+    Merge,
+    LayoutList,
+    LayoutGrid,
+    Building2
   } from 'lucide-svelte';
   import { api, type Account, type Note } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -37,6 +40,10 @@
   // Merge accounts state
   let mergeSourceAccountId = '';
   let mergeTargetAccountId = '';
+  
+  // View mode: 'folders' | 'cards' | 'organized'
+  type ViewMode = 'folders' | 'cards' | 'organized';
+  let viewMode: ViewMode = 'folders';
 
   onMount(async () => {
     await loadData();
@@ -218,6 +225,28 @@
       year: 'numeric'
     });
   }
+
+  function stripHtml(html: string): string {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  }
+
+  function getPreview(content: string, maxLength: number = 120): string {
+    const text = stripHtml(content);
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  }
+
+  function getAccountName(accountId: string): string {
+    return accounts.find(a => a.id === accountId)?.name || 'Unknown';
+  }
+
+  $: allNotes = filterQuery
+    ? notes.filter(n => 
+        n.title.toLowerCase().includes(filterQuery.toLowerCase()) ||
+        (n.content && n.content.toLowerCase().includes(filterQuery.toLowerCase()))
+      )
+    : notes;
 </script>
 
 <svelte:head>
@@ -231,13 +260,43 @@
       <p class="page-subtitle">Organize your meeting notes by account</p>
     </div>
     <div class="flex items-center gap-3">
+      <!-- View Mode Toggle -->
+      <div class="flex items-center bg-[var(--color-bg)] rounded-lg p-1 border border-[var(--color-border)]">
+        <button 
+          class="p-1.5 rounded-md transition-colors"
+          class:bg-[var(--color-card)]={viewMode === 'folders'}
+          class:shadow-sm={viewMode === 'folders'}
+          on:click={() => viewMode = 'folders'}
+          title="Folder view"
+        >
+          <FolderOpen class="w-4 h-4" />
+        </button>
+        <button 
+          class="p-1.5 rounded-md transition-colors"
+          class:bg-[var(--color-card)]={viewMode === 'cards'}
+          class:shadow-sm={viewMode === 'cards'}
+          on:click={() => viewMode = 'cards'}
+          title="Cards view"
+        >
+          <LayoutGrid class="w-4 h-4" />
+        </button>
+        <button 
+          class="p-1.5 rounded-md transition-colors"
+          class:bg-[var(--color-card)]={viewMode === 'organized'}
+          class:shadow-sm={viewMode === 'organized'}
+          on:click={() => viewMode = 'organized'}
+          title="Organized by account"
+        >
+          <Building2 class="w-4 h-4" />
+        </button>
+      </div>
       {#if accounts.length >= 2}
         <button 
           class="btn-ghost"
           on:click={() => showMergeAccountsModal = true}
         >
           <Merge class="w-4 h-4" />
-          Merge Accounts
+          Merge
         </button>
       {/if}
       <button 
@@ -245,7 +304,7 @@
         on:click={() => showNewAccountModal = true}
       >
         <Plus class="w-4 h-4" />
-        New Account
+        Account
       </button>
       <button 
         class="btn-primary"
@@ -253,7 +312,7 @@
         disabled={accounts.length === 0}
       >
         <Plus class="w-4 h-4" />
-        New Note
+        Note
       </button>
     </div>
   </div>
@@ -293,7 +352,8 @@
         Create Account
       </button>
     </div>
-  {:else}
+  {:else if viewMode === 'folders'}
+    <!-- Folders View (Original) -->
     <div class="space-y-4">
       {#each filteredAccounts as account (account.id)}
         <div class="card p-0 overflow-hidden group">
@@ -375,6 +435,124 @@
                     Create one
                   </button>
                 </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  {:else if viewMode === 'cards'}
+    <!-- Cards View -->
+    {#if allNotes.length === 0}
+      <div class="card text-center py-12">
+        <FileText class="w-12 h-12 mx-auto text-[var(--color-muted)] mb-4" />
+        <h3 class="text-lg font-medium mb-2">No notes yet</h3>
+        <p class="text-[var(--color-muted)] mb-6">Create your first note to get started.</p>
+        <button class="btn-primary" on:click={() => showNewNoteModal = true}>
+          <Plus class="w-4 h-4" />
+          Create Note
+        </button>
+      </div>
+    {:else}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {#each allNotes as note (note.id)}
+          <a 
+            href="/notes/{note.id}"
+            class="card p-4 hover:border-primary-500/50 transition-colors group"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <span class="px-2 py-0.5 text-xs rounded bg-primary-500/10 text-primary-500">
+                {note.template_type}
+              </span>
+              <button 
+                class="p-1 hover:bg-[var(--color-border)] rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Delete note"
+                on:click|preventDefault|stopPropagation={() => deleteNote(note.id)}
+              >
+                <Trash2 class="w-3.5 h-3.5 text-red-500" />
+              </button>
+            </div>
+            <h3 class="font-semibold mb-1 line-clamp-2">{note.title}</h3>
+            <p class="text-sm text-[var(--color-muted)] mb-3 line-clamp-3">
+              {note.content ? getPreview(note.content) : 'No content yet...'}
+            </p>
+            <div class="flex items-center justify-between text-xs text-[var(--color-muted)]">
+              <span class="flex items-center gap-1">
+                <Building2 class="w-3 h-3" />
+                {getAccountName(note.account_id)}
+              </span>
+              <span>{formatDate(note.created_at)}</span>
+            </div>
+          </a>
+        {/each}
+      </div>
+    {/if}
+  {:else if viewMode === 'organized'}
+    <!-- Organized View (Grouped by Account, No Collapse) -->
+    <div class="space-y-8">
+      {#each filteredAccounts as account (account.id)}
+        {@const accountNotes = getNotesForAccount(account.id)}
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
+              <Building2 class="w-5 h-5 text-primary-500" />
+            </div>
+            <div>
+              <h2 class="font-semibold">{account.name}</h2>
+              <p class="text-sm text-[var(--color-muted)]">
+                {accountNotes.length} note{accountNotes.length !== 1 ? 's' : ''}
+                {#if account.account_owner}
+                  · {account.account_owner}
+                {/if}
+              </p>
+            </div>
+          </div>
+          {#if accountNotes.length === 0}
+            <div class="card text-center py-6 text-[var(--color-muted)]">
+              No notes in this account yet.
+              <button 
+                class="text-primary-500 hover:underline ml-1"
+                on:click={() => { newNoteAccountId = account.id; showNewNoteModal = true; }}
+              >
+                Create one
+              </button>
+            </div>
+          {:else}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {#each accountNotes as note (note.id)}
+                <a 
+                  href="/notes/{note.id}"
+                  class="card p-4 hover:border-primary-500/50 transition-colors group"
+                >
+                  <div class="flex items-start justify-between mb-2">
+                    <span class="px-2 py-0.5 text-xs rounded bg-primary-500/10 text-primary-500">
+                      {note.template_type}
+                    </span>
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        class="p-1 hover:bg-[var(--color-border)] rounded"
+                        title="Move to another account"
+                        on:click|preventDefault|stopPropagation={() => openMoveNoteModal(note.id)}
+                      >
+                        <ArrowRightLeft class="w-3.5 h-3.5 text-[var(--color-muted)]" />
+                      </button>
+                      <button 
+                        class="p-1 hover:bg-[var(--color-border)] rounded"
+                        title="Delete note"
+                        on:click|preventDefault|stopPropagation={() => deleteNote(note.id)}
+                      >
+                        <Trash2 class="w-3.5 h-3.5 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                  <h3 class="font-semibold mb-1 line-clamp-2">{note.title}</h3>
+                  <p class="text-sm text-[var(--color-muted)] mb-3 line-clamp-2">
+                    {note.content ? getPreview(note.content, 80) : 'No content yet...'}
+                  </p>
+                  <div class="text-xs text-[var(--color-muted)]">
+                    {formatDate(note.created_at)}
+                  </div>
+                </a>
               {/each}
             </div>
           {/if}

@@ -30,6 +30,29 @@ func Initialize(dbPath string) (*sql.DB, error) {
 	return db, nil
 }
 
+// columnExists checks if a column exists in a table
+func columnExists(db *sql.DB, table, column string) bool {
+	rows, err := db.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull, pk int
+		var dfltValue sql.NullString
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
+			continue
+		}
+		if name == column {
+			return true
+		}
+	}
+	return false
+}
+
 // Migrate runs database migrations
 func Migrate(db *sql.DB) error {
 	migrations := []string{
@@ -117,16 +140,23 @@ func Migrate(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_todos_status ON todos(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_note_todos_note_id ON note_todos(note_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_note_todos_todo_id ON note_todos(todo_id)`,
-
-		// Add account_id to todos (migration)
-		`ALTER TABLE todos ADD COLUMN account_id TEXT REFERENCES accounts(id)`,
-		`CREATE INDEX IF NOT EXISTS idx_todos_account_id ON todos(account_id)`,
 	}
 
 	for _, migration := range migrations {
 		if _, err := db.Exec(migration); err != nil {
 			return err
 		}
+	}
+
+	// Add account_id to todos (migration) - check if column exists first
+	if !columnExists(db, "todos", "account_id") {
+		if _, err := db.Exec(`ALTER TABLE todos ADD COLUMN account_id TEXT REFERENCES accounts(id)`); err != nil {
+			return err
+		}
+	}
+	// Create index for account_id
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_todos_account_id ON todos(account_id)`); err != nil {
+		return err
 	}
 
 	return nil

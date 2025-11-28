@@ -30,6 +30,7 @@
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/notes', label: 'Notes', icon: FileText },
+    { href: '/accounts', label: 'Accounts', icon: Building2 },
     { href: '/todos', label: 'Todos', icon: CheckSquare },
     { href: '/calendar', label: 'Calendar', icon: Calendar },
     { href: '/settings', label: 'Settings', icon: Settings },
@@ -123,7 +124,7 @@
   function getResultLink(result: SearchResult): string {
     switch (result.type) {
       case 'note': return `/notes/${result.id}`;
-      case 'account': return `/notes?account=${result.id}`;
+      case 'account': return `/accounts`;
       case 'todo': return `/todos`;
       default: return '/';
     }
