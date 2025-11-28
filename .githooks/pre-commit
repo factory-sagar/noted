@@ -381,13 +381,14 @@ fi
 # =============================================================================
 print_header "Summary"
 
+FINAL_STATUS="success"
 if [[ $ERRORS -gt 0 ]]; then
     echo -e "  ${RED}✗ $ERRORS error(s) found${NC}"
     echo -e "  ${YELLOW}⚠ $WARNINGS warning(s) found${NC}"
     echo ""
     echo -e "  ${RED}Commit blocked.${NC} Please fix the errors above."
     echo -e "  Use ${YELLOW}git commit --no-verify${NC} to bypass (not recommended)"
-    exit 1
+    FINAL_STATUS="fail"
 elif [[ $WARNINGS -gt 0 ]]; then
     echo -e "  ${GREEN}✓ No errors${NC}"
     echo -e "  ${YELLOW}⚠ $WARNINGS warning(s) found${NC}"
@@ -397,5 +398,29 @@ else
     echo -e "  ${GREEN}✓ All checks passed!${NC}"
 fi
 
+# =============================================================================
+# 6. DASHCODE REPORTING
+# =============================================================================
+DASHCODE_URL="http://localhost:3001"
+REPO_ID="e8450e26-c573-4aee-af1b-248405af0acc"
+
+COMMIT_HASH="$(git rev-parse HEAD 2>/dev/null || echo 'staged')"
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
+AUTHOR="$(git config user.name 2>/dev/null || echo 'unknown')"
+STAGED_COUNT=$(echo "$STAGED_ALL_FILES" | wc -w | tr -d ' ')
+
+RESULTS="[{\"type\":\"security\",\"status\":\"pass\",\"output\":\"Security checks completed\",\"durationMs\":0,\"exitCode\":0},{\"type\":\"general\",\"status\":\"pass\",\"output\":\"$ERRORS errors, $WARNINGS warnings\",\"durationMs\":0,\"exitCode\":0}]"
+META="{\"author\":\"$AUTHOR\",\"stagedFiles\":$STAGED_COUNT,\"errors\":$ERRORS,\"warnings\":$WARNINGS}"
+PAYLOAD="{\"repoId\":\"$REPO_ID\",\"commitHash\":\"$COMMIT_HASH\",\"branch\":\"$BRANCH\",\"trigger\":\"pre-commit\",\"status\":\"$FINAL_STATUS\",\"durationMs\":0,\"meta\":$META,\"results\":$RESULTS}"
+
+print_header "Dashcode Tracking"
+if curl -s -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$DASHCODE_URL/api/hooks/report" --max-time 5 >/dev/null 2>&1; then
+    print_success "Commit tracked successfully"
+    COMMIT_SHORT="$(git rev-parse --short HEAD 2>/dev/null || echo 'staged')"
+    echo -e "  ${GREEN}→${NC} $COMMIT_SHORT: $(git log -1 --pretty=%s 2>/dev/null || echo 'new commit')"
+else
+    print_warning "Could not reach Dashcode"
+fi
+
 echo ""
-exit 0
+[[ "$FINAL_STATUS" == "fail" ]] && exit 1 || exit 0
