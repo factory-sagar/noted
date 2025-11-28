@@ -1186,3 +1186,355 @@ func (h *Handler) GetNoteTags(c *gin.Context) {
 
 	c.JSON(http.StatusOK, tags)
 }
+
+// --- Activity Handlers ---
+
+func (h *Handler) GetActivities(c *gin.Context) {
+	accountID := c.Param("id")
+	limit := c.DefaultQuery("limit", "50")
+
+	rows, err := h.db.Query(`
+		SELECT id, account_id, type, title, description, entity_type, entity_id, created_at
+		FROM activities
+		WHERE account_id = ?
+		ORDER BY created_at DESC
+		LIMIT ?
+	`, accountID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	activities := []models.Activity{}
+	for rows.Next() {
+		var a models.Activity
+		rows.Scan(&a.ID, &a.AccountID, &a.Type, &a.Title, &a.Description, &a.EntityType, &a.EntityID, &a.CreatedAt)
+		activities = append(activities, a)
+	}
+
+	c.JSON(http.StatusOK, activities)
+}
+
+func (h *Handler) CreateActivity(c *gin.Context) {
+	var req models.CreateActivityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	id := uuid.New().String()
+	now := time.Now()
+
+	_, err := h.db.Exec(`
+		INSERT INTO activities (id, account_id, type, title, description, entity_type, entity_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, id, req.AccountID, req.Type, req.Title, req.Description, req.EntityType, req.EntityID, now)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, models.Activity{
+		ID:          id,
+		AccountID:   req.AccountID,
+		Type:        req.Type,
+		Title:       req.Title,
+		Description: req.Description,
+		EntityType:  req.EntityType,
+		EntityID:    req.EntityID,
+		CreatedAt:   now,
+	})
+}
+
+// LogActivity is a helper to log activities from other handlers
+func (h *Handler) LogActivity(accountID, actType, title, description, entityType, entityID string) {
+	id := uuid.New().String()
+	h.db.Exec(`
+		INSERT INTO activities (id, account_id, type, title, description, entity_type, entity_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, id, accountID, actType, title, description, entityType, entityID, time.Now())
+}
+
+// --- Attachment Handlers ---
+
+func (h *Handler) GetAttachments(c *gin.Context) {
+	noteID := c.Param("id")
+
+	rows, err := h.db.Query(`
+		SELECT id, note_id, filename, original_name, mime_type, size, created_at
+		FROM attachments
+		WHERE note_id = ?
+		ORDER BY created_at DESC
+	`, noteID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	attachments := []models.Attachment{}
+	for rows.Next() {
+		var a models.Attachment
+		rows.Scan(&a.ID, &a.NoteID, &a.Filename, &a.OriginalName, &a.MimeType, &a.Size, &a.CreatedAt)
+		attachments = append(attachments, a)
+	}
+
+	c.JSON(http.StatusOK, attachments)
+}
+
+func (h *Handler) UploadAttachment(c *gin.Context) {
+	noteID := c.Param("id")
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+
+	id := uuid.New().String()
+	filename := id + "_" + file.Filename
+
+	// Save file to uploads directory
+	uploadPath := "./data/uploads/" + filename
+	if err := c.SaveUploadedFile(file, uploadPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+
+	now := time.Now()
+	_, err = h.db.Exec(`
+		INSERT INTO attachments (id, note_id, filename, original_name, mime_type, size, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, id, noteID, filename, file.Filename, file.Header.Get("Content-Type"), file.Size, now)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, models.Attachment{
+		ID:           id,
+		NoteID:       noteID,
+		Filename:     filename,
+		OriginalName: file.Filename,
+		MimeType:     file.Header.Get("Content-Type"),
+		Size:         file.Size,
+		CreatedAt:    now,
+	})
+}
+
+func (h *Handler) DeleteAttachment(c *gin.Context) {
+	id := c.Param("attachmentId")
+
+	var filename string
+	err := h.db.QueryRow("SELECT filename FROM attachments WHERE id = ?", id).Scan(&filename)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Attachment not found"})
+		return
+	}
+
+	// Delete from database
+	h.db.Exec("DELETE FROM attachments WHERE id = ?", id)
+
+	// TODO: Delete file from disk (optional, could keep for backup)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Attachment deleted"})
+}
+
+// --- Reorder Notes Handler ---
+
+func (h *Handler) ReorderNotes(c *gin.Context) {
+	accountID := c.Param("id")
+	var req models.ReorderNotesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for i, noteID := range req.NoteIDs {
+		_, err := tx.Exec("UPDATE notes SET sort_order = ? WHERE id = ? AND account_id = ?", i, noteID, accountID)
+		if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Notes reordered"})
+}
+
+// --- Quick Capture Handler ---
+
+func (h *Handler) QuickCapture(c *gin.Context) {
+	var req models.QuickCaptureRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	id := uuid.New().String()
+	now := time.Now()
+
+	if req.Type == "note" {
+		accountID := req.AccountID
+		if accountID == nil {
+			// Create a default "Quick Notes" account if none provided
+			var defaultAccountID string
+			err := h.db.QueryRow("SELECT id FROM accounts WHERE name = 'Quick Notes'").Scan(&defaultAccountID)
+			if err == sql.ErrNoRows {
+				defaultAccountID = uuid.New().String()
+				h.db.Exec("INSERT INTO accounts (id, name, created_at, updated_at) VALUES (?, 'Quick Notes', ?, ?)",
+					defaultAccountID, now, now)
+			}
+			accountID = &defaultAccountID
+		}
+
+		_, err := h.db.Exec(`
+			INSERT INTO notes (id, title, account_id, template_type, content, created_at, updated_at)
+			VALUES (?, ?, ?, 'quick', ?, ?, ?)
+		`, id, req.Title, *accountID, req.Content, now, now)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"id":         id,
+			"type":       "note",
+			"title":      req.Title,
+			"account_id": *accountID,
+			"created_at": now,
+		})
+	} else if req.Type == "todo" {
+		priority := req.Priority
+		if priority == "" {
+			priority = "medium"
+		}
+
+		_, err := h.db.Exec(`
+			INSERT INTO todos (id, title, description, status, priority, account_id, created_at, updated_at)
+			VALUES (?, ?, ?, 'not_started', ?, ?, ?, ?)
+		`, id, req.Title, req.Description, priority, req.AccountID, now, now)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"id":         id,
+			"type":       "todo",
+			"title":      req.Title,
+			"priority":   priority,
+			"created_at": now,
+		})
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid type, must be 'note' or 'todo'"})
+	}
+}
+
+// --- Pin/Archive Handlers ---
+
+func (h *Handler) ToggleNotePin(c *gin.Context) {
+	id := c.Param("id")
+
+	var pinned int
+	err := h.db.QueryRow("SELECT pinned FROM notes WHERE id = ?", id).Scan(&pinned)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+		return
+	}
+
+	newPinned := 1
+	if pinned == 1 {
+		newPinned = 0
+	}
+
+	h.db.Exec("UPDATE notes SET pinned = ?, updated_at = ? WHERE id = ?", newPinned, time.Now(), id)
+
+	c.JSON(http.StatusOK, gin.H{"pinned": newPinned == 1})
+}
+
+func (h *Handler) ToggleNoteArchive(c *gin.Context) {
+	id := c.Param("id")
+
+	var archived int
+	err := h.db.QueryRow("SELECT archived FROM notes WHERE id = ?", id).Scan(&archived)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+		return
+	}
+
+	newArchived := 1
+	if archived == 1 {
+		newArchived = 0
+	}
+
+	h.db.Exec("UPDATE notes SET archived = ?, updated_at = ? WHERE id = ?", newArchived, time.Now(), id)
+
+	c.JSON(http.StatusOK, gin.H{"archived": newArchived == 1})
+}
+
+func (h *Handler) ToggleTodoPin(c *gin.Context) {
+	id := c.Param("id")
+
+	var pinned int
+	err := h.db.QueryRow("SELECT pinned FROM todos WHERE id = ?", id).Scan(&pinned)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Todo not found"})
+		return
+	}
+
+	newPinned := 1
+	if pinned == 1 {
+		newPinned = 0
+	}
+
+	h.db.Exec("UPDATE todos SET pinned = ?, updated_at = ? WHERE id = ?", newPinned, time.Now(), id)
+
+	c.JSON(http.StatusOK, gin.H{"pinned": newPinned == 1})
+}
+
+func (h *Handler) GetArchivedNotes(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT n.id, n.title, n.account_id, n.template_type, n.created_at, n.updated_at,
+		       COALESCE(a.name, '') as account_name
+		FROM notes n
+		LEFT JOIN accounts a ON n.account_id = a.id
+		WHERE n.archived = 1
+		ORDER BY n.updated_at DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	notes := []map[string]interface{}{}
+	for rows.Next() {
+		var id, title, accountID, templateType, accountName string
+		var createdAt, updatedAt time.Time
+		rows.Scan(&id, &title, &accountID, &templateType, &createdAt, &updatedAt, &accountName)
+		notes = append(notes, map[string]interface{}{
+			"id":            id,
+			"title":         title,
+			"account_id":    accountID,
+			"account_name":  accountName,
+			"template_type": templateType,
+			"created_at":    createdAt,
+			"updated_at":    updatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, notes)
+}

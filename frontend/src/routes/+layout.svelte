@@ -14,14 +14,17 @@
     Menu,
     X,
     Building2,
-    Loader2
+    Loader2,
+    Zap
   } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { api, type SearchResult } from '$lib/utils/api';
+  import QuickCapture from '$lib/components/QuickCapture.svelte';
 
   let darkMode = false;
   let sidebarOpen = true;
   let searchOpen = false;
+  let quickCaptureOpen = false;
   let searchQuery = '';
   let searchResults: SearchResult[] = [];
   let searching = false;
@@ -63,6 +66,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    // Cmd/Ctrl + K for search
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
       searchOpen = !searchOpen;
@@ -71,8 +75,14 @@
         searchResults = [];
       }
     }
+    // Cmd/Ctrl + Shift + C for quick capture
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
+      e.preventDefault();
+      quickCaptureOpen = !quickCaptureOpen;
+    }
     if (e.key === 'Escape') {
       searchOpen = false;
+      quickCaptureOpen = false;
     }
   }
 
@@ -207,19 +217,31 @@
           </button>
         </div>
 
-        <!-- Search -->
-        <button 
-          class="flex items-center gap-2 px-4 py-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-[var(--color-muted)] hover:border-primary-500 transition-colors"
-          on:click={() => searchOpen = true}
-        >
-          <Search class="w-4 h-4" />
-          <span class="text-sm">Search...</span>
-          <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-[var(--color-border)] rounded">
-            ⌘K
-          </kbd>
-        </button>
+        <div class="flex items-center gap-3">
+          <!-- Search -->
+          <button 
+            class="flex items-center gap-2 px-4 py-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-[var(--color-muted)] hover:border-primary-500 transition-colors"
+            on:click={() => searchOpen = true}
+          >
+            <Search class="w-4 h-4" />
+            <span class="text-sm hidden sm:inline">Search...</span>
+            <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-[var(--color-border)] rounded">
+              ⌘K
+            </kbd>
+          </button>
 
-        <div class="w-20"></div>
+          <!-- Quick Capture -->
+          <button 
+            class="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            on:click={() => quickCaptureOpen = true}
+            title="Quick Capture (⌘⇧C)"
+          >
+            <Zap class="w-4 h-4" />
+            <span class="text-sm hidden sm:inline">Quick</span>
+          </button>
+        </div>
+
+        <div class="w-10"></div>
       </div>
     </header>
 
@@ -305,3 +327,9 @@
     </div>
   </div>
 {/if}
+
+<!-- Quick Capture Modal -->
+<QuickCapture 
+  bind:open={quickCaptureOpen} 
+  on:close={() => quickCaptureOpen = false}
+/>

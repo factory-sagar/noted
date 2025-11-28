@@ -11,6 +11,11 @@ import (
 )
 
 func main() {
+	// Create uploads directory
+	if err := os.MkdirAll("./data/uploads", 0755); err != nil {
+		log.Printf("Warning: Could not create uploads directory: %v", err)
+	}
+
 	// Initialize database
 	database, err := db.Initialize("./data/notes.db")
 	if err != nil {
@@ -41,6 +46,9 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	// Static file serving for uploads
+	router.Static("/uploads", "./data/uploads")
+
 	// API routes
 	api := router.Group("/api")
 	{
@@ -51,7 +59,8 @@ func main() {
 		api.PUT("/accounts/:id", h.UpdateAccount)
 		api.DELETE("/accounts/:id", h.DeleteAccount)
 
-		// Notes
+		// Notes - archived must come before :id to avoid route capture
+		api.GET("/notes/archived", h.GetArchivedNotes)
 		api.GET("/notes", h.GetNotes)
 		api.GET("/notes/:id", h.GetNote)
 		api.POST("/notes", h.CreateNote)
@@ -95,6 +104,26 @@ func main() {
 		api.GET("/notes/:id/tags", h.GetNoteTags)
 		api.POST("/notes/:id/tags/:tagId", h.AddTagToNote)
 		api.DELETE("/notes/:id/tags/:tagId", h.RemoveTagFromNote)
+
+		// Activities
+		api.GET("/accounts/:id/activities", h.GetActivities)
+		api.POST("/activities", h.CreateActivity)
+
+		// Attachments
+		api.GET("/notes/:id/attachments", h.GetAttachments)
+		api.POST("/notes/:id/attachments", h.UploadAttachment)
+		api.DELETE("/notes/:id/attachments/:attachmentId", h.DeleteAttachment)
+
+		// Reorder notes
+		api.POST("/accounts/:id/notes/reorder", h.ReorderNotes)
+
+		// Quick capture
+		api.POST("/quick-capture", h.QuickCapture)
+
+		// Pin/Archive
+		api.POST("/notes/:id/pin", h.ToggleNotePin)
+		api.POST("/notes/:id/archive", h.ToggleNoteArchive)
+		api.POST("/todos/:id/pin", h.ToggleTodoPin)
 	}
 
 	// Get port from environment or default

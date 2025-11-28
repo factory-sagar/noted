@@ -147,6 +147,48 @@ export interface CreateTagRequest {
   color?: string;
 }
 
+// Activity types
+export interface Activity {
+  id: string;
+  account_id: string;
+  type: string;
+  title: string;
+  description?: string;
+  entity_type?: string;
+  entity_id?: string;
+  created_at: string;
+}
+
+export interface CreateActivityRequest {
+  account_id: string;
+  type: string;
+  title: string;
+  description?: string;
+  entity_type?: string;
+  entity_id?: string;
+}
+
+// Attachment types
+export interface Attachment {
+  id: string;
+  note_id: string;
+  filename: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  created_at: string;
+}
+
+// Quick Capture types
+export interface QuickCaptureRequest {
+  type: 'note' | 'todo';
+  title: string;
+  content?: string;
+  account_id?: string;
+  priority?: string;
+  description?: string;
+}
+
 // API functions
 export const api = {
   // Accounts
@@ -225,4 +267,55 @@ export const api = {
     request<{ message: string }>(`/notes/${noteId}/tags/${tagId}`, { method: 'POST' }),
   removeTagFromNote: (noteId: string, tagId: string) =>
     request<{ message: string }>(`/notes/${noteId}/tags/${tagId}`, { method: 'DELETE' }),
+
+  // Activities
+  getActivities: (accountId: string, limit?: number) =>
+    request<Activity[]>(`/accounts/${accountId}/activities${limit ? `?limit=${limit}` : ''}`),
+  createActivity: (data: CreateActivityRequest) =>
+    request<Activity>('/activities', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Attachments
+  getAttachments: (noteId: string) => request<Attachment[]>(`/notes/${noteId}/attachments`),
+  uploadAttachment: async (noteId: string, file: File): Promise<Attachment> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE}/notes/${noteId}/attachments`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error);
+    }
+    return response.json();
+  },
+  deleteAttachment: (noteId: string, attachmentId: string) =>
+    request<{ message: string }>(`/notes/${noteId}/attachments/${attachmentId}`, { method: 'DELETE' }),
+
+  // Reorder notes
+  reorderNotes: (accountId: string, noteIds: string[]) =>
+    request<{ message: string }>(`/accounts/${accountId}/notes/reorder`, {
+      method: 'POST',
+      body: JSON.stringify({ note_ids: noteIds })
+    }),
+
+  // Quick capture
+  quickCapture: (data: QuickCaptureRequest) =>
+    request<{ id: string; type: string; title: string }>('/quick-capture', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  // Pin/Archive
+  toggleNotePin: (noteId: string) =>
+    request<{ pinned: boolean }>(`/notes/${noteId}/pin`, { method: 'POST' }),
+  toggleNoteArchive: (noteId: string) =>
+    request<{ archived: boolean }>(`/notes/${noteId}/archive`, { method: 'POST' }),
+  toggleTodoPin: (todoId: string) =>
+    request<{ pinned: boolean }>(`/todos/${todoId}/pin`, { method: 'POST' }),
+  getArchivedNotes: () => request<Note[]>('/notes/archived'),
 };
+
+// Helper for attachment download URL
+export const getAttachmentUrl = (filename: string) =>
+  `http://localhost:8080/uploads/${filename}`;

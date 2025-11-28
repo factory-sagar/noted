@@ -6,7 +6,8 @@
     Plus,
     Trash2,
     Save,
-    Copy
+    Copy,
+    Code
   } from 'lucide-svelte';
   import { addToast } from '$lib/stores';
 
@@ -22,6 +23,25 @@
   let editingTemplate: Template | null = null;
   let showNewTemplateModal = false;
   let newTemplateName = '';
+  let showVariablesHelp = false;
+
+  // Available template variables
+  const templateVariables = [
+    { name: '{{date}}', description: 'Current date (e.g., November 28, 2024)' },
+    { name: '{{date_short}}', description: 'Short date (e.g., 11/28/2024)' },
+    { name: '{{time}}', description: 'Current time (e.g., 2:30 PM)' },
+    { name: '{{account_name}}', description: 'Account name' },
+    { name: '{{account_owner}}', description: 'Account owner name' },
+    { name: '{{participants}}', description: 'List of all participants' },
+    { name: '{{internal_participants}}', description: 'Internal team members' },
+    { name: '{{external_participants}}', description: 'External attendees' },
+    { name: '{{meeting_title}}', description: 'Calendar meeting title' },
+  ];
+
+  function insertVariable(variable: string) {
+    if (!editingTemplate) return;
+    editingTemplate.content += variable;
+  }
 
   const defaultFields = [
     'Account Overview',
@@ -270,13 +290,46 @@
         </div>
 
         <div>
-          <label class="label">Default Content (HTML)</label>
+          <div class="flex items-center justify-between mb-2">
+            <label class="label mb-0">Default Content (HTML)</label>
+            <button 
+              class="btn-ghost text-sm py-1"
+              on:click={() => showVariablesHelp = !showVariablesHelp}
+            >
+              <Code class="w-4 h-4 mr-1" />
+              {showVariablesHelp ? 'Hide' : 'Show'} Variables
+            </button>
+          </div>
+          
+          {#if showVariablesHelp}
+            <div class="mb-4 p-4 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
+              <h4 class="font-medium mb-2">Template Variables</h4>
+              <p class="text-sm text-[var(--color-muted)] mb-3">
+                Click to insert. Variables are replaced when creating a note.
+              </p>
+              <div class="grid grid-cols-2 gap-2">
+                {#each templateVariables as variable}
+                  <button
+                    class="flex items-start gap-2 p-2 text-left rounded hover:bg-[var(--color-card)] transition-colors"
+                    on:click={() => insertVariable(variable.name)}
+                  >
+                    <code class="text-xs px-1.5 py-0.5 bg-primary-500/10 text-primary-500 rounded">
+                      {variable.name}
+                    </code>
+                    <span class="text-xs text-[var(--color-muted)]">{variable.description}</span>
+                  </button>
+                {/each}
+              </div>
+            </div>
+          {/if}
+          
           <textarea 
             class="input font-mono text-sm h-64"
             bind:value={editingTemplate.content}
           ></textarea>
           <p class="text-xs text-[var(--color-muted)] mt-2">
-            Use HTML tags like &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt; for formatting
+            Use HTML tags like &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt; for formatting.
+            Use {'{{variable}}'} syntax for dynamic content.
           </p>
         </div>
       </div>

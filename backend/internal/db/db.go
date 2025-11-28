@@ -152,6 +152,31 @@ func Migrate(db *sql.DB) error {
 			FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 		)`,
 
+		// Activity log table
+		`CREATE TABLE IF NOT EXISTS activities (
+			id TEXT PRIMARY KEY,
+			account_id TEXT NOT NULL,
+			type TEXT NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			entity_type TEXT,
+			entity_id TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+		)`,
+
+		// Attachments table
+		`CREATE TABLE IF NOT EXISTS attachments (
+			id TEXT PRIMARY KEY,
+			note_id TEXT NOT NULL,
+			filename TEXT NOT NULL,
+			original_name TEXT NOT NULL,
+			mime_type TEXT NOT NULL,
+			size INTEGER NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE
+		)`,
+
 		// Indexes
 		`CREATE INDEX IF NOT EXISTS idx_notes_account_id ON notes(account_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_notes_meeting_date ON notes(meeting_date)`,
@@ -160,6 +185,8 @@ func Migrate(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_note_todos_todo_id ON note_todos(todo_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_note_tags_note_id ON note_tags(note_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_note_tags_tag_id ON note_tags(tag_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_activities_account_id ON activities(account_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_attachments_note_id ON attachments(note_id)`,
 	}
 
 	for _, migration := range migrations {
@@ -177,6 +204,34 @@ func Migrate(db *sql.DB) error {
 	// Create index for account_id
 	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_todos_account_id ON todos(account_id)`); err != nil {
 		return err
+	}
+
+	// Add pinned to notes
+	if !columnExists(db, "notes", "pinned") {
+		if _, err := db.Exec(`ALTER TABLE notes ADD COLUMN pinned INTEGER DEFAULT 0`); err != nil {
+			return err
+		}
+	}
+
+	// Add archived to notes
+	if !columnExists(db, "notes", "archived") {
+		if _, err := db.Exec(`ALTER TABLE notes ADD COLUMN archived INTEGER DEFAULT 0`); err != nil {
+			return err
+		}
+	}
+
+	// Add sort_order to notes
+	if !columnExists(db, "notes", "sort_order") {
+		if _, err := db.Exec(`ALTER TABLE notes ADD COLUMN sort_order INTEGER DEFAULT 0`); err != nil {
+			return err
+		}
+	}
+
+	// Add pinned to todos
+	if !columnExists(db, "todos", "pinned") {
+		if _, err := db.Exec(`ALTER TABLE todos ADD COLUMN pinned INTEGER DEFAULT 0`); err != nil {
+			return err
+		}
 	}
 
 	return nil
