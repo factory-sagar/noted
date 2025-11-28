@@ -159,23 +159,31 @@
     }
   }
 
-  async function markComplete(todo: Todo, fromColumnId: string) {
+  async function advanceTodo(todo: Todo, fromColumnId: string) {
+    // not_started -> in_progress, in_progress/stuck -> completed
+    const targetStatus = fromColumnId === 'not_started' ? 'in_progress' : 'completed';
+    
     try {
-      await api.updateTodo(todo.id, { status: 'completed' });
+      await api.updateTodo(todo.id, { status: targetStatus });
       
-      // Remove from source
-      if (fromColumnId === 'completed') return;
+      // Remove from source column
       const colIndex = columns.findIndex(c => c.id === fromColumnId);
       if (colIndex !== -1) {
         columns[colIndex].items = columns[colIndex].items.filter(t => t.id !== todo.id);
         columns = columns;
       }
       
-      // Add to completed
-      todo.status = 'completed';
-      completedItems = [todo, ...completedItems];
-      
-      addToast('success', 'Marked complete');
+      // Add to target
+      todo.status = targetStatus;
+      if (targetStatus === 'completed') {
+        completedItems = [todo, ...completedItems];
+        addToast('success', 'Marked complete');
+      } else {
+        const targetIndex = columns.findIndex(c => c.id === targetStatus);
+        columns[targetIndex].items = [todo, ...columns[targetIndex].items];
+        columns = columns;
+        addToast('success', 'Started');
+      }
     } catch (e) {
       addToast('error', 'Failed to update');
     }
@@ -345,16 +353,14 @@
                     <h3 class="font-medium text-sm truncate">{todo.title}</h3>
                   </div>
                   <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
-                    <!-- Complete button -->
-                    {#if column.id !== 'completed'}
-                      <button 
-                        class="p-1.5 hover:bg-green-500/20 rounded"
-                        title="Mark complete"
-                        on:click|stopPropagation={() => markComplete(todo, column.id)}
-                      >
-                        <Check class="w-4 h-4 text-green-500" />
-                      </button>
-                    {/if}
+                    <!-- Advance button: not_started->in_progress, others->completed -->
+                    <button 
+                      class="p-1.5 hover:bg-green-500/20 rounded"
+                      title={column.id === 'not_started' ? 'Start' : 'Mark complete'}
+                      on:click|stopPropagation={() => advanceTodo(todo, column.id)}
+                    >
+                      <Check class="w-4 h-4 text-green-500" />
+                    </button>
                     <!-- Stuck button (only on in_progress) -->
                     {#if column.id === 'in_progress'}
                       <button 
@@ -456,7 +462,7 @@
       </div>
       
       <div 
-        class="min-h-[100px] p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl"
+        class="min-h-[100px] p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl flex flex-wrap gap-3"
         use:dndzone={{
           items: completedItems,
           flipDurationMs,
@@ -465,48 +471,44 @@
         on:consider={(e) => handleDndConsider('completed', e)}
         on:finalize={(e) => handleDndFinalize('completed', e)}
       >
-        {#if completedItems.length > 0}
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {#each completedItems as todo (todo.id)}
-              <div 
-                class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3 cursor-grab group opacity-60 hover:opacity-100"
-                animate:flip={{ duration: flipDurationMs }}
-              >
-                <div class="flex items-start justify-between gap-2">
-                  <span class="text-sm line-through truncate">{todo.title}</span>
-                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
-                    <button 
-                      class="p-1 hover:bg-blue-500/20 rounded"
-                      title="Restore to In Progress"
-                      on:click|stopPropagation={() => restoreTodo(todo, 'in_progress')}
-                    >
-                      <RotateCcw class="w-3.5 h-3.5 text-blue-500" />
-                    </button>
-                    <button 
-                      class="p-1 hover:bg-red-500/20 rounded"
-                      title="Delete"
-                      on:click|stopPropagation={() => deleteTodo(todo.id, 'completed')}
-                    >
-                      <Trash2 class="w-3.5 h-3.5 text-red-500" />
-                    </button>
-                  </div>
-                </div>
-                {#if todo.account_name}
-                  <div class="mt-2">
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500 rounded">
-                      <Building2 class="w-3 h-3" />
-                      {todo.account_name}
-                    </span>
-                  </div>
-                {/if}
+        {#each completedItems as todo (todo.id)}
+          <div 
+            class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3 cursor-grab group opacity-60 hover:opacity-100 w-full md:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
+            animate:flip={{ duration: flipDurationMs }}
+          >
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-sm line-through truncate">{todo.title}</span>
+              <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
+                <button 
+                  class="p-1 hover:bg-blue-500/20 rounded"
+                  title="Restore to In Progress"
+                  on:click|stopPropagation={() => restoreTodo(todo, 'in_progress')}
+                >
+                  <RotateCcw class="w-3.5 h-3.5 text-blue-500" />
+                </button>
+                <button 
+                  class="p-1 hover:bg-red-500/20 rounded"
+                  title="Delete"
+                  on:click|stopPropagation={() => deleteTodo(todo.id, 'completed')}
+                >
+                  <Trash2 class="w-3.5 h-3.5 text-red-500" />
+                </button>
               </div>
-            {/each}
+            </div>
+            {#if todo.account_name}
+              <div class="mt-2">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500 rounded">
+                  <Building2 class="w-3 h-3" />
+                  {todo.account_name}
+                </span>
+              </div>
+            {/if}
           </div>
         {:else}
-          <div class="flex items-center justify-center h-16 text-[var(--color-muted)] text-sm">
+          <div class="flex items-center justify-center w-full h-16 text-[var(--color-muted)] text-sm">
             Completed items appear here
           </div>
-        {/if}
+        {/each}
       </div>
     </div>
   {/if}
