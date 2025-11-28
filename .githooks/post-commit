@@ -15,9 +15,6 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Start timer
-START_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-
 # Get commit information
 COMMIT_HASH=$(git rev-parse HEAD)
 COMMIT_SHORT=$(git rev-parse --short HEAD)
@@ -31,39 +28,42 @@ REPO_PATH=$(git rev-parse --show-toplevel)
 # Get files changed count
 FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD | wc -l | tr -d ' ')
 
-# Calculate duration
-END_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-DURATION_MS=$((END_TIME - START_TIME))
-
-# Build JSON payload matching dashcode format
-JSON_PAYLOAD=$(cat <<EOF
-{
-  "repoPath": "$REPO_PATH",
-  "repoName": "$REPO_NAME",
-  "commitHash": "$COMMIT_HASH",
-  "branch": "$BRANCH",
-  "trigger": "post-commit",
-  "status": "success",
-  "durationMs": $DURATION_MS,
-  "meta": {
-    "author": "$COMMIT_AUTHOR",
-    "email": "$COMMIT_EMAIL",
-    "message": $(echo "$COMMIT_MESSAGE" | jq -Rs .),
-    "shortHash": "$COMMIT_SHORT",
-    "filesChanged": $FILES_CHANGED
-  },
-  "results": [
-    {
-      "type": "commit",
-      "status": "pass",
-      "output": "Commit $COMMIT_SHORT by $COMMIT_AUTHOR",
-      "durationMs": $DURATION_MS,
-      "exitCode": 0
-    }
-  ]
-}
-EOF
-)
+# Build JSON payload using jq for proper escaping
+JSON_PAYLOAD=$(jq -n \
+    --arg repoPath "$REPO_PATH" \
+    --arg repoName "$REPO_NAME" \
+    --arg commitHash "$COMMIT_HASH" \
+    --arg branch "$BRANCH" \
+    --arg author "$COMMIT_AUTHOR" \
+    --arg email "$COMMIT_EMAIL" \
+    --arg message "$COMMIT_MESSAGE" \
+    --arg shortHash "$COMMIT_SHORT" \
+    --argjson filesChanged "$FILES_CHANGED" \
+    '{
+        repoPath: $repoPath,
+        repoName: $repoName,
+        commitHash: $commitHash,
+        branch: $branch,
+        trigger: "post-commit",
+        status: "success",
+        durationMs: 100,
+        meta: {
+            author: $author,
+            email: $email,
+            message: $message,
+            shortHash: $shortHash,
+            filesChanged: $filesChanged
+        },
+        results: [
+            {
+                type: "commit",
+                status: "pass",
+                output: ("Commit " + $shortHash + " by " + $author),
+                durationMs: 100,
+                exitCode: 0
+            }
+        ]
+    }')
 
 # Post to dashcode
 echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
