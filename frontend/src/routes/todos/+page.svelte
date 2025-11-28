@@ -14,7 +14,8 @@
     ChevronDown,
     RotateCcw,
     Trash,
-    RefreshCw
+    RefreshCw,
+    Pencil
   } from 'lucide-svelte';
   import { api, type Todo, type Note, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -43,6 +44,10 @@
   let linkTodoId = '';
   let availableNotes: Note[] = [];
   let accounts: Account[] = [];
+  let showEditModal = false;
+  let editingTodo: Todo | null = null;
+  let editTitle = '';
+  let editDescription = '';
 
   const flipDurationMs = 200;
 
@@ -149,8 +154,6 @@
   async function deleteTodo(todoId: string, columnId: string) {
     try {
       await api.deleteTodo(todoId);
-      
-      // Find the todo to move to trash
       let deletedTodo: Todo | undefined;
       if (columnId === 'completed') {
         deletedTodo = completedItems.find(t => t.id === todoId);
@@ -163,15 +166,52 @@
           columns = columns;
         }
       }
-      
-      // Add to deleted items
       if (deletedTodo) {
         deletedItems = [deletedTodo, ...deletedItems];
       }
-      
       addToast('success', 'Moved to trash');
     } catch (e) {
       addToast('error', 'Failed to delete todo');
+    }
+  }
+
+  function openEditModal(todo: Todo) {
+    editingTodo = todo;
+    editTitle = todo.title;
+    editDescription = todo.description || '';
+    showEditModal = true;
+  }
+
+  async function saveEditTodo() {
+    if (!editingTodo || !editTitle.trim()) return;
+    try {
+      await api.updateTodo(editingTodo.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || undefined
+      });
+      
+      // Update in columns or completed
+      for (const column of columns) {
+        const idx = column.items.findIndex(t => t.id === editingTodo!.id);
+        if (idx !== -1) {
+          column.items[idx].title = editTitle.trim();
+          column.items[idx].description = editDescription.trim();
+          columns = columns;
+          break;
+        }
+      }
+      const compIdx = completedItems.findIndex(t => t.id === editingTodo!.id);
+      if (compIdx !== -1) {
+        completedItems[compIdx].title = editTitle.trim();
+        completedItems[compIdx].description = editDescription.trim();
+        completedItems = completedItems;
+      }
+      
+      showEditModal = false;
+      editingTodo = null;
+      addToast('success', 'Todo updated');
+    } catch (e) {
+      addToast('error', 'Failed to update todo');
     }
   }
 
@@ -181,7 +221,6 @@
       const todo = deletedItems.find(t => t.id === todoId);
       if (todo) {
         deletedItems = deletedItems.filter(t => t.id !== todoId);
-        // Add back to appropriate column based on status
         const colIndex = columns.findIndex(c => c.id === todo.status);
         if (todo.status === 'completed') {
           completedItems = [todo, ...completedItems];
@@ -189,7 +228,6 @@
           columns[colIndex].items = [todo, ...columns[colIndex].items];
           columns = columns;
         } else {
-          // Default to not_started
           columns[0].items = [todo, ...columns[0].items];
           columns = columns;
         }
@@ -201,7 +239,7 @@
   }
 
   async function permanentDelete(todoId: string) {
-    if (!confirm('Permanently delete this todo? This cannot be undone.')) return;
+    if (!confirm('Permanently delete this todo?')) return;
     try {
       await api.permanentDeleteTodo(todoId);
       deletedItems = deletedItems.filter(t => t.id !== todoId);
@@ -212,20 +250,14 @@
   }
 
   async function advanceTodo(todo: Todo, fromColumnId: string) {
-    // not_started -> in_progress, in_progress/stuck -> completed
     const targetStatus = fromColumnId === 'not_started' ? 'in_progress' : 'completed';
-    
     try {
       await api.updateTodo(todo.id, { status: targetStatus });
-      
-      // Remove from source column
       const colIndex = columns.findIndex(c => c.id === fromColumnId);
       if (colIndex !== -1) {
         columns[colIndex].items = columns[colIndex].items.filter(t => t.id !== todo.id);
         columns = columns;
       }
-      
-      // Add to target
       todo.status = targetStatus;
       if (targetStatus === 'completed') {
         completedItems = [todo, ...completedItems];
@@ -244,19 +276,14 @@
   async function markStuck(todo: Todo, fromColumnId: string) {
     try {
       await api.updateTodo(todo.id, { status: 'stuck' });
-      
-      // Remove from source
       const colIndex = columns.findIndex(c => c.id === fromColumnId);
       if (colIndex !== -1) {
         columns[colIndex].items = columns[colIndex].items.filter(t => t.id !== todo.id);
       }
-      
-      // Add to stuck
       const stuckIndex = columns.findIndex(c => c.id === 'stuck');
       todo.status = 'stuck';
       columns[stuckIndex].items = [todo, ...columns[stuckIndex].items];
       columns = columns;
-      
       addToast('success', 'Moved to Stuck');
     } catch (e) {
       addToast('error', 'Failed to update');
@@ -266,16 +293,11 @@
   async function restoreTodo(todo: Todo, toStatus: string) {
     try {
       await api.updateTodo(todo.id, { status: toStatus });
-      
-      // Remove from completed
       completedItems = completedItems.filter(t => t.id !== todo.id);
-      
-      // Add to target column
       const colIndex = columns.findIndex(c => c.id === toStatus);
       todo.status = toStatus;
       columns[colIndex].items = [todo, ...columns[colIndex].items];
       columns = columns;
-      
       addToast('success', 'Todo restored');
     } catch (e) {
       addToast('error', 'Failed to restore');
@@ -286,16 +308,13 @@
     try {
       const account = accounts.find(a => a.id === accountId);
       await api.updateTodo(todo.id, { account_id: accountId || null });
-      
       todo.account_id = accountId || undefined;
       todo.account_name = account?.name || '';
-      
       if (columnId === 'completed') {
         completedItems = completedItems;
       } else {
         columns = columns;
       }
-      
       addToast('success', accountId ? `Tagged: ${account?.name}` : 'Account removed');
     } catch (e) {
       addToast('error', 'Failed to update');
@@ -325,21 +344,21 @@
 
   function getColumnColor(columnId: string): string {
     switch (columnId) {
-      case 'not_started': return 'bg-gray-500';
+      case 'not_started': return 'bg-charcoal-400';
       case 'in_progress': return 'bg-blue-500';
       case 'stuck': return 'bg-red-500';
-      case 'completed': return 'bg-green-500';
-      default: return 'bg-gray-400';
+      case 'completed': return 'bg-emerald-500';
+      default: return 'bg-charcoal-400';
     }
   }
 
   function getOutlineColor(columnId: string): string {
     switch (columnId) {
-      case 'not_started': return '#6b7280';
+      case 'not_started': return 'var(--color-border)';
       case 'in_progress': return '#3b82f6';
       case 'stuck': return '#ef4444';
-      case 'completed': return '#22c55e';
-      default: return '#9ca3af';
+      case 'completed': return '#10b981';
+      default: return 'var(--color-border)';
     }
   }
 </script>
@@ -349,13 +368,15 @@
 </svelte:head>
 
 <div class="max-w-full mx-auto">
-  <div class="flex items-center justify-between mb-8">
-    <div>
+  <!-- Header -->
+  <div class="flex items-start justify-between mb-12">
+    <div class="page-header mb-0">
+      <div class="divider-accent mb-6"></div>
       <h1 class="page-title">Todos</h1>
       <p class="page-subtitle">Track your follow-up items</p>
     </div>
     <button class="btn-primary" on:click={() => showNewTodoModal = true}>
-      <Plus class="w-4 h-4" />
+      <Plus class="w-4 h-4" strokeWidth={1.5} />
       New Todo
     </button>
   </div>
@@ -363,28 +384,29 @@
   {#if loading}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       {#each [1, 2, 3] as _}
-        <div class="card animate-pulse">
-          <div class="h-6 bg-[var(--color-border)] rounded w-32 mb-4"></div>
+        <div class="card">
+          <div class="skeleton h-6 w-32 mb-4"></div>
           <div class="space-y-3">
-            <div class="h-20 bg-[var(--color-border)] rounded"></div>
-            <div class="h-20 bg-[var(--color-border)] rounded"></div>
+            <div class="skeleton h-20"></div>
+            <div class="skeleton h-20"></div>
           </div>
         </div>
       {/each}
     </div>
   {:else}
-    <!-- Main Columns -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Kanban Columns -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
       {#each columns as column (column.id)}
         <div class="flex flex-col">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-3 h-3 rounded-full {getColumnColor(column.id)}"></div>
-            <h2 class="font-semibold">{column.title}</h2>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-2 h-2 {getColumnColor(column.id)}" style="border-radius: 1px;"></div>
+            <h2 class="font-serif text-lg">{column.title}</h2>
             <span class="text-sm text-[var(--color-muted)]">({column.items.length})</span>
           </div>
 
           <div 
-            class="flex-1 min-h-[400px] p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl"
+            class="flex-1 min-h-[400px] p-4 bg-[var(--color-card)] border border-[var(--color-border)]"
+            style="border-radius: 2px;"
             use:dndzone={{
               items: column.items,
               flipDurationMs,
@@ -395,80 +417,81 @@
           >
             {#each column.items as todo (todo.id)}
               <div 
-                class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-4 mb-3 cursor-grab group"
+                class="bg-[var(--color-bg)] border border-[var(--color-border)] p-4 mb-3 cursor-grab group hover:border-[var(--color-accent)]/40 transition-colors"
+                style="border-radius: 2px;"
                 animate:flip={{ duration: flipDurationMs }}
               >
-                <!-- Header -->
-                <div class="flex items-start justify-between gap-2 mb-1">
+                <div class="flex items-start justify-between gap-2 mb-2">
                   <div class="flex items-center gap-2 min-w-0">
-                    <GripVertical class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 flex-shrink-0" />
-                    <h3 class="font-medium text-sm truncate">{todo.title}</h3>
+                    <GripVertical class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 flex-shrink-0" strokeWidth={1.5} />
+                    <h3 class="font-medium text-sm">{todo.title}</h3>
                   </div>
-                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
-                    <!-- Advance button: not_started->in_progress, others->completed -->
+                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
                     <button 
-                      class="p-1.5 hover:bg-green-500/20 rounded"
-                      title={column.id === 'not_started' ? 'Start' : 'Mark complete'}
+                      class="btn-icon-sm btn-icon-success"
+                      title={column.id === 'not_started' ? 'Start' : 'Complete'}
                       on:click|stopPropagation={() => advanceTodo(todo, column.id)}
                     >
-                      <Check class="w-4 h-4 text-green-500" />
+                      <Check class="w-4 h-4" strokeWidth={1.5} />
                     </button>
-                    <!-- Stuck button (only on in_progress) -->
                     {#if column.id === 'in_progress'}
                       <button 
-                        class="p-1.5 hover:bg-red-500/20 rounded"
+                        class="btn-icon-sm btn-icon-danger"
                         title="Mark stuck"
                         on:click|stopPropagation={() => markStuck(todo, column.id)}
                       >
-                        <AlertTriangle class="w-4 h-4 text-red-500" />
+                        <AlertTriangle class="w-4 h-4" strokeWidth={1.5} />
                       </button>
                     {/if}
-                    <!-- Link button -->
                     <button 
-                      class="p-1.5 hover:bg-[var(--color-border)] rounded"
+                      class="btn-icon-sm btn-icon-ghost"
+                      title="Edit"
+                      on:click|stopPropagation={() => openEditModal(todo)}
+                    >
+                      <Pencil class="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                    <button 
+                      class="btn-icon-sm btn-icon-ghost"
                       title="Link to note"
                       on:click|stopPropagation={() => openLinkModal(todo.id)}
                     >
-                      <Link class="w-4 h-4 text-[var(--color-muted)]" />
+                      <Link class="w-4 h-4" strokeWidth={1.5} />
                     </button>
-                    <!-- Delete -->
                     <button 
-                      class="p-1.5 hover:bg-red-500/20 rounded"
+                      class="btn-icon-sm btn-icon-danger"
                       title="Delete"
                       on:click|stopPropagation={() => deleteTodo(todo.id, column.id)}
                     >
-                      <Trash2 class="w-4 h-4 text-red-500" />
+                      <Trash2 class="w-4 h-4" strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>
 
-                <!-- Description -->
                 {#if todo.description}
-                  <p class="text-xs text-[var(--color-muted)] mb-2 ml-6 line-clamp-2">{todo.description}</p>
+                  <p class="text-xs text-[var(--color-muted)] mb-3 ml-6 line-clamp-2">{todo.description}</p>
                 {/if}
 
-                <!-- Account Tag -->
                 <div class="ml-6">
                   <div class="relative inline-block group/dropdown">
                     <button
-                      class="inline-flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors {todo.account_name ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-[var(--color-border)] text-[var(--color-muted)]'}"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors {todo.account_name ? 'tag-accent' : 'tag-default'}"
                       on:click|stopPropagation
                     >
-                      <Building2 class="w-3 h-3" />
+                      <Building2 class="w-3 h-3" strokeWidth={1.5} />
                       {todo.account_name || 'Add account'}
-                      <ChevronDown class="w-3 h-3" />
+                      <ChevronDown class="w-3 h-3" strokeWidth={1.5} />
                     </button>
                     <div class="absolute left-0 top-full mt-1 z-20 hidden group-hover/dropdown:block">
-                      <div class="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg shadow-xl py-1 min-w-[150px]">
+                      <div class="bg-[var(--color-card)] border border-[var(--color-border)] shadow-editorial py-1 min-w-[150px]" style="border-radius: 2px;">
                         <button
-                          class="w-full px-3 py-1.5 text-xs text-left hover:bg-[var(--color-bg)] {!todo.account_id ? 'text-primary-500 font-medium' : ''}"
+                          class="w-full px-3 py-2 text-xs text-left hover:bg-[var(--color-bg)] {!todo.account_id ? 'text-[var(--color-accent)]' : ''}"
                           on:click|stopPropagation={() => setAccount(todo, '', column.id)}
                         >
                           No account
                         </button>
                         {#each accounts as account}
                           <button
-                            class="w-full px-3 py-1.5 text-xs text-left hover:bg-[var(--color-bg)] {todo.account_id === account.id ? 'text-primary-500 font-medium' : ''}"
+                            class="w-full px-3 py-2 text-xs text-left hover:bg-[var(--color-bg)] {todo.account_id === account.id ? 'text-[var(--color-accent)]' : ''}"
                             on:click|stopPropagation={() => setAccount(todo, account.id, column.id)}
                           >
                             {account.name}
@@ -479,16 +502,16 @@
                   </div>
                 </div>
 
-                <!-- Linked Notes -->
                 {#if todo.linked_notes && todo.linked_notes.length > 0}
-                  <div class="flex flex-wrap gap-1 mt-2 ml-6">
+                  <div class="flex flex-wrap gap-1.5 mt-3 ml-6">
                     {#each todo.linked_notes as note}
                       <a 
                         href="/notes/{note.id}"
-                        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary-500/10 text-primary-500 rounded hover:bg-primary-500/20"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-[var(--color-accent)]/10 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20 transition-colors"
+                        style="border-radius: 2px;"
                         on:click|stopPropagation
                       >
-                        <FileText class="w-3 h-3" />
+                        <FileText class="w-3 h-3" strokeWidth={1.5} />
                         {note.title}
                       </a>
                     {/each}
@@ -496,7 +519,7 @@
                 {/if}
               </div>
             {:else}
-              <div class="flex items-center justify-center h-32 text-[var(--color-muted)] text-sm">
+              <div class="flex items-center justify-center h-32 text-[var(--color-muted)] text-sm border border-dashed border-[var(--color-border)]" style="border-radius: 2px;">
                 Drop items here
               </div>
             {/each}
@@ -506,51 +529,60 @@
     </div>
 
     <!-- Completed Section -->
-    <div class="mt-8">
-      <div class="flex items-center gap-2 mb-4">
-        <div class="w-3 h-3 rounded-full bg-green-500"></div>
-        <h2 class="font-semibold">Completed</h2>
+    <div class="mb-12">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-2 h-2 bg-emerald-500" style="border-radius: 1px;"></div>
+        <h2 class="font-serif text-lg">Completed</h2>
         <span class="text-sm text-[var(--color-muted)]">({completedItems.length})</span>
       </div>
       
       <div 
-        class="min-h-[100px] p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl flex flex-wrap gap-3"
+        class="min-h-[100px] p-4 bg-[var(--color-card)] border border-[var(--color-border)] flex flex-wrap gap-4"
+        style="border-radius: 2px;"
         use:dndzone={{
           items: completedItems,
           flipDurationMs,
-          dropTargetStyle: { outline: '2px dashed #22c55e', outlineOffset: '-2px' }
+          dropTargetStyle: { outline: '2px dashed #10b981', outlineOffset: '-2px' }
         }}
         on:consider={(e) => handleDndConsider('completed', e)}
         on:finalize={(e) => handleDndFinalize('completed', e)}
       >
         {#each completedItems as todo (todo.id)}
           <div 
-            class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3 cursor-grab group opacity-60 hover:opacity-100 w-full md:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
+            class="bg-[var(--color-bg)] border border-[var(--color-border)] p-4 cursor-grab group opacity-60 hover:opacity-100 w-full md:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] transition-opacity"
+            style="border-radius: 2px;"
             animate:flip={{ duration: flipDurationMs }}
           >
             <div class="flex items-start justify-between gap-2">
-              <span class="text-sm line-through truncate">{todo.title}</span>
-              <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
+              <span class="text-sm line-through">{todo.title}</span>
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
                 <button 
-                  class="p-1 hover:bg-blue-500/20 rounded"
-                  title="Restore to In Progress"
-                  on:click|stopPropagation={() => restoreTodo(todo, 'in_progress')}
+                  class="btn-icon-sm btn-icon-ghost"
+                  title="Edit"
+                  on:click|stopPropagation={() => openEditModal(todo)}
                 >
-                  <RotateCcw class="w-3.5 h-3.5 text-blue-500" />
+                  <Pencil class="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
                 <button 
-                  class="p-1 hover:bg-red-500/20 rounded"
+                  class="btn-icon-sm text-blue-500 hover:bg-blue-500/10"
+                  title="Restore"
+                  on:click|stopPropagation={() => restoreTodo(todo, 'in_progress')}
+                >
+                  <RotateCcw class="w-3.5 h-3.5" strokeWidth={1.5} />
+                </button>
+                <button 
+                  class="btn-icon-sm btn-icon-danger"
                   title="Delete"
                   on:click|stopPropagation={() => deleteTodo(todo.id, 'completed')}
                 >
-                  <Trash2 class="w-3.5 h-3.5 text-red-500" />
+                  <Trash2 class="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
               </div>
             </div>
             {#if todo.account_name}
               <div class="mt-2">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500 rounded">
-                  <Building2 class="w-3 h-3" />
+                <span class="tag-accent text-[10px]">
+                  <Building2 class="w-3 h-3" strokeWidth={1.5} />
                   {todo.account_name}
                 </span>
               </div>
@@ -566,45 +598,45 @@
 
     <!-- Trash Section -->
     {#if deletedItems.length > 0}
-      <div class="mt-8">
+      <div>
         <button 
-          class="flex items-center gap-2 mb-4 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+          class="flex items-center gap-2 mb-4 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
           on:click={() => showTrash = !showTrash}
         >
-          <Trash class="w-4 h-4" />
+          <Trash class="w-4 h-4" strokeWidth={1.5} />
           <span class="font-medium">Trash</span>
           <span class="text-sm">({deletedItems.length})</span>
-          <ChevronDown class="w-4 h-4 transition-transform {showTrash ? 'rotate-180' : ''}" />
+          <ChevronDown class="w-4 h-4 transition-transform {showTrash ? 'rotate-180' : ''}" strokeWidth={1.5} />
         </button>
         
         {#if showTrash}
-          <div class="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl border-dashed">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="p-6 bg-[var(--color-card)] border border-dashed border-[var(--color-border)]" style="border-radius: 2px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {#each deletedItems as todo (todo.id)}
-                <div class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3 opacity-50 hover:opacity-100 transition-opacity group">
+                <div class="bg-[var(--color-bg)] border border-[var(--color-border)] p-4 opacity-50 hover:opacity-100 transition-opacity group" style="border-radius: 2px;">
                   <div class="flex items-start justify-between gap-2">
-                    <span class="text-sm line-through truncate">{todo.title}</span>
-                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
+                    <span class="text-sm line-through">{todo.title}</span>
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
                       <button 
-                        class="p-1 hover:bg-green-500/20 rounded"
+                        class="btn-icon-sm btn-icon-success"
                         title="Restore"
                         on:click={() => restoreFromTrash(todo.id)}
                       >
-                        <RefreshCw class="w-3.5 h-3.5 text-green-500" />
+                        <RefreshCw class="w-3.5 h-3.5" strokeWidth={1.5} />
                       </button>
                       <button 
-                        class="p-1 hover:bg-red-500/20 rounded"
+                        class="btn-icon-sm btn-icon-danger"
                         title="Delete permanently"
                         on:click={() => permanentDelete(todo.id)}
                       >
-                        <Trash2 class="w-3.5 h-3.5 text-red-500" />
+                        <Trash2 class="w-3.5 h-3.5" strokeWidth={1.5} />
                       </button>
                     </div>
                   </div>
                   {#if todo.account_name}
                     <div class="mt-2">
-                      <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500 rounded">
-                        <Building2 class="w-3 h-3" />
+                      <span class="tag-accent text-[10px]">
+                        <Building2 class="w-3 h-3" strokeWidth={1.5} />
                         {todo.account_name}
                       </span>
                     </div>
@@ -622,14 +654,11 @@
 <!-- New Todo Modal -->
 {#if showNewTodoModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button 
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      on:click={() => showNewTodoModal = false}
-    ></button>
-    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
-      <h2 class="text-lg font-semibold mb-4">New Todo</h2>
+    <button class="modal-backdrop" on:click={() => showNewTodoModal = false}></button>
+    <div class="relative modal-content animate-scale-in">
+      <h2 class="modal-title">New Todo</h2>
       <form on:submit|preventDefault={createTodo}>
-        <div class="mb-4">
+        <div class="mb-6">
           <label class="label">Title</label>
           <input 
             type="text"
@@ -639,7 +668,7 @@
             autofocus
           />
         </div>
-        <div class="mb-4">
+        <div class="mb-6">
           <label class="label">Description (optional)</label>
           <textarea 
             class="input"
@@ -648,7 +677,7 @@
             bind:value={newTodoDescription}
           ></textarea>
         </div>
-        <div class="mb-4">
+        <div class="mb-6">
           <label class="label">Account (optional)</label>
           <select class="input" bind:value={newTodoAccountId}>
             <option value="">No account</option>
@@ -673,22 +702,20 @@
 <!-- Link to Note Modal -->
 {#if showLinkModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button 
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      on:click={() => showLinkModal = false}
-    ></button>
-    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
-      <h2 class="text-lg font-semibold mb-4">Link to Note</h2>
+    <button class="modal-backdrop" on:click={() => showLinkModal = false}></button>
+    <div class="relative modal-content animate-scale-in">
+      <h2 class="modal-title">Link to Note</h2>
       {#if availableNotes.length === 0}
         <p class="text-[var(--color-muted)]">No notes available.</p>
       {:else}
         <div class="max-h-80 overflow-y-auto space-y-2">
           {#each availableNotes as note}
             <button 
-              class="w-full flex items-center gap-3 p-3 bg-[var(--color-bg)] rounded-lg hover:bg-[var(--color-border)] text-left"
+              class="w-full flex items-center gap-4 p-4 bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[var(--color-accent)]/40 transition-colors text-left"
+              style="border-radius: 2px;"
               on:click={() => linkToNote(note.id)}
             >
-              <FileText class="w-5 h-5 text-primary-500" />
+              <FileText class="w-5 h-5 text-[var(--color-accent)]" strokeWidth={1.5} />
               <div>
                 <p class="font-medium">{note.title}</p>
                 <p class="text-sm text-[var(--color-muted)]">{note.account_name || 'No account'}</p>
@@ -697,9 +724,47 @@
           {/each}
         </div>
       {/if}
-      <div class="flex justify-end mt-4">
+      <div class="flex justify-end mt-6">
         <button class="btn-secondary" on:click={() => showLinkModal = false}>Cancel</button>
       </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Edit Todo Modal -->
+{#if showEditModal && editingTodo}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button class="modal-backdrop" on:click={() => showEditModal = false}></button>
+    <div class="relative modal-content animate-scale-in">
+      <h2 class="modal-title">Edit Todo</h2>
+      <form on:submit|preventDefault={saveEditTodo}>
+        <div class="mb-4">
+          <label class="label">Title</label>
+          <input 
+            type="text"
+            class="input"
+            bind:value={editTitle}
+            autofocus
+          />
+        </div>
+        <div class="mb-6">
+          <label class="label">Description (optional)</label>
+          <textarea
+            class="input"
+            rows="3"
+            placeholder="Add more details..."
+            bind:value={editDescription}
+          ></textarea>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn-secondary" on:click={() => showEditModal = false}>
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" disabled={!editTitle.trim()}>
+            Save Changes
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 {/if}

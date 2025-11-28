@@ -58,6 +58,37 @@ Content-Type: application/json
 DELETE /accounts/:id
 ```
 
+### Get Account Activities
+```
+GET /accounts/:id/activities?limit=50
+```
+
+Response:
+```json
+[
+  {
+    "id": "uuid",
+    "account_id": "account-uuid",
+    "type": "note_created",
+    "title": "Created note: Discovery Call",
+    "description": "Initial meeting with engineering team",
+    "entity_type": "note",
+    "entity_id": "note-uuid",
+    "created_at": "2024-01-15T10:00:00Z"
+  }
+]
+```
+
+### Reorder Notes in Account
+```
+POST /accounts/:id/notes/reorder
+Content-Type: application/json
+
+{
+  "note_ids": ["note-uuid-1", "note-uuid-2", "note-uuid-3"]
+}
+```
+
 ---
 
 ## Notes
@@ -81,10 +112,17 @@ Response:
     "content": "<p>Meeting notes...</p>",
     "meeting_id": "google-calendar-id",
     "meeting_date": "2024-01-15T10:00:00Z",
+    "pinned": false,
+    "archived": false,
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-01T00:00:00Z"
   }
 ]
+```
+
+### Get Notes by Account
+```
+GET /accounts/:id/notes
 ```
 
 ### Create Note
@@ -108,7 +146,7 @@ Content-Type: application/json
 GET /notes/:id
 ```
 
-Returns note with linked todos.
+Returns note with linked todos and tags.
 
 ### Update Note
 ```
@@ -121,14 +159,63 @@ Content-Type: application/json
 }
 ```
 
-### Delete Note
+### Delete Note (Soft Delete)
 ```
 DELETE /notes/:id
 ```
 
-### Get Notes by Account
+Moves note to trash. Can be restored.
+
+### Restore Note
 ```
-GET /accounts/:id/notes
+POST /notes/:id/restore
+```
+
+Restores note from trash.
+
+### Permanently Delete Note
+```
+DELETE /notes/:id/permanent
+```
+
+Permanently deletes note. Cannot be undone.
+
+### Get Deleted Notes
+```
+GET /notes/deleted
+```
+
+Returns all soft-deleted notes.
+
+### Get Archived Notes
+```
+GET /notes/archived
+```
+
+Returns all archived notes.
+
+### Toggle Note Pin
+```
+POST /notes/:id/pin
+```
+
+Response:
+```json
+{
+  "pinned": true
+}
+```
+
+### Toggle Note Archive
+```
+POST /notes/:id/archive
+```
+
+Response:
+```json
+{
+  "archived": true
+}
 ```
 
 ### Export Note
@@ -149,6 +236,7 @@ GET /notes/:id/export?type=minimal
 GET /todos
 GET /todos?status=not_started
 GET /todos?status=in_progress
+GET /todos?status=stuck
 GET /todos?status=completed
 ```
 
@@ -162,6 +250,9 @@ Response:
     "status": "not_started",
     "priority": "high",
     "due_date": "2024-01-20T00:00:00Z",
+    "account_id": "account-uuid",
+    "account_name": "Acme Corp",
+    "pinned": false,
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-01T00:00:00Z",
     "linked_notes": [
@@ -170,6 +261,10 @@ Response:
   }
 ]
 ```
+
+**Status values:** `not_started`, `in_progress`, `stuck`, `completed`
+
+**Priority values:** `low`, `medium`, `high`
 
 ### Create Todo
 ```
@@ -182,8 +277,14 @@ Content-Type: application/json
   "status": "not_started",
   "priority": "high",
   "due_date": "2024-01-20T00:00:00Z",
-  "note_id": "note-uuid"  // Optional: link to note on creation
+  "note_id": "note-uuid",
+  "account_id": "account-uuid"
 }
+```
+
+### Get Todo
+```
+GET /todos/:id
 ```
 
 ### Update Todo
@@ -197,9 +298,29 @@ Content-Type: application/json
 }
 ```
 
-### Delete Todo
+### Delete Todo (Soft Delete)
 ```
 DELETE /todos/:id
+```
+
+### Restore Todo
+```
+POST /todos/:id/restore
+```
+
+### Permanently Delete Todo
+```
+DELETE /todos/:id/permanent
+```
+
+### Get Deleted Todos
+```
+GET /todos/deleted
+```
+
+### Toggle Todo Pin
+```
+POST /todos/:id/pin
 ```
 
 ### Link Todo to Note
@@ -214,6 +335,174 @@ DELETE /todos/:id/notes/:noteId
 
 ---
 
+## Tags
+
+### List Tags
+```
+GET /tags
+```
+
+Response:
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Follow-up",
+    "color": "#ef4444",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+### Create Tag
+```
+POST /tags
+Content-Type: application/json
+
+{
+  "name": "Follow-up",
+  "color": "#ef4444"
+}
+```
+
+### Update Tag
+```
+PUT /tags/:id
+Content-Type: application/json
+
+{
+  "name": "Urgent Follow-up",
+  "color": "#dc2626"
+}
+```
+
+### Delete Tag
+```
+DELETE /tags/:id
+```
+
+### Get Note Tags
+```
+GET /notes/:id/tags
+```
+
+### Add Tag to Note
+```
+POST /notes/:id/tags/:tagId
+```
+
+### Remove Tag from Note
+```
+DELETE /notes/:id/tags/:tagId
+```
+
+---
+
+## Attachments
+
+### List Note Attachments
+```
+GET /notes/:id/attachments
+```
+
+Response:
+```json
+[
+  {
+    "id": "uuid",
+    "note_id": "note-uuid",
+    "filename": "abc123-document.pdf",
+    "original_name": "document.pdf",
+    "mime_type": "application/pdf",
+    "size": 102400,
+    "created_at": "2024-01-15T10:00:00Z"
+  }
+]
+```
+
+### Upload Attachment
+```
+POST /notes/:id/attachments
+Content-Type: multipart/form-data
+
+file: <binary>
+```
+
+### Delete Attachment
+```
+DELETE /notes/:id/attachments/:attachmentId
+```
+
+### Access Attachment File
+```
+GET /uploads/:filename
+```
+
+Static file serving for uploaded attachments.
+
+---
+
+## Activities
+
+### Get Account Activities
+```
+GET /accounts/:id/activities?limit=50
+```
+
+### Create Activity
+```
+POST /activities
+Content-Type: application/json
+
+{
+  "account_id": "account-uuid",
+  "type": "note_created",
+  "title": "Created note",
+  "description": "Optional description",
+  "entity_type": "note",
+  "entity_id": "note-uuid"
+}
+```
+
+---
+
+## Quick Capture
+
+### Create Quick Note or Todo
+```
+POST /quick-capture
+Content-Type: application/json
+
+{
+  "type": "note",
+  "title": "Quick note title",
+  "content": "Note content",
+  "account_id": "account-uuid"
+}
+```
+
+Or for todo:
+```json
+{
+  "type": "todo",
+  "title": "Quick todo",
+  "description": "Todo description",
+  "priority": "high",
+  "account_id": "account-uuid"
+}
+```
+
+Response:
+```json
+{
+  "id": "created-uuid",
+  "type": "note",
+  "title": "Quick note title"
+}
+```
+
+---
+
 ## Search
 
 ### Global Search
@@ -221,7 +510,7 @@ DELETE /todos/:id/notes/:noteId
 GET /search?q=search+term
 ```
 
-Searches across notes (using FTS5), accounts, and todos.
+Searches across notes (using FTS4 with fuzzy matching), accounts, and todos.
 
 Response:
 ```json
@@ -230,12 +519,17 @@ Response:
     "type": "note",
     "id": "uuid",
     "title": "Discovery Call",
-    "snippet": "...matching <mark>search term</mark>..."
+    "snippet": "...matching search term..."
   },
   {
     "type": "account",
     "id": "uuid",
     "title": "Acme Corp"
+  },
+  {
+    "type": "todo",
+    "id": "uuid",
+    "title": "Send documentation"
   }
 ]
 ```
@@ -258,7 +552,8 @@ Response:
   "todos_by_status": {
     "not_started": 15,
     "in_progress": 10,
-    "completed": 20
+    "stuck": 5,
+    "completed": 15
   },
   "notes_by_account": [
     {"account_id": "uuid", "account_name": "Acme Corp", "note_count": 5}
@@ -284,6 +579,107 @@ Response:
     "missing_fields": ["budget", "est_engineers"]
   }
 ]
+```
+
+---
+
+## Calendar (Google OAuth)
+
+### Get Auth URL
+```
+GET /calendar/auth
+```
+
+Response:
+```json
+{
+  "url": "https://accounts.google.com/o/oauth2/auth?..."
+}
+```
+
+### OAuth Callback
+```
+GET /calendar/callback?code=...&state=...
+```
+
+Handled automatically by OAuth flow.
+
+### Get Calendar Config
+```
+GET /calendar/config
+```
+
+Response:
+```json
+{
+  "connected": true,
+  "email": "user@gmail.com"
+}
+```
+
+### Disconnect Calendar
+```
+DELETE /calendar/disconnect
+```
+
+### List Calendar Events
+```
+GET /calendar/events?start=2024-01-01&end=2024-01-31
+```
+
+Response:
+```json
+[
+  {
+    "id": "google-event-id",
+    "title": "Team Standup",
+    "description": "Daily standup meeting",
+    "start_time": "2024-01-15T09:00:00Z",
+    "end_time": "2024-01-15T09:30:00Z",
+    "attendees": ["john@acme.com", "jane@factory.ai"],
+    "meet_link": "https://meet.google.com/..."
+  }
+]
+```
+
+### Get Single Event
+```
+GET /calendar/events/:eventId
+```
+
+### Parse Participants
+```
+POST /calendar/parse-participants
+Content-Type: application/json
+
+{
+  "attendees": ["john@acme.com", "jane@factory.ai", "bob@factory.ai"],
+  "internal_domain": "factory.ai"
+}
+```
+
+Response:
+```json
+{
+  "internal": ["jane@factory.ai", "bob@factory.ai"],
+  "external": ["john@acme.com"]
+}
+```
+
+---
+
+## Health Check
+
+### Health
+```
+GET /health
+```
+
+Response:
+```json
+{
+  "status": "ok"
+}
 ```
 
 ---

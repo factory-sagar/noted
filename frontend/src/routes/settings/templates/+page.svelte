@@ -225,7 +225,7 @@
 
 <div class="max-w-4xl mx-auto">
   <div class="flex items-center gap-4 mb-8">
-    <a href="/settings" class="p-2 hover:bg-[var(--color-card)] rounded-lg transition-colors">
+    <a href="/settings" class="btn-icon btn-icon-ghost">
       <ArrowLeft class="w-5 h-5" />
     </a>
     <div class="flex-1">
@@ -293,10 +293,10 @@
           <div class="flex items-center justify-between mb-2">
             <label class="label mb-0">Default Content (HTML)</label>
             <button 
-              class="btn-ghost text-sm py-1"
+              class="btn-ghost btn-sm"
               on:click={() => showVariablesHelp = !showVariablesHelp}
             >
-              <Code class="w-4 h-4 mr-1" />
+              <Code class="w-4 h-4" />
               {showVariablesHelp ? 'Hide' : 'Show'} Variables
             </button>
           </div>
@@ -355,13 +355,13 @@
               </p>
               <div class="flex gap-2">
                 <button 
-                  class="btn-secondary text-sm py-1.5"
+                  class="btn-secondary btn-sm"
                   on:click={() => editTemplate(template)}
                 >
                   Edit
                 </button>
                 <button 
-                  class="btn-ghost text-sm py-1.5"
+                  class="btn-ghost btn-sm"
                   on:click={() => duplicateTemplate(template)}
                 >
                   <Copy class="w-4 h-4" />
@@ -369,7 +369,7 @@
                 </button>
                 {#if template.type === 'custom'}
                   <button 
-                    class="btn-ghost text-sm py-1.5 text-red-500"
+                    class="btn-danger btn-sm"
                     on:click={() => deleteTemplate(template.id)}
                   >
                     <Trash2 class="w-4 h-4" />

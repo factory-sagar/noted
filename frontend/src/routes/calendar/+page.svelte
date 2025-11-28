@@ -264,7 +264,7 @@
     </div>
     <div class="flex items-center gap-3">
       {#if calendarConfig.connected}
-        <button class="btn-ghost text-red-500" on:click={disconnectCalendar}>
+        <button class="btn-danger" on:click={disconnectCalendar}>
           <Unlink class="w-4 h-4" />
           Disconnect
         </button>
@@ -281,16 +281,16 @@
   <div class="card mb-6">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <button class="btn-ghost p-2" on:click={previousMonth}>
+        <button class="btn-icon btn-icon-ghost" on:click={previousMonth}>
           <ChevronLeft class="w-5 h-5" />
         </button>
         <h2 class="text-xl font-semibold min-w-[200px] text-center">{monthYear}</h2>
-        <button class="btn-ghost p-2" on:click={nextMonth}>
+        <button class="btn-icon btn-icon-ghost" on:click={nextMonth}>
           <ChevronRight class="w-5 h-5" />
         </button>
       </div>
       <div class="flex items-center gap-2">
-        <button class="btn-secondary text-sm" on:click={goToToday}>
+        <button class="btn-secondary btn-sm" on:click={goToToday}>
           Today
         </button>
         {#if loadingEvents}
@@ -388,7 +388,7 @@
             Connect your Google Calendar to automatically sync meetings, see upcoming calls, 
             and quickly create notes from calendar events with auto-populated participants.
           </p>
-          <button class="btn-primary text-sm" on:click={connectCalendar}>
+          <button class="btn-primary btn-sm" on:click={connectCalendar}>
             Connect Now
           </button>
         </div>

@@ -263,7 +263,7 @@
           <p class="font-medium">Customize Templates</p>
           <p class="text-sm text-[var(--color-muted)]">Create and edit note templates</p>
         </div>
-        <a href="/settings/templates" class="btn-secondary text-sm">
+        <a href="/settings/templates" class="btn-secondary btn-sm">
           Manage Templates
         </a>
       </div>
@@ -361,7 +361,7 @@
         </div>
       {/if}
       
-      <button class="btn-secondary text-sm" on:click={() => showTagModal = true}>
+      <button class="btn-secondary btn-sm" on:click={() => showTagModal = true}>
         <Tag class="w-4 h-4" />
         Create Tag
       </button>
@@ -393,12 +393,12 @@
               <Check class="w-4 h-4" />
               Connected
             </span>
-            <button class="btn-secondary text-sm" on:click={disconnectCalendar}>
+            <button class="btn-secondary btn-sm" on:click={disconnectCalendar}>
               Disconnect
             </button>
           </div>
         {:else}
-          <button class="btn-primary text-sm" on:click={connectCalendar}>
+          <button class="btn-primary btn-sm" on:click={connectCalendar}>
             Connect
           </button>
         {/if}
@@ -417,7 +417,7 @@
           <p class="font-medium">Export All Data</p>
           <p class="text-sm text-[var(--color-muted)]">Download all your data as JSON</p>
         </div>
-        <button class="btn-secondary text-sm" on:click={exportAllData}>
+        <button class="btn-secondary btn-sm" on:click={exportAllData}>
           <Download class="w-4 h-4" />
           Export
         </button>
@@ -429,7 +429,7 @@
           <p class="text-sm text-[var(--color-muted)]">Permanently remove all accounts, notes, and todos</p>
         </div>
         <button 
-          class="btn text-sm bg-red-500/10 text-red-500 hover:bg-red-500/20"
+          class="btn-danger btn-sm"
           on:click={clearAllData}
         >
           <Trash2 class="w-4 h-4" />

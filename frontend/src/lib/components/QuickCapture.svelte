@@ -1,22 +1,18 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
   import { api, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
-  import { 
-    X, 
-    FileText, 
-    CheckSquare,
-    Zap
-  } from 'lucide-svelte';
+  import { FileText, CheckSquare, X, Plus } from 'lucide-svelte';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
 
   export let open = false;
 
   const dispatch = createEventDispatcher();
 
-  let type: 'note' | 'todo' = 'note';
+  let captureType: 'note' | 'todo' = 'note';
   let title = '';
   let content = '';
-  let description = '';
   let accountId = '';
   let priority = 'medium';
   let accounts: Account[] = [];
@@ -25,205 +21,170 @@
   onMount(async () => {
     try {
       accounts = await api.getAccounts();
-    } catch (err) {
-      console.error('Failed to load accounts:', err);
+    } catch (e) {
+      console.error('Failed to load accounts:', e);
     }
   });
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      close();
-    }
-  }
-
   function close() {
     open = false;
-    resetForm();
+    title = '';
+    content = '';
+    accountId = '';
+    priority = 'medium';
     dispatch('close');
   }
 
-  function resetForm() {
-    title = '';
-    content = '';
-    description = '';
-    accountId = '';
-    priority = 'medium';
-    type = 'note';
-  }
-
   async function handleSubmit() {
-    if (!title.trim()) {
-      addToast('error', 'Title is required');
-      return;
-    }
+    if (!title.trim()) return;
 
     loading = true;
     try {
       const result = await api.quickCapture({
-        type,
+        type: captureType,
         title: title.trim(),
-        content: type === 'note' ? content : undefined,
-        description: type === 'todo' ? description : undefined,
+        content: content.trim() || undefined,
         account_id: accountId || undefined,
-        priority: type === 'todo' ? priority : undefined,
+        priority: captureType === 'todo' ? priority : undefined,
+        description: captureType === 'todo' ? content.trim() : undefined
       });
 
-      addToast('success', `${type === 'note' ? 'Note' : 'Todo'} created successfully`);
+      addToast('success', `${captureType === 'note' ? 'Note' : 'Todo'} created`);
       close();
-      dispatch('created', result);
-    } catch (err: any) {
-      addToast('error', err.message);
+
+      if (captureType === 'note') {
+        goto(`/notes/${result.id}`);
+      } else {
+        goto('/todos');
+      }
+    } catch (e) {
+      addToast('error', `Failed to create ${captureType}`);
     } finally {
       loading = false;
     }
   }
 
-  $: if (open) {
-    setTimeout(() => {
-      const input = document.querySelector('#quick-capture-title') as HTMLInputElement;
-      input?.focus();
-    }, 100);
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      close();
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      handleSubmit();
+    }
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={open ? handleKeydown : undefined} />
 
 {#if open}
-  <div class="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
-    <button 
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      on:click={close}
-    ></button>
+  <div class="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
+    <button class="modal-backdrop" on:click={close}></button>
     
-    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-2xl w-full max-w-lg animate-slide-up">
+    <div class="relative z-[101] w-full max-w-lg mx-4 bg-[var(--color-card)] border border-[var(--color-border)] shadow-editorial-lg animate-scale-in" style="border-radius: 2px;">
       <!-- Header -->
-      <div class="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
-        <div class="flex items-center gap-2">
-          <Zap class="w-5 h-5 text-primary-500" />
-          <h2 class="font-semibold">Quick Capture</h2>
+      <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20" style="border-radius: 2px;">
+            <Plus class="w-4 h-4 text-[var(--color-accent)]" strokeWidth={1.5} />
+          </div>
+          <h2 class="font-serif text-lg">Quick Create</h2>
         </div>
         <button 
-          class="p-1.5 hover:bg-[var(--color-bg)] rounded-lg transition-colors"
+          class="p-2 hover:bg-[var(--color-card-hover)] transition-colors"
+          style="border-radius: 2px;"
           on:click={close}
         >
-          <X class="w-5 h-5" />
+          <X class="w-4 h-4" strokeWidth={1.5} />
         </button>
       </div>
 
       <!-- Type Toggle -->
-      <div class="flex gap-2 p-4 pb-0">
-        <button
-          class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border transition-colors"
-          class:bg-primary-500={type === 'note'}
-          class:text-white={type === 'note'}
-          class:border-primary-500={type === 'note'}
-          class:border-[var(--color-border)]={type !== 'note'}
-          on:click={() => type = 'note'}
-        >
-          <FileText class="w-4 h-4" />
-          Note
-        </button>
-        <button
-          class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border transition-colors"
-          class:bg-primary-500={type === 'todo'}
-          class:text-white={type === 'todo'}
-          class:border-primary-500={type === 'todo'}
-          class:border-[var(--color-border)]={type !== 'todo'}
-          on:click={() => type = 'todo'}
-        >
-          <CheckSquare class="w-4 h-4" />
-          Todo
-        </button>
+      <div class="px-6 py-4 border-b border-[var(--color-border)]">
+        <div class="flex gap-2">
+          <button
+            class="flex-1 flex items-center justify-center gap-2 py-3 border transition-all {captureType === 'note' ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/5 text-[var(--color-accent)]' : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/40'}"
+            style="border-radius: 2px;"
+            on:click={() => captureType = 'note'}
+          >
+            <FileText class="w-4 h-4" strokeWidth={1.5} />
+            <span class="text-sm font-medium">Note</span>
+          </button>
+          <button
+            class="flex-1 flex items-center justify-center gap-2 py-3 border transition-all {captureType === 'todo' ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/5 text-[var(--color-accent)]' : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/40'}"
+            style="border-radius: 2px;"
+            on:click={() => captureType = 'todo'}
+          >
+            <CheckSquare class="w-4 h-4" strokeWidth={1.5} />
+            <span class="text-sm font-medium">Todo</span>
+          </button>
+        </div>
       </div>
 
       <!-- Form -->
-      <form on:submit|preventDefault={handleSubmit} class="p-4 space-y-4">
-        <div>
-          <input
-            id="quick-capture-title"
-            type="text"
-            class="input text-lg"
-            placeholder={type === 'note' ? 'Note title...' : 'What needs to be done?'}
-            bind:value={title}
-            autofocus
-          />
-        </div>
-
-        {#if type === 'note'}
+      <form on:submit|preventDefault={handleSubmit} class="p-6">
+        <div class="space-y-5">
           <div>
+            <label class="label">Title</label>
+            <input
+              type="text"
+              class="input"
+              placeholder={captureType === 'note' ? 'Note title...' : 'What needs to be done?'}
+              bind:value={title}
+              autofocus
+            />
+          </div>
+
+          <div>
+            <label class="label">{captureType === 'note' ? 'Quick notes' : 'Description'} (optional)</label>
             <textarea
-              class="input h-24 resize-none"
-              placeholder="Quick notes (optional)..."
+              class="input"
+              rows="3"
+              placeholder={captureType === 'note' ? 'Jot down quick thoughts...' : 'Add more details...'}
               bind:value={content}
             ></textarea>
           </div>
-        {:else}
-          <div>
-            <textarea
-              class="input h-20 resize-none"
-              placeholder="Description (optional)..."
-              bind:value={description}
-            ></textarea>
-          </div>
-          
-          <div>
-            <label class="label">Priority</label>
-            <div class="flex gap-2">
-              {#each ['low', 'medium', 'high'] as p}
-                <button
-                  type="button"
-                  class="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
-                  class:bg-green-500={priority === p && p === 'low'}
-                  class:bg-amber-500={priority === p && p === 'medium'}
-                  class:bg-red-500={priority === p && p === 'high'}
-                  class:text-white={priority === p}
-                  class:border-green-500={priority === p && p === 'low'}
-                  class:border-amber-500={priority === p && p === 'medium'}
-                  class:border-red-500={priority === p && p === 'high'}
-                  class:border-[var(--color-border)]={priority !== p}
-                  on:click={() => priority = p}
-                >
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </button>
-              {/each}
-            </div>
-          </div>
-        {/if}
 
-        <div>
-          <label class="label">Account (optional)</label>
-          <select class="input" bind:value={accountId}>
-            <option value="">No account</option>
-            {#each accounts as account}
-              <option value={account.id}>{account.name}</option>
-            {/each}
-          </select>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="label">Account (optional)</label>
+              <select class="input" bind:value={accountId}>
+                <option value="">No account</option>
+                {#each accounts as account}
+                  <option value={account.id}>{account.name}</option>
+                {/each}
+              </select>
+            </div>
+
+            {#if captureType === 'todo'}
+              <div>
+                <label class="label">Priority</label>
+                <select class="input" bind:value={priority}>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            {/if}
+          </div>
         </div>
 
-        <div class="flex gap-3 pt-2">
-          <button 
-            type="button" 
-            class="btn-secondary flex-1"
-            on:click={close}
-          >
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            class="btn-primary flex-1"
-            disabled={loading || !title.trim()}
-          >
-            {loading ? 'Creating...' : 'Create'}
-          </button>
+        <div class="flex items-center justify-between mt-8 pt-6 border-t border-[var(--color-border)]">
+          <span class="text-xs text-[var(--color-muted)]">
+            <kbd class="px-1.5 py-0.5 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">⌘</kbd>
+            +
+            <kbd class="px-1.5 py-0.5 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">Enter</kbd>
+            to save
+          </span>
+          <div class="flex gap-3">
+            <button type="button" class="btn-secondary" on:click={close}>
+              Cancel
+            </button>
+            <button type="submit" class="btn-primary" disabled={!title.trim() || loading}>
+              {loading ? 'Creating...' : 'Create'}
+            </button>
+          </div>
         </div>
       </form>
-
-      <!-- Keyboard hint -->
-      <div class="px-4 pb-4">
-        <p class="text-xs text-center text-[var(--color-muted)]">
-          Press <kbd class="px-1.5 py-0.5 bg-[var(--color-bg)] rounded border border-[var(--color-border)] text-xs">Esc</kbd> to close
-        </p>
-      </div>
     </div>
   </div>
 {/if}
