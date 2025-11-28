@@ -86,6 +86,15 @@ func main() {
 		api.GET("/calendar/events", h.GetCalendarEvents)
 		api.GET("/calendar/events/:eventId", h.GetCalendarEvent)
 		api.POST("/calendar/parse-participants", h.ParseParticipants)
+
+		// Tags
+		api.GET("/tags", h.GetTags)
+		api.POST("/tags", h.CreateTag)
+		api.PUT("/tags/:id", h.UpdateTag)
+		api.DELETE("/tags/:id", h.DeleteTag)
+		api.GET("/notes/:id/tags", h.GetNoteTags)
+		api.POST("/notes/:id/tags/:tagId", h.AddTagToNote)
+		api.DELETE("/notes/:id/tags/:tagId", h.RemoveTagFromNote)
 	}
 
 	// Get port from environment or default

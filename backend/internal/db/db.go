@@ -134,12 +134,32 @@ func Migrate(db *sql.DB) error {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
+		// Tags table
+		`CREATE TABLE IF NOT EXISTS tags (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL UNIQUE,
+			color TEXT DEFAULT '#6b7280',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+
+		// Note-Tags junction table (many-to-many)
+		`CREATE TABLE IF NOT EXISTS note_tags (
+			note_id TEXT NOT NULL,
+			tag_id TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (note_id, tag_id),
+			FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
+			FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+		)`,
+
 		// Indexes
 		`CREATE INDEX IF NOT EXISTS idx_notes_account_id ON notes(account_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_notes_meeting_date ON notes(meeting_date)`,
 		`CREATE INDEX IF NOT EXISTS idx_todos_status ON todos(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_note_todos_note_id ON note_todos(note_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_note_todos_todo_id ON note_todos(todo_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_note_tags_note_id ON note_tags(note_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_note_tags_tag_id ON note_tags(tag_id)`,
 	}
 
 	for _, migration := range migrations {

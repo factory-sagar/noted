@@ -27,11 +27,15 @@
     items: Todo[];
   }
 
+  // Main columns (3 across)
   let columns: Column[] = [
     { id: 'not_started', title: 'Not Started', items: [] },
     { id: 'in_progress', title: 'In Progress', items: [] },
-    { id: 'completed', title: 'Completed', items: [] },
+    { id: 'stuck', title: 'Stuck', items: [] },
   ];
+  
+  // Completed is separate (full width)
+  let completedColumn: Column = { id: 'completed', title: 'Completed', items: [] };
 
   let loading = true;
   let showNewTodoModal = false;
@@ -72,11 +76,21 @@
       
       accounts = accountsData;
       
-      // Distribute todos into columns
+      // Distribute todos into columns (high priority first)
+      const sortByPriority = (items: Todo[]) => {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return items.sort((a, b) => (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1));
+      };
+      
       columns = columns.map(col => ({
         ...col,
-        items: todos.filter(t => t.status === col.id)
+        items: sortByPriority(todos.filter(t => t.status === col.id))
       }));
+      
+      completedColumn = {
+        ...completedColumn,
+        items: sortByPriority(todos.filter(t => t.status === 'completed'))
+      };
     } catch (e) {
       addToast('error', 'Failed to load todos');
     } finally {
@@ -85,27 +99,47 @@
   }
 
   function handleDndConsider(columnId: string, e: CustomEvent) {
-    const column = columns.find(c => c.id === columnId);
-    if (column) {
-      column.items = e.detail.items;
-      columns = columns;
+    if (columnId === 'completed') {
+      completedColumn.items = e.detail.items;
+      completedColumn = completedColumn;
+    } else {
+      const column = columns.find(c => c.id === columnId);
+      if (column) {
+        column.items = e.detail.items;
+        columns = columns;
+      }
     }
   }
 
   async function handleDndFinalize(columnId: string, e: CustomEvent) {
-    const column = columns.find(c => c.id === columnId);
-    if (column) {
-      column.items = e.detail.items;
-      columns = columns;
-
-      // Update the status of moved items
+    if (columnId === 'completed') {
+      completedColumn.items = e.detail.items;
+      completedColumn = completedColumn;
+      
       for (const item of e.detail.items) {
-        if (item.status !== columnId) {
+        if (item.status !== 'completed') {
           try {
-            await api.updateTodo(item.id, { status: columnId });
-            item.status = columnId;
+            await api.updateTodo(item.id, { status: 'completed' });
+            item.status = 'completed';
           } catch (err) {
             addToast('error', 'Failed to update todo status');
+          }
+        }
+      }
+    } else {
+      const column = columns.find(c => c.id === columnId);
+      if (column) {
+        column.items = e.detail.items;
+        columns = columns;
+
+        for (const item of e.detail.items) {
+          if (item.status !== columnId) {
+            try {
+              await api.updateTodo(item.id, { status: columnId });
+              item.status = columnId;
+            } catch (err) {
+              addToast('error', 'Failed to update todo status');
+            }
           }
         }
       }
@@ -182,10 +216,11 @@
     }
   }
 
-  function getColumnColor(columnId: string): string {
+  function getColumnColorClass(columnId: string): string {
     switch (columnId) {
       case 'not_started': return 'bg-gray-500';
       case 'in_progress': return 'bg-blue-500';
+      case 'stuck': return 'bg-red-500';
       case 'completed': return 'bg-green-500';
       default: return 'bg-gray-400';
     }
@@ -195,8 +230,18 @@
     switch (columnId) {
       case 'not_started': return '#6b7280'; // gray-500
       case 'in_progress': return '#3b82f6'; // blue-500
+      case 'stuck': return '#ef4444'; // red-500
       case 'completed': return '#22c55e'; // green-500
       default: return '#9ca3af';
+    }
+  }
+
+  function getPriorityIndicator(priority: string): { color: string; label: string } {
+    switch (priority) {
+      case 'high': return { color: '#ef4444', label: 'H' };
+      case 'medium': return { color: '#f59e0b', label: 'M' };
+      case 'low': return { color: '#22c55e', label: 'L' };
+      default: return { color: '#6b7280', label: '-' };
     }
   }
 
@@ -296,7 +341,7 @@
 
   $: selectedCount = selectedTodos.size;
 
-  // Filter and sort todos
+  // Filter and sort todos (high priority always at top)
   function filterAndSortTodos(todos: Todo[]): Todo[] {
     let filtered = todos;
     
@@ -313,14 +358,17 @@
       filtered = filtered.filter(t => !t.linked_notes || t.linked_notes.length === 0);
     }
     
-    // Apply sorting
+    // Always sort high priority to top first, then apply secondary sort
+    const priorityWeight = { high: 0, medium: 1, low: 2 };
+    
     filtered.sort((a, b) => {
+      // Primary sort: high priority always first
+      const priorityDiff = (priorityWeight[a.priority] || 1) - (priorityWeight[b.priority] || 1);
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Secondary sort based on user selection
       let comparison = 0;
       switch (sortBy) {
-        case 'priority':
-          const priorityOrder = { high: 3, medium: 2, low: 1 };
-          comparison = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-          break;
         case 'title':
           comparison = a.title.localeCompare(b.title);
           break;
@@ -350,6 +398,22 @@
     ...col,
     items: filterAndSortTodos(col.items)
   }));
+  
+  $: filteredCompletedColumn = {
+    ...completedColumn,
+    items: filterAndSortTodos(completedColumn.items)
+  };
+
+  // Get column color for drag outlines
+  function getColumnColor(columnId: string): string {
+    switch (columnId) {
+      case 'not_started': return '#6b7280';
+      case 'in_progress': return '#3b82f6';
+      case 'stuck': return '#ef4444';
+      case 'completed': return '#22c55e';
+      default: return '#6b7280';
+    }
+  }
 </script>
 
 <svelte:head>
@@ -514,7 +578,7 @@
           <!-- Column Header -->
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full {getColumnColor(column.id)}"></div>
+              <div class="w-3 h-3 rounded-full {getColumnColorClass(column.id)}"></div>
               <h2 class="font-semibold">{column.title}</h2>
               <span class="text-sm text-[var(--color-muted)]">({column.items.length})</span>
             </div>
@@ -615,7 +679,13 @@
                 {/if}
 
                 <div class="flex items-center justify-between text-xs text-[var(--color-muted)]">
-                  <span class="capitalize">{todo.priority} priority</span>
+                  <span 
+                    class="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-white"
+                    style="background-color: {getPriorityIndicator(todo.priority).color}"
+                    title="{todo.priority} priority"
+                  >
+                    {getPriorityIndicator(todo.priority).label}
+                  </span>
                   {#if todo.due_date}
                     <span class="flex items-center gap-1">
                       <Calendar class="w-3 h-3" />
@@ -632,6 +702,88 @@
           </div>
         </div>
       {/each}
+    </div>
+
+    <!-- Completed Section (Full Width) -->
+    <div class="mt-8">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          <h2 class="font-semibold">Completed</h2>
+          <span class="text-sm text-[var(--color-muted)]">({filteredCompletedColumn.items.length})</span>
+        </div>
+        {#if selectionMode && filteredCompletedColumn.items.length > 0}
+          <button 
+            class="text-xs text-primary-500 hover:underline"
+            on:click={() => selectAllInColumn('completed')}
+          >
+            Select all
+          </button>
+        {/if}
+      </div>
+      
+      <div 
+        class="min-h-[120px] p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl"
+        use:dndzone={{
+          items: filteredCompletedColumn.items,
+          flipDurationMs,
+          dropTargetStyle: { outline: '2px dashed #22c55e', outlineOffset: '-2px' }
+        }}
+        on:consider={(e) => handleDndConsider('completed', e)}
+        on:finalize={(e) => handleDndFinalize('completed', e)}
+      >
+        {#if filteredCompletedColumn.items.length > 0}
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {#each filteredCompletedColumn.items as todo (todo.id)}
+              <div 
+                class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3 group opacity-70 hover:opacity-100 transition-opacity"
+                class:cursor-grab={!selectionMode}
+                class:cursor-pointer={selectionMode}
+                class:ring-2={selectedTodos.has(todo.id)}
+                class:ring-primary-500={selectedTodos.has(todo.id)}
+                animate:flip={{ duration: flipDurationMs }}
+                on:click={() => selectionMode && toggleTodoSelection(todo.id)}
+              >
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2 min-w-0">
+                    {#if selectionMode}
+                      <button 
+                        class="p-0.5 flex-shrink-0"
+                        on:click|stopPropagation={() => toggleTodoSelection(todo.id)}
+                      >
+                        {#if selectedTodos.has(todo.id)}
+                          <CheckSquare class="w-4 h-4 text-primary-500" />
+                        {:else}
+                          <Square class="w-4 h-4 text-[var(--color-muted)]" />
+                        {/if}
+                      </button>
+                    {/if}
+                    <span class="font-medium text-sm line-through truncate">{todo.title}</span>
+                  </div>
+                  <button 
+                    class="p-1 hover:bg-[var(--color-border)] rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    on:click|stopPropagation={() => deleteTodo(todo.id, 'completed')}
+                  >
+                    <Trash2 class="w-3.5 h-3.5 text-red-500" />
+                  </button>
+                </div>
+                {#if todo.account_name}
+                  <div class="mt-2">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded">
+                      <Building2 class="w-3 h-3" />
+                      {todo.account_name}
+                    </span>
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="flex items-center justify-center h-20 text-[var(--color-muted)] text-sm">
+            Completed items will appear here
+          </div>
+        {/if}
+      </div>
     </div>
   {/if}
 </div>

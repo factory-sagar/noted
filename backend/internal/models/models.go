@@ -30,6 +30,7 @@ type Note struct {
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 	Todos                []Todo     `json:"todos,omitempty"`
+	Tags                 []Tag      `json:"tags,omitempty"`
 }
 
 // Todo represents a task/follow-up item
@@ -53,6 +54,26 @@ type Participant struct {
 	Email      string `json:"email"`
 	Title      string `json:"title,omitempty"`
 	IsInternal bool   `json:"is_internal"`
+}
+
+// Tag represents a tag for notes
+type Tag struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Color     string    `json:"color"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// CreateTagRequest for creating a tag
+type CreateTagRequest struct {
+	Name  string `json:"name" binding:"required"`
+	Color string `json:"color"`
+}
+
+// UpdateTagRequest for updating a tag
+type UpdateTagRequest struct {
+	Name  *string `json:"name"`
+	Color *string `json:"color"`
 }
 
 // CreateAccountRequest for creating an account

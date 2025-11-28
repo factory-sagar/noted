@@ -134,6 +134,19 @@ export interface ParsedParticipants {
   external: string[];
 }
 
+// Tag types
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface CreateTagRequest {
+  name: string;
+  color?: string;
+}
+
 // API functions
 export const api = {
   // Accounts
@@ -198,4 +211,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ attendees, internal_domain: internalDomain })
     }),
+
+  // Tags
+  getTags: () => request<Tag[]>('/tags'),
+  createTag: (data: CreateTagRequest) =>
+    request<Tag>('/tags', { method: 'POST', body: JSON.stringify(data) }),
+  updateTag: (id: string, data: Partial<CreateTagRequest>) =>
+    request<Tag>(`/tags/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTag: (id: string) =>
+    request<{ message: string }>(`/tags/${id}`, { method: 'DELETE' }),
+  getNoteTags: (noteId: string) => request<Tag[]>(`/notes/${noteId}/tags`),
+  addTagToNote: (noteId: string, tagId: string) =>
+    request<{ message: string }>(`/notes/${noteId}/tags/${tagId}`, { method: 'POST' }),
+  removeTagFromNote: (noteId: string, tagId: string) =>
+    request<{ message: string }>(`/notes/${noteId}/tags/${tagId}`, { method: 'DELETE' }),
 };

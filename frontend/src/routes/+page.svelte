@@ -62,45 +62,45 @@
   {:else if analytics}
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div class="card">
+      <a href="/notes" class="card hover:border-primary-500/50 transition-colors cursor-pointer group">
         <div class="flex items-center justify-between mb-4">
-          <span class="text-[var(--color-muted)] text-sm font-medium">Total Notes</span>
+          <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-primary-500 transition-colors">Total Notes</span>
           <div class="p-2 bg-primary-500/10 rounded-lg">
             <FileText class="w-5 h-5 text-primary-500" />
           </div>
         </div>
         <p class="text-3xl font-semibold">{analytics.total_notes}</p>
-      </div>
+      </a>
 
-      <div class="card">
+      <a href="/accounts" class="card hover:border-green-500/50 transition-colors cursor-pointer group">
         <div class="flex items-center justify-between mb-4">
-          <span class="text-[var(--color-muted)] text-sm font-medium">Accounts</span>
+          <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-green-500 transition-colors">Accounts</span>
           <div class="p-2 bg-green-500/10 rounded-lg">
             <Users class="w-5 h-5 text-green-500" />
           </div>
         </div>
         <p class="text-3xl font-semibold">{analytics.total_accounts}</p>
-      </div>
+      </a>
 
-      <div class="card">
+      <a href="/todos" class="card hover:border-orange-500/50 transition-colors cursor-pointer group">
         <div class="flex items-center justify-between mb-4">
-          <span class="text-[var(--color-muted)] text-sm font-medium">Total Todos</span>
+          <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-orange-500 transition-colors">Total Todos</span>
           <div class="p-2 bg-orange-500/10 rounded-lg">
             <CheckSquare class="w-5 h-5 text-orange-500" />
           </div>
         </div>
         <p class="text-3xl font-semibold">{analytics.total_todos}</p>
-      </div>
+      </a>
 
-      <div class="card">
+      <a href="/todos" class="card hover:border-purple-500/50 transition-colors cursor-pointer group">
         <div class="flex items-center justify-between mb-4">
-          <span class="text-[var(--color-muted)] text-sm font-medium">Completion Rate</span>
+          <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-purple-500 transition-colors">Completion Rate</span>
           <div class="p-2 bg-purple-500/10 rounded-lg">
             <TrendingUp class="w-5 h-5 text-purple-500" />
           </div>
         </div>
         <p class="text-3xl font-semibold">{getCompletionRate()}%</p>
-      </div>
+      </a>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -148,6 +148,13 @@
               <span>In Progress</span>
             </div>
             <span class="font-medium">{analytics.todos_by_status['in_progress'] || 0}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span>Stuck</span>
+            </div>
+            <span class="font-medium">{analytics.todos_by_status['stuck'] || 0}</span>
           </div>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">

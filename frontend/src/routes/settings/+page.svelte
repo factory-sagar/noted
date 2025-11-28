@@ -11,15 +11,31 @@
     Download,
     Trash2,
     Check,
-    AlertCircle
+    AlertCircle,
+    LayoutGrid,
+    CheckSquare,
+    Building2,
+    Tag
   } from 'lucide-svelte';
   import { addToast } from '$lib/stores';
-  import { api, type CalendarConfig } from '$lib/utils/api';
+  import { api, type CalendarConfig, type Tag as TagType } from '$lib/utils/api';
 
   let darkMode = false;
   let autoSave = true;
   let defaultTemplate = 'initial';
   let calendarConfig: CalendarConfig = { connected: false };
+  
+  // Default view settings
+  let defaultNotesView = 'folders'; // folders, cards, organized
+  let defaultTodosView = 'kanban'; // kanban, list
+  let defaultAccountsView = 'split'; // split, grid
+  
+  // Tags
+  let tags: TagType[] = [];
+  let newTagName = '';
+  let newTagColor = '#6b7280';
+  let showTagModal = false;
+  const tagColors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280'];
 
   onMount(async () => {
     if (typeof window !== 'undefined') {
@@ -32,6 +48,10 @@
       if (savedTemplate) {
         defaultTemplate = savedTemplate;
       }
+      // Load view settings
+      defaultNotesView = localStorage.getItem('defaultNotesView') || 'folders';
+      defaultTodosView = localStorage.getItem('defaultTodosView') || 'kanban';
+      defaultAccountsView = localStorage.getItem('defaultAccountsView') || 'split';
     }
     
     // Check for OAuth callback
@@ -40,11 +60,12 @@
       goto('/settings', { replaceState: true });
     }
     
-    // Load calendar config
+    // Load calendar config and tags
     try {
       calendarConfig = await api.getCalendarConfig();
+      tags = await api.getTags();
     } catch (e) {
-      console.error('Failed to load calendar config:', e);
+      console.error('Failed to load settings:', e);
     }
   });
 
@@ -67,6 +88,46 @@
   function saveDefaultTemplate() {
     localStorage.setItem('defaultTemplate', defaultTemplate);
     addToast('success', 'Default template updated');
+  }
+
+  function saveNotesView() {
+    localStorage.setItem('defaultNotesView', defaultNotesView);
+    addToast('success', 'Notes view preference saved');
+  }
+
+  function saveTodosView() {
+    localStorage.setItem('defaultTodosView', defaultTodosView);
+    addToast('success', 'Todos view preference saved');
+  }
+
+  function saveAccountsView() {
+    localStorage.setItem('defaultAccountsView', defaultAccountsView);
+    addToast('success', 'Accounts view preference saved');
+  }
+
+  async function createTag() {
+    if (!newTagName.trim()) return;
+    try {
+      const tag = await api.createTag({ name: newTagName.trim(), color: newTagColor });
+      tags = [...tags, tag];
+      newTagName = '';
+      newTagColor = '#6b7280';
+      showTagModal = false;
+      addToast('success', 'Tag created');
+    } catch (e) {
+      addToast('error', 'Failed to create tag');
+    }
+  }
+
+  async function deleteTag(tagId: string) {
+    if (!confirm('Delete this tag? It will be removed from all notes.')) return;
+    try {
+      await api.deleteTag(tagId);
+      tags = tags.filter(t => t.id !== tagId);
+      addToast('success', 'Tag deleted');
+    } catch (e) {
+      addToast('error', 'Failed to delete tag');
+    }
   }
 
   async function connectCalendar() {
@@ -208,6 +269,104 @@
       </div>
     </div>
 
+    <!-- Default Views -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <LayoutGrid class="w-5 h-5" />
+        Default Views
+      </h2>
+      
+      <div class="py-3 border-b border-[var(--color-border)]">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <p class="font-medium">Notes View</p>
+            <p class="text-sm text-[var(--color-muted)]">Default view when opening notes page</p>
+          </div>
+        </div>
+        <select 
+          class="input mt-2"
+          bind:value={defaultNotesView}
+          on:change={saveNotesView}
+        >
+          <option value="folders">Folders - Collapsible by account</option>
+          <option value="cards">Cards - Grid of note cards</option>
+          <option value="organized">Organized - Grouped by account</option>
+        </select>
+      </div>
+
+      <div class="py-3 border-b border-[var(--color-border)]">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <p class="font-medium">Todos View</p>
+            <p class="text-sm text-[var(--color-muted)]">Default layout for todos page</p>
+          </div>
+        </div>
+        <select 
+          class="input mt-2"
+          bind:value={defaultTodosView}
+          on:change={saveTodosView}
+        >
+          <option value="kanban">Kanban Board</option>
+          <option value="list">List View</option>
+        </select>
+      </div>
+
+      <div class="py-3">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <p class="font-medium">Accounts View</p>
+            <p class="text-sm text-[var(--color-muted)]">Default layout for accounts page</p>
+          </div>
+        </div>
+        <select 
+          class="input mt-2"
+          bind:value={defaultAccountsView}
+          on:change={saveAccountsView}
+        >
+          <option value="split">Split View - List and detail</option>
+          <option value="grid">Grid View - Cards</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tags Management -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <Tag class="w-5 h-5" />
+        Tags
+      </h2>
+      <p class="text-sm text-[var(--color-muted)] mb-4">Create tags to organize your notes</p>
+      
+      {#if tags.length === 0}
+        <div class="text-center py-6 text-[var(--color-muted)]">
+          No tags yet. Create your first tag to get started.
+        </div>
+      {:else}
+        <div class="flex flex-wrap gap-2 mb-4">
+          {#each tags as tag}
+            <div 
+              class="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm group"
+              style="background-color: {tag.color}20; color: {tag.color}; border: 1px solid {tag.color}40"
+            >
+              <span class="w-2 h-2 rounded-full" style="background-color: {tag.color}"></span>
+              {tag.name}
+              <button 
+                class="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
+                on:click={() => deleteTag(tag.id)}
+              >
+                <Trash2 class="w-3 h-3" />
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+      
+      <button class="btn-secondary text-sm" on:click={() => showTagModal = true}>
+        <Tag class="w-4 h-4" />
+        Create Tag
+      </button>
+    </div>
+
     <!-- Calendar Integration -->
     <div class="card">
       <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -290,3 +449,69 @@
     </div>
   </div>
 </div>
+
+<!-- Create Tag Modal -->
+{#if showTagModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => showTagModal = false}
+    ></button>
+    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <Tag class="w-5 h-5" />
+        Create Tag
+      </h2>
+      <form on:submit|preventDefault={createTag}>
+        <div class="mb-4">
+          <label class="label">Tag Name</label>
+          <input 
+            type="text"
+            class="input"
+            placeholder="e.g., Follow-up, Urgent, Demo"
+            bind:value={newTagName}
+            autofocus
+          />
+        </div>
+        <div class="mb-4">
+          <label class="label">Color</label>
+          <div class="flex flex-wrap gap-2 mt-2">
+            {#each tagColors as color}
+              <button
+                type="button"
+                class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
+                class:border-white={newTagColor === color}
+                class:border-transparent={newTagColor !== color}
+                class:ring-2={newTagColor === color}
+                class:ring-offset-2={newTagColor === color}
+                style="background-color: {color}; --tw-ring-color: {color}"
+                on:click={() => newTagColor = color}
+              ></button>
+            {/each}
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <span class="text-sm text-[var(--color-muted)]">Preview:</span>
+            <span 
+              class="px-3 py-1 rounded-full text-sm"
+              style="background-color: {newTagColor}20; color: {newTagColor}; border: 1px solid {newTagColor}40"
+            >
+              {newTagName || 'Tag Name'}
+            </span>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button 
+            type="button"
+            class="btn-secondary"
+            on:click={() => showTagModal = false}
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" disabled={!newTagName.trim()}>
+            Create Tag
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
