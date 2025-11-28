@@ -30,7 +30,6 @@ FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD | wc -l | tr -d
 
 # Build JSON payload using jq for proper escaping
 JSON_PAYLOAD=$(jq -n \
-    --arg repoPath "$REPO_PATH" \
     --arg repoName "$REPO_NAME" \
     --arg commitHash "$COMMIT_HASH" \
     --arg branch "$BRANCH" \
@@ -40,7 +39,6 @@ JSON_PAYLOAD=$(jq -n \
     --arg shortHash "$COMMIT_SHORT" \
     --argjson filesChanged "$FILES_CHANGED" \
     '{
-        repoPath: $repoPath,
         repoName: $repoName,
         commitHash: $commitHash,
         branch: $branch,
