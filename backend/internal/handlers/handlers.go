@@ -506,7 +506,7 @@ func (h *Handler) GetNotesByAccount(c *gin.Context) {
 	rows, err := h.db.Query(`
 		SELECT id, title, account_id, template_type, internal_participants, 
 			   external_participants, content, meeting_id, meeting_date, created_at, updated_at
-		FROM notes WHERE account_id = ? ORDER BY created_at DESC
+		FROM notes WHERE account_id = ? AND deleted_at IS NULL ORDER BY created_at DESC
 	`, accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

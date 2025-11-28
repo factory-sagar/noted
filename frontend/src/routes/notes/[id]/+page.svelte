@@ -170,6 +170,16 @@
     }
   }
 
+  async function deleteNote() {
+    try {
+      await api.deleteNote(noteId);
+      addToast('success', 'Note moved to trash');
+      goto('/notes');
+    } catch (e) {
+      addToast('error', 'Failed to delete note');
+    }
+  }
+
   async function exportPDF(type: 'full' | 'minimal') {
     if (!note || !editor) return;
     
@@ -278,6 +288,13 @@
         <button class="btn-primary" on:click={saveNote} disabled={saving}>
           <Save class="w-4 h-4" />
           {saving ? 'Saving...' : 'Save'}
+        </button>
+        <button 
+          class="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
+          title="Delete note"
+          on:click={deleteNote}
+        >
+          <Trash2 class="w-5 h-5 text-red-500" />
         </button>
       </div>
     </div>
