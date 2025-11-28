@@ -8,7 +8,7 @@ This document provides context for AI agents working on this repository.
 
 ### Tech Stack
 - **Frontend**: SvelteKit 2.x + Tailwind CSS 3.x + TipTap (rich text editor)
-- **Backend**: Go 1.21+ with Gin framework
+- **Backend**: Go 1.24+ with Gin framework
 - **Database**: SQLite with FTS4 (full-text search)
 - **Containerization**: Docker + Docker Compose
 
@@ -34,27 +34,30 @@ notes-droid/
 │   ├── cmd/server/main.go      # Entry point, routes
 │   └── internal/
 │       ├── handlers/           # HTTP request handlers
+│       │   ├── handlers.go     # Main CRUD handlers
+│       │   └── calendar.go     # Google Calendar OAuth
 │       ├── models/             # Data structures & request/response types
 │       └── db/                 # Database setup, migrations, FTS4
 ├── frontend/                   # SvelteKit application
 │   └── src/
 │       ├── routes/             # Page components
-│       │   ├── +page.svelte    # Dashboard
+│       │   ├── +page.svelte    # Dashboard (clickable stats)
+│       │   ├── +layout.svelte  # App shell, sidebar, global search
 │       │   ├── notes/          # Notes list & editor
-│       │   ├── todos/          # Kanban board
-│       │   ├── calendar/       # Calendar view
-│       │   └── settings/       # App settings
+│       │   ├── accounts/       # Account management page
+│       │   ├── todos/          # Kanban board (4 columns)
+│       │   ├── calendar/       # Calendar view with OAuth
+│       │   └── settings/       # App settings, tags, templates
 │       └── lib/
 │           ├── stores/         # Svelte stores (state)
-│           └── utils/api.ts    # API client
+│           └── utils/
+│               ├── api.ts      # API client with types
+│               └── pdf.ts      # PDF generation (jsPDF)
 ├── .githooks/                  # Git hooks with dashcode integration
-│   ├── pre-commit              # Linting, security checks
+│   ├── pre-commit              # Linting, security checks, dashcode
 │   ├── commit-msg              # Conventional commit validation
 │   └── post-commit             # Dashcode tracking
 ├── docs/                       # Additional documentation
-│   ├── API.md                  # API endpoint reference
-│   ├── SETUP.md                # Setup instructions
-│   └── ARCHITECTURE.md         # System design
 ├── docker-compose.yml          # Container orchestration
 └── Makefile                    # Development commands
 ```
@@ -74,7 +77,7 @@ type Account struct {
 ```
 
 ### Note
-Meeting notes linked to an account.
+Meeting notes linked to an account, can have tags.
 ```go
 type Note struct {
     ID                   string
@@ -86,25 +89,41 @@ type Note struct {
     Content              string      // HTML from TipTap
     MeetingID            *string     // Google Calendar event ID
     MeetingDate          *time.Time
+    Tags                 []Tag       // Many-to-many relationship
+    Todos                []Todo      // Linked todos
 }
 ```
 
 ### Todo
-Follow-up items, can link to multiple notes.
+Follow-up items with 4-status kanban workflow.
 ```go
 type Todo struct {
     ID          string
     Title       string
     Description string
-    Status      string  // "not_started", "in_progress", "completed"
-    Priority    string  // "low", "medium", "high"
+    Status      string    // "not_started", "in_progress", "stuck", "completed"
+    Priority    string    // "low", "medium", "high"
     DueDate     *time.Time
-    Notes       []Note  // Many-to-many relationship
+    AccountID   *string   // Optional account tag
+    AccountName string    // Populated from join
+    Notes       []Note    // Many-to-many relationship
+}
+```
+
+### Tag
+Tags for organizing notes.
+```go
+type Tag struct {
+    ID        string
+    Name      string    // "Follow-up", "Demo", "Urgent"
+    Color     string    // Hex color "#ef4444"
+    CreatedAt time.Time
 }
 ```
 
 ## API Endpoints
 
+### Accounts
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/accounts` | List all accounts |
@@ -112,20 +131,102 @@ type Todo struct {
 | GET | `/api/accounts/:id` | Get account by ID |
 | PUT | `/api/accounts/:id` | Update account |
 | DELETE | `/api/accounts/:id` | Delete account |
+
+### Notes
+| Method | Path | Description |
+|--------|------|-------------|
 | GET | `/api/notes` | List all notes |
 | POST | `/api/notes` | Create note |
-| GET | `/api/notes/:id` | Get note with linked todos |
+| GET | `/api/notes/:id` | Get note with linked todos and tags |
 | PUT | `/api/notes/:id` | Update note |
 | DELETE | `/api/notes/:id` | Delete note |
+| GET | `/api/accounts/:id/notes` | Get notes by account |
+| GET | `/api/notes/:id/export` | Export note for PDF |
+
+### Todos
+| Method | Path | Description |
+|--------|------|-------------|
 | GET | `/api/todos` | List todos (optional `?status=` filter) |
 | POST | `/api/todos` | Create todo |
-| PUT | `/api/todos/:id` | Update todo (including status for kanban) |
+| GET | `/api/todos/:id` | Get todo by ID |
+| PUT | `/api/todos/:id` | Update todo (status for kanban) |
 | DELETE | `/api/todos/:id` | Delete todo |
 | POST | `/api/todos/:id/notes/:noteId` | Link todo to note |
 | DELETE | `/api/todos/:id/notes/:noteId` | Unlink todo from note |
-| GET | `/api/search?q=term` | Full-text search |
+
+### Tags
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/tags` | List all tags |
+| POST | `/api/tags` | Create tag |
+| PUT | `/api/tags/:id` | Update tag |
+| DELETE | `/api/tags/:id` | Delete tag |
+| GET | `/api/notes/:id/tags` | Get tags for a note |
+| POST | `/api/notes/:id/tags/:tagId` | Add tag to note |
+| DELETE | `/api/notes/:id/tags/:tagId` | Remove tag from note |
+
+### Search & Analytics
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/search?q=term` | Full-text search (fuzzy, FTS4) |
 | GET | `/api/analytics` | Dashboard statistics |
 | GET | `/api/analytics/incomplete` | Notes with missing fields |
+
+### Calendar (Google OAuth)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/calendar/auth` | Get OAuth URL |
+| GET | `/api/calendar/callback` | OAuth callback |
+| GET | `/api/calendar/config` | Get connection status |
+| DELETE | `/api/calendar/disconnect` | Disconnect calendar |
+| GET | `/api/calendar/events` | List calendar events |
+| GET | `/api/calendar/events/:eventId` | Get single event |
+| POST | `/api/calendar/parse-participants` | Parse attendees by domain |
+
+## Frontend Pages
+
+### Dashboard (`/`)
+- Clickable stat cards (Notes, Accounts, Todos, Completion Rate)
+- Notes by account breakdown
+- Todos by status (Not Started, In Progress, Stuck, Completed)
+- Incomplete fields tracker
+
+### Notes (`/notes`)
+- **Three view modes**: Folders, Cards, Organized (toggle in header)
+- Rich text editor with TipTap
+- PDF export (full/minimal)
+- Move notes between accounts
+- Merge accounts functionality
+
+### Accounts (`/accounts`)
+- Split view: accounts list + detail panel
+- Account stats (notes, todos, completed/pending)
+- Recent notes and todos per account
+- Create, edit, delete accounts
+
+### Todos (`/todos`)
+- **4-column Kanban**: Not Started, In Progress, Stuck, Completed
+- Completed section is full-width at bottom
+- Priority indicator badges (H/M/L colored squares)
+- High priority auto-sorts to top of each column
+- Filter by: account, priority, linked notes
+- Sort by: date, priority, title
+- Bulk operations (select, move, delete)
+- Account tags on cards
+
+### Calendar (`/calendar`)
+- Google OAuth integration
+- Event list view
+- Create notes from calendar events
+- Auto-populate participants from attendees
+
+### Settings (`/settings`)
+- **Default Views**: Notes view, Todos view, Accounts view preferences
+- **Tags Management**: Create/edit/delete tags with color picker
+- **Templates**: Customize note templates
+- **Calendar**: Connect/disconnect Google Calendar
+- **Data**: Export all data, delete all data
+- Theme toggle (light/dark)
 
 ## Development Commands
 
@@ -149,40 +250,128 @@ make setup            # Install deps + configure hooks
 make setup-hooks      # Configure git hooks only
 ```
 
-## Git Hooks & Dashcode
+## Git Hooks & Dashcode Integration
 
-This repo uses custom git hooks that report to **Dashcode** (localhost:3001).
+This repo uses custom git hooks that report to **Dashcode** at `localhost:3001`.
 
-### Pre-commit Hook
-- Security: Scans for secrets, API keys, sensitive files
-- Go: Format check (gofmt), vet, build verification
-- General: Merge conflicts, trailing whitespace, debugger statements
-- Reports results to Dashcode
+### Pre-commit Hook (`.githooks/pre-commit`)
 
-### Commit-msg Hook
-- Validates conventional commit format
-- Required format: `type(scope): description`
-- Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `init`, `perf`, `ci`, `build`, `revert`
+**Purpose**: Validates code quality and security before allowing commits.
 
-### Post-commit Hook
-- Posts commit metadata to Dashcode for tracking
-- Includes: author, message, files changed, branch
+**Checks performed**:
+1. **Security Checks**
+   - Scans for secrets (API keys, tokens, passwords, private keys)
+   - Detects sensitive file types (.env, .pem, .key, credentials.json)
+   - Warns about large files (>1MB)
 
-## Testing Locally
+2. **Go Backend Checks**
+   - `gofmt` - Format validation
+   - `go vet` - Static analysis
+   - `go build` - Compilation check
+   - Common issues (fmt.Println usage, TODO comments)
 
-```bash
-# 1. Start backend
-cd backend && go run ./cmd/server/
+3. **Frontend Checks**
+   - `svelte-check` - TypeScript/Svelte validation
+   - `console.log` detection
 
-# 2. In another terminal, start frontend
-cd frontend && npm run dev
+4. **General Checks**
+   - Merge conflict markers
+   - Trailing whitespace
+   - Debugger statements
 
-# 3. Open http://localhost:5173
-
-# OR use Docker
-docker-compose up
-# Open http://localhost:3000
+**Dashcode Payload**:
+```json
+{
+  "repoId": "e8450e26-c573-4aee-af1b-248405af0acc",
+  "commitHash": "<current-hash>",
+  "branch": "<branch-name>",
+  "trigger": "pre-commit",
+  "status": "success|fail",
+  "durationMs": 0,
+  "meta": {
+    "author": "<git-user>",
+    "stagedFiles": <count>,
+    "errors": <count>,
+    "warnings": <count>
+  },
+  "results": [
+    {"type": "security", "status": "pass", "output": "...", "durationMs": 0, "exitCode": 0},
+    {"type": "general", "status": "pass", "output": "...", "durationMs": 0, "exitCode": 0}
+  ]
+}
 ```
+
+**Endpoint**: `POST http://localhost:3001/api/hooks/report`
+
+### Commit-msg Hook (`.githooks/commit-msg`)
+
+**Purpose**: Validates conventional commit message format.
+
+**Format**: `type(scope): description`
+
+**Valid types**:
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation
+- `style` - Formatting
+- `refactor` - Code restructuring
+- `test` - Tests
+- `chore` - Maintenance
+- `init` - Initial commit
+- `perf` - Performance
+- `ci` - CI/CD
+- `build` - Build system
+- `revert` - Revert commit
+
+**Validation**:
+- Checks message matches pattern
+- Warns if >72 characters
+- Warns if <10 characters
+- Skips merge commits
+
+### Post-commit Hook (`.githooks/post-commit`)
+
+**Purpose**: Reports successful commits to Dashcode for tracking.
+
+**Data collected**:
+- Commit hash (full and short)
+- Commit message
+- Author name and email
+- Branch name
+- Repository name
+- Files changed count
+
+**Dashcode Payload**:
+```json
+{
+  "repoName": "notes-droid",
+  "commitHash": "<full-hash>",
+  "branch": "<branch-name>",
+  "trigger": "post-commit",
+  "status": "success",
+  "durationMs": 100,
+  "meta": {
+    "author": "<author-name>",
+    "email": "<author-email>",
+    "message": "<commit-message>",
+    "shortHash": "<short-hash>",
+    "filesChanged": <count>
+  },
+  "results": [
+    {
+      "type": "commit",
+      "status": "pass",
+      "output": "Commit <short-hash> by <author>",
+      "durationMs": 100,
+      "exitCode": 0
+    }
+  ]
+}
+```
+
+**Endpoint**: `POST http://localhost:3001/api/hooks/report`
+
+**Note**: Post-commit never blocks - always exits 0.
 
 ## Common Tasks for Agents
 
@@ -190,26 +379,29 @@ docker-compose up
 1. Add handler function in `backend/internal/handlers/handlers.go`
 2. Add route in `backend/cmd/server/main.go`
 3. Add corresponding function in `frontend/src/lib/utils/api.ts`
-4. Update `docs/API.md`
+4. Update types if needed
 
 ### Adding a New Page
 1. Create route in `frontend/src/routes/[page-name]/+page.svelte`
-2. Add navigation link in `frontend/src/routes/+layout.svelte`
+2. Add navigation link in `frontend/src/routes/+layout.svelte` (navItems array)
 3. Import any needed stores from `frontend/src/lib/stores/`
 
 ### Modifying Database Schema
 1. Update models in `backend/internal/models/models.go`
-2. Add migration SQL in `backend/internal/db/db.go` (Migrate function)
-3. Update handlers to use new fields
-4. Delete `data/notes.db` to reset (or write migration logic)
+2. Add migration SQL in `backend/internal/db/db.go`
+3. Use `columnExists()` helper for ALTER TABLE migrations
+4. Update handlers to use new fields
 
-### Adding a New Field to Notes
-1. Add field to `Note` struct in `backend/internal/models/models.go`
-2. Add to `CreateNoteRequest` and `UpdateNoteRequest`
-3. Update SQL in `db.go` migration
-4. Update `GetNote`, `CreateNote`, `UpdateNote` handlers
-5. Add to frontend form in `frontend/src/routes/notes/[id]/+page.svelte`
-6. Update API types in `frontend/src/lib/utils/api.ts`
+### Adding a New Todo Status
+1. Update `columns` array in `frontend/src/routes/todos/+page.svelte`
+2. Add color to `getColumnColorClass()` and `getColumnOutlineColor()`
+3. Update dashboard status list in `frontend/src/routes/+page.svelte`
+4. Update `filterAndSortTodos()` if needed
+
+### Working with Tags
+1. Backend: Tags table + note_tags junction table
+2. API: `/api/tags` CRUD + `/api/notes/:id/tags/:tagId` linking
+3. Frontend: Tag management in Settings, tag display/selection in notes
 
 ## Environment
 
@@ -223,18 +415,23 @@ docker-compose up
 - Production port: 3000
 - API URL: `http://localhost:8080` (hardcoded in `api.ts`)
 
+### Dashcode
+- URL: `http://localhost:3001`
+- Endpoint: `/api/hooks/report`
+- Required for hook tracking (non-blocking if unavailable)
+
+## Settings Storage
+
+User preferences stored in localStorage:
+- `darkMode` - Theme preference
+- `autoSave` - Auto-save notes
+- `defaultTemplate` - Default note template
+- `defaultNotesView` - Notes page view mode (folders/cards/organized)
+- `defaultTodosView` - Todos page view mode (kanban/list)
+- `defaultAccountsView` - Accounts page view mode (split/grid)
+
 ## Known Limitations
 
 1. **Single user**: No authentication, designed for local use
-2. **Google Calendar**: Placeholder only, OAuth not implemented
-3. **PDF Export**: Returns JSON, client-side PDF generation needed
-4. **FTS4 vs FTS5**: Using FTS4 for broader SQLite compatibility
-
-## Future Roadmap
-
-- [ ] Google Calendar OAuth integration
-- [ ] Auto-populate participants from calendar
-- [ ] Proper PDF export with formatting
-- [ ] Note templates customization
-- [ ] Search result highlighting
-- [ ] Mobile responsive improvements
+2. **FTS4 vs FTS5**: Using FTS4 for broader SQLite compatibility
+3. **Google Calendar**: Requires OAuth setup (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
