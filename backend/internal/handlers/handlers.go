@@ -631,6 +631,12 @@ func (h *Handler) GetTodos(c *gin.Context) {
 	placeholders := strings.Repeat("?,", len(todoIDs))
 	placeholders = placeholders[:len(placeholders)-1]
 
+	// Correctly cast todoIDs to []interface{} for Query
+	queryArgs := make([]interface{}, len(todoIDs))
+	for i, v := range todoIDs {
+		queryArgs[i] = v
+	}
+
 	notesQuery := `
 		SELECT nt.todo_id, n.id, n.title
 		FROM note_todos nt
@@ -638,7 +644,7 @@ func (h *Handler) GetTodos(c *gin.Context) {
 		WHERE nt.todo_id IN (` + placeholders + `)
 	`
 
-	noteRows, err := h.db.Query(notesQuery, todoIDs...)
+	noteRows, err := h.db.Query(notesQuery, queryArgs...)
 	if err != nil {
 		log.Printf("Error fetching linked notes: %v", err)
 		// Return todos even if linked notes fail
@@ -651,6 +657,7 @@ func (h *Handler) GetTodos(c *gin.Context) {
 	for noteRows.Next() {
 		var todoID, noteID, noteTitle string
 		if err := noteRows.Scan(&todoID, &noteID, &noteTitle); err != nil {
+			log.Printf("Error scanning linked note: %v", err)
 			continue
 		}
 		if _, ok := linkedNotesMap[todoID]; !ok {

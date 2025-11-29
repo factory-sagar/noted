@@ -22,16 +22,20 @@
   import { onMount } from 'svelte';
   import { api, type SearchResult } from '$lib/utils/api';
   import QuickCapture from '$lib/components/QuickCapture.svelte';
+  import CommandPalette from '$lib/components/CommandPalette.svelte';
   import { theme } from '$lib/stores/theme';
 
   let darkMode = false;
   let sidebarOpen = true;
-  let searchOpen = false;
+  let searchOpen = false; // Used for Command Palette now
   let quickCaptureOpen = false;
-  let searchQuery = '';
-  let searchResults: SearchResult[] = [];
-  let searching = false;
-  let searchTimeout: ReturnType<typeof setTimeout>;
+  let quickCaptureType: 'note' | 'todo' = 'note';
+  
+  // Removed legacy search state
+  // let searchQuery = '';
+  // let searchResults: SearchResult[] = [];
+  // let searching = false;
+  // let searchTimeout: ReturnType<typeof setTimeout>;
 
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -75,19 +79,12 @@
   function handleKeydown(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
-      searchOpen = !searchOpen;
-      if (searchOpen) {
-        searchQuery = '';
-        searchResults = [];
-      }
+      searchOpen = !searchOpen; // Toggles Command Palette
     }
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
       e.preventDefault();
       quickCaptureOpen = !quickCaptureOpen;
-    }
-    if (e.key === 'Escape') {
-      searchOpen = false;
-      quickCaptureOpen = false;
+      quickCaptureType = 'note';
     }
   }
 
@@ -95,60 +92,9 @@
     if (href === '/') return currentPath === '/';
     return currentPath.startsWith(href);
   }
+  
+  // Legacy search functions removed as they are handled in CommandPalette
 
-  async function performSearch(query: string) {
-    if (query.length < 2) {
-      searchResults = [];
-      return;
-    }
-    
-    searching = true;
-    try {
-      searchResults = await api.search(query);
-    } catch (e) {
-      console.error('Search failed:', e);
-      searchResults = [];
-    } finally {
-      searching = false;
-    }
-  }
-
-  function handleSearchInput(e: Event) {
-    const value = (e.target as HTMLInputElement).value;
-    searchQuery = value;
-    
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => performSearch(value), 300);
-  }
-
-  function highlightMatch(text: string, query: string): string {
-    if (!query || query.length < 2) return text;
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark class="bg-primary-200 dark:bg-primary-900/50 px-0.5">$1</mark>');
-  }
-
-  function getResultIcon(type: string) {
-    switch (type) {
-      case 'note': return FileText;
-      case 'account': return Building2;
-      case 'todo': return CheckSquare;
-      default: return FileText;
-    }
-  }
-
-  function getResultLink(result: SearchResult): string {
-    switch (result.type) {
-      case 'note': return `/notes/${result.id}`;
-      case 'account': return `/accounts`;
-      case 'todo': return `/todos`;
-      default: return '/';
-    }
-  }
-
-  function selectResult(result: SearchResult) {
-    searchOpen = false;
-    goto(getResultLink(result));
-  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -230,7 +176,7 @@
             on:click={() => searchOpen = true}
           >
             <Search class="w-4 h-4 text-[var(--color-muted)]" strokeWidth={1.5} />
-            <span class="flex-1 text-[var(--color-muted)]">Search notes, accounts, todos...</span>
+            <span class="flex-1 text-[var(--color-muted)]">Type a command or search...</span>
             <kbd class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: var(--radius);">
               ⌘K
             </kbd>
@@ -258,88 +204,18 @@
   </div>
 </div>
 
-<!-- Search Modal -->
-{#if searchOpen}
-  <div class="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-    <button 
-      class="modal-backdrop"
-      on:click={() => searchOpen = false}
-      aria-label="Close search"
-    ></button>
-    
-    <div class="relative z-[101] w-full max-w-2xl mx-4 bg-[var(--color-card)] border border-[var(--color-border)] shadow-editorial-lg animate-scale-in" style="border-radius: calc(var(--radius) + 4px);">
-      <div class="flex items-center gap-4 px-6 py-4 border-b border-[var(--color-border)]">
-        {#if searching}
-          <Loader2 class="w-5 h-5 text-[var(--color-muted)] animate-spin" strokeWidth={1.5} />
-        {:else}
-          <Search class="w-5 h-5 text-[var(--color-muted)]" strokeWidth={1.5} />
-        {/if}
-        <!-- svelte-ignore a11y-autofocus -->
-        <input 
-          type="text"
-          placeholder="Search notes, accounts, todos..."
-          class="flex-1 bg-transparent outline-none text-[var(--color-text)] placeholder-[var(--color-muted)] text-lg"
-          value={searchQuery}
-          on:input={handleSearchInput}
-          autofocus
-        />
-        <kbd class="px-2 py-1 text-xs bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-muted)]" style="border-radius: var(--radius);">ESC</kbd>
-      </div>
-      
-      <div class="max-h-96 overflow-y-auto">
-        {#if searchQuery.length < 2}
-          <div class="px-6 py-12 text-center">
-            <p class="text-[var(--color-muted)]">Type at least 2 characters to search</p>
-          </div>
-        {:else if searching}
-          <div class="px-6 py-12 text-center">
-            <p class="text-[var(--color-muted)]">Searching...</p>
-          </div>
-        {:else if searchResults.length === 0}
-          <div class="px-6 py-12 text-center">
-            <p class="text-[var(--color-muted)]">No results found for "{searchQuery}"</p>
-          </div>
-        {:else}
-          <div class="p-2">
-            {#each searchResults as result}
-              <button
-                class="w-full flex items-start gap-4 p-4 hover:bg-[var(--color-card-hover)] transition-colors text-left group"
-                on:click={() => selectResult(result)}
-              >
-                <div class="p-2 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: var(--radius);">
-                  <svelte:component 
-                    this={getResultIcon(result.type)} 
-                    class="w-4 h-4 text-[var(--color-muted)]" 
-                    strokeWidth={1.5}
-                  />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-3 mb-1">
-                    <span class="font-medium">
-                      {@html highlightMatch(result.title, searchQuery)}
-                    </span>
-                    <span class="tag-default text-[10px]">
-                      {result.type}
-                    </span>
-                  </div>
-                  {#if result.snippet}
-                    <p class="text-sm text-[var(--color-muted)] line-clamp-2">
-                      {@html result.snippet}
-                    </p>
-                  {/if}
-                </div>
-                <ArrowRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
-              </button>
-            {/each}
-          </div>
-        {/if}
-      </div>
-    </div>
-  </div>
-{/if}
+<!-- Command Palette -->
+<CommandPalette 
+  bind:open={searchOpen} 
+  on:quickCapture={(e) => {
+    quickCaptureType = e.detail;
+    quickCaptureOpen = true;
+  }}
+/>
 
 <!-- Quick Capture Modal -->
 <QuickCapture 
   bind:open={quickCaptureOpen} 
+  type={quickCaptureType}
   on:close={() => quickCaptureOpen = false}
 />
