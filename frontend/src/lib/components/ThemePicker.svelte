@@ -46,6 +46,12 @@
       colors: ['#f92672', '#272822', '#f8f8f2']
     },
     { 
+      id: 'liquid', 
+      name: 'Liquid Glass', 
+      description: 'Futuristic, ethereal, and fluid. Animated background.',
+      colors: ['#3b82f6', '#eef2ff', '#1e293b']
+    },
+    { 
       id: 'noir', 
       name: 'Editorial Noir', 
       description: 'Classic, sophisticated, and warm. Gold & Serif.',

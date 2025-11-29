@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export type Theme = 'modern' | 'minimal' | 'cyber' | 'noir' | 'retro' | 'nordic' | 'corporate' | 'monokai';
+export type Theme = 'modern' | 'minimal' | 'cyber' | 'noir' | 'retro' | 'nordic' | 'corporate' | 'monokai' | 'liquid';
 
 const createThemeStore = () => {
   const { subscribe, set, update } = writable<Theme>('modern');
@@ -19,7 +19,8 @@ const createThemeStore = () => {
           'theme-retro',
           'theme-nordic',
           'theme-corporate',
-          'theme-monokai'
+          'theme-monokai',
+          'theme-liquid'
         );
         // Add the new one (if not modern)
         if (theme !== 'modern') {
