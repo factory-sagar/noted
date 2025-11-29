@@ -287,12 +287,13 @@
                     
                     <div class="flex items-center gap-2 shrink-0 flex-wrap">
                       {#if group.suggested_account}
+                        {@const suggested = group.suggested_account}
                         <button
                           class="btn-primary btn-sm flex items-center gap-2 whitespace-nowrap"
-                          on:click={() => linkDomainToAccount(group.domain, group.suggested_account.id)}
+                          on:click={() => linkDomainToAccount(group.domain, suggested.id)}
                         >
                           <Link class="w-3 h-3" />
-                          <span class="truncate max-w-[120px]">Link to {group.suggested_account.name}</span>
+                          <span class="truncate max-w-[120px]">Link to {suggested.name}</span>
                         </button>
                       {:else}
                         <button
@@ -412,14 +413,14 @@
           <div class="flex items-center gap-1">
             <button
               class="p-2 hover:bg-[var(--color-border)] rounded-lg"
-              on:click={() => openEdit(selectedContact)}
+              on:click={() => selectedContact && openEdit(selectedContact)}
               title="Edit"
             >
               <Pencil class="w-4 h-4" />
             </button>
             <button
               class="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500"
-              on:click={() => deletingContact = selectedContact}
+              on:click={() => selectedContact && (deletingContact = selectedContact)}
               title="Delete"
             >
               <Trash2 class="w-4 h-4" />
@@ -541,16 +542,16 @@
       <h2 class="text-lg font-semibold mb-4">Edit Contact</h2>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium mb-1">Email</label>
-          <input type="email" class="input bg-[var(--color-border)]/50" value={editingContact.email} disabled />
+          <label for="edit-email" class="block text-sm font-medium mb-1">Email</label>
+          <input id="edit-email" type="email" class="input bg-[var(--color-border)]/50" value={editingContact.email} disabled />
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">Name</label>
-          <input type="text" class="input" placeholder="Full name" bind:value={editName} />
+          <label for="edit-name" class="block text-sm font-medium mb-1">Name</label>
+          <input id="edit-name" type="text" class="input" placeholder="Full name" bind:value={editName} />
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">Company</label>
-          <input type="text" class="input" placeholder="Company" bind:value={editCompany} />
+          <label for="edit-company" class="block text-sm font-medium mb-1">Company</label>
+          <input id="edit-company" type="text" class="input" placeholder="Company" bind:value={editCompany} />
         </div>
       </div>
       <div class="mt-6 flex justify-end gap-3">
