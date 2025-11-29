@@ -93,6 +93,8 @@
         action: 'delete'
       });
       addToast('success', 'Contacts deleted');
+      selectedIds = new Set();
+      isBulkMode = false;
       await Promise.all([loadContacts(), loadStats()]);
     } catch (e) {
       addToast('error', 'Failed to delete contacts');
@@ -106,7 +108,10 @@
         action: 'set_internal',
         value: { is_internal: isInternal }
       });
+      // Add toast and reload
       addToast('success', 'Contacts updated');
+      selectedIds = new Set(); // Clear selection
+      isBulkMode = false;
       await Promise.all([loadContacts(), loadStats()]);
     } catch (e) {
       addToast('error', 'Failed to update contacts');
@@ -122,6 +127,8 @@
       });
       addToast('success', 'Contacts linked to account');
       showBulkAccountModal = false;
+      selectedIds = new Set();
+      isBulkMode = false;
       await Promise.all([loadContacts(), loadStats()]);
     } catch (e) {
       addToast('error', 'Failed to link contacts');
@@ -264,9 +271,9 @@
   <title>Contacts - Noted</title>
 </svelte:head>
 
-<div class="flex h-full">
+<div class="flex h-full overflow-hidden">
   <!-- Main List -->
-  <div class="flex-1 overflow-auto p-6 {selectedContact ? 'hidden md:block md:border-r md:border-[var(--color-border)]' : ''}">
+  <div class="flex-1 overflow-y-auto p-6 {selectedContact ? 'hidden md:block md:border-r md:border-[var(--color-border)]' : ''}">
     <div class="max-w-4xl mx-auto">
       <div class="mb-6 flex items-center justify-between">
         <div>
@@ -400,7 +407,7 @@
               </div>
               
               <button 
-                class="flex-1 flex items-center gap-4 min-w-0 text-left"
+                class="flex-1 flex items-center gap-4 min-w-0 text-left p-0 bg-transparent border-none"
                 on:click={() => viewContact(contact)}
               >
                 <div class="w-10 h-10 rounded-full shrink-0 {contact.is_internal ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' : 'bg-green-100 text-green-600 dark:bg-green-900/30'} flex items-center justify-center font-medium">
@@ -451,8 +458,8 @@
 
   <!-- Contact Detail Panel -->
   {#if selectedContact}
-    <div class="w-full md:w-96 lg:w-[28rem] bg-[var(--color-card)] overflow-auto">
-      <div class="p-6">
+    <div class="w-full md:w-96 lg:w-[28rem] bg-[var(--color-card)] overflow-y-auto h-full border-l border-[var(--color-border)] shadow-xl z-20">
+      <div class="p-6 min-h-full">
         <!-- Back button (mobile) -->
         <button
           class="md:hidden flex items-center gap-2 text-[var(--color-muted)] mb-4"
