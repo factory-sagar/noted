@@ -3,7 +3,7 @@
   "name": "Noted",
   "outputfilename": "Noted",
   "frontend:install": "echo 'Frontend already built'",
-  "frontend:build": "echo 'Frontend already built'",
+  "frontend:build": "cd ../../../frontend && npm run build",
   "author": {
     "name": "Your Name",
     "email": "you@example.com"
