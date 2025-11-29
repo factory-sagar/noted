@@ -36,6 +36,7 @@
   let selectedIds: Set<string> = new Set();
   let isBulkMode = false;
   let showBulkAccountModal = false;
+  let showBulkDeleteModal = false;
   
   // Modals
   let linkingContact: Contact | null = null;
@@ -85,8 +86,7 @@
     isBulkMode = selectedIds.size > 0;
   }
 
-  async function bulkDelete() {
-    if (!confirm(`Delete ${selectedIds.size} contacts?`)) return;
+  async function confirmBulkDelete() {
     try {
       await api.bulkContactsOperation({
         contact_ids: Array.from(selectedIds),
@@ -95,6 +95,7 @@
       addToast('success', 'Contacts deleted');
       selectedIds = new Set();
       isBulkMode = false;
+      showBulkDeleteModal = false;
       await Promise.all([loadContacts(), loadStats()]);
     } catch (e) {
       addToast('error', 'Failed to delete contacts');
@@ -316,7 +317,7 @@
               {selectedIds.size} selected
             </div>
             <div class="h-6 w-px bg-[var(--color-border)]"></div>
-            <button class="btn-sm btn-danger" on:click={bulkDelete}>
+            <button class="btn-sm btn-danger" on:click={() => showBulkDeleteModal = true}>
               <Trash2 class="w-4 h-4" />
               Delete
             </button>
@@ -460,14 +461,24 @@
   {#if selectedContact}
     <div class="w-full md:w-96 lg:w-[28rem] bg-[var(--color-card)] overflow-y-auto h-full border-l border-[var(--color-border)] shadow-xl z-20">
       <div class="p-6 min-h-full">
-        <!-- Back button (mobile) -->
-        <button
-          class="md:hidden flex items-center gap-2 text-[var(--color-muted)] mb-4"
-          on:click={() => selectedContact = null}
-        >
-          <ArrowLeft class="w-4 h-4" />
-          Back to list
-        </button>
+        <!-- Header with close button -->
+        <div class="flex items-center justify-between mb-4">
+          <button
+            class="flex items-center gap-2 text-[var(--color-muted)] hover:text-[var(--color-text)]"
+            on:click={() => selectedContact = null}
+          >
+            <ArrowLeft class="w-4 h-4" />
+            <span class="md:hidden">Back to list</span>
+            <span class="hidden md:inline">Close</span>
+          </button>
+          <button
+            class="p-2 hover:bg-[var(--color-border)] rounded-lg"
+            on:click={() => selectedContact = null}
+            title="Close panel"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
 
         <!-- Contact Header -->
         <div class="flex items-start justify-between mb-6">
@@ -500,51 +511,12 @@
 
         <!-- Contact Info -->
         <div class="space-y-4 mb-6">
-          <div class="card p-4 bg-[var(--color-bg)] border border-[var(--color-border)]">
-            <h3 class="text-sm font-medium text-[var(--color-muted)] mb-3 flex items-center gap-2">
-              <Pencil class="w-3.5 h-3.5" /> Edit Details
-            </h3>
-            <div class="space-y-3">
-              <div>
-                <label for="inline-name" class="block text-xs font-medium mb-1">Name</label>
-                <input
-                  id="inline-name"
-                  type="text"
-                  class="input text-sm py-1.5"
-                  placeholder="Full name"
-                  value={selectedContact.name}
-                  on:input={(e) => {
-                    if (selectedContact) selectedContact.name = e.currentTarget.value;
-                  }}
-                  on:blur={() => {
-                    openEdit(selectedContact);
-                    editName = selectedContact.name;
-                    editCompany = selectedContact.company;
-                    saveEdit();
-                  }}
-                />
-              </div>
-              <div>
-                <label for="inline-company" class="block text-xs font-medium mb-1">Company</label>
-                <input
-                  id="inline-company"
-                  type="text"
-                  class="input text-sm py-1.5"
-                  placeholder="Company"
-                  value={selectedContact.company}
-                  on:input={(e) => {
-                    if (selectedContact) selectedContact.company = e.currentTarget.value;
-                  }}
-                  on:blur={() => {
-                    openEdit(selectedContact);
-                    editName = selectedContact.name;
-                    editCompany = selectedContact.company;
-                    saveEdit();
-                  }}
-                />
-              </div>
+          {#if selectedContact.company}
+            <div class="flex items-center gap-3 text-sm">
+              <Building2 class="w-4 h-4 text-[var(--color-muted)]" />
+              <span>{selectedContact.company}</span>
             </div>
-          </div>
+          {/if}
 
           <div class="flex items-center gap-3 text-sm">
             <span class="px-2 py-1 rounded text-xs {selectedContact.is_internal ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}">
@@ -776,6 +748,37 @@
           on:click={deleteContact}
         >
           Delete
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Bulk Delete Confirmation Modal -->
+{#if showBulkDeleteModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => showBulkDeleteModal = false}
+      aria-label="Close modal"
+    ></button>
+    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-red-500">
+        <Trash2 class="w-5 h-5" />
+        Delete {selectedIds.size} Contacts?
+      </h2>
+      <p class="text-[var(--color-muted)] mb-6">
+        This action cannot be undone. Meeting history will be preserved in notes.
+      </p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-secondary" on:click={() => showBulkDeleteModal = false}>
+          Cancel
+        </button>
+        <button
+          class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          on:click={confirmBulkDelete}
+        >
+          Delete All
         </button>
       </div>
     </div>
