@@ -458,7 +458,35 @@ export const api = {
     request<ContactNote[]>(`/contacts/${id}/notes`),
   bulkContactsOperation: (data: { contact_ids: string[]; action: string; value?: Record<string, any> }) =>
     request<{ message: string }>('/contacts/bulk', { method: 'POST', body: JSON.stringify(data) }),
+  getContactDomainGroups: (filter?: 'unlinked' | 'all', includeContacts?: boolean) => {
+    const params = new URLSearchParams();
+    if (filter) params.append('filter', filter);
+    if (includeContacts) params.append('include_contacts', 'true');
+    const query = params.toString();
+    return request<DomainGroup[]>(`/contacts/domain-groups${query ? `?${query}` : ''}`);
+  },
+  linkDomainToAccount: (domain: string, accountId: string) =>
+    request<{ message: string; contacts_updated: number }>(`/contacts/domain/${encodeURIComponent(domain)}/link/${accountId}`, { method: 'POST' }),
+  createAccountFromDomain: (domain: string, accountName?: string) =>
+    request<{ message: string; account_id: string; account_name: string; contacts_updated: number }>(
+      `/contacts/domain/${encodeURIComponent(domain)}/create-account`, 
+      { method: 'POST', body: JSON.stringify({ account_name: accountName }) }
+    ),
 };
+
+export interface DomainGroup {
+  domain: string;
+  contact_count: number;
+  contact_ids: string[];
+  is_internal: boolean;
+  linked_account_id?: string;
+  linked_account_name?: string;
+  suggested_account?: {
+    id: string;
+    name: string;
+  };
+  contacts?: Contact[];
+}
 
 export interface ContactNote {
   id: string;

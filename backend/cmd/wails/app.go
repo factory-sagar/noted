@@ -177,6 +177,9 @@ func (a *App) startServer() {
 		api.POST("/contacts/:id/confirm-suggestion", h.ConfirmAccountSuggestion)
 		api.POST("/contacts/:id/link/:accountId", h.LinkContactToAccount)
 		api.GET("/contacts/:id/notes", h.GetContactNotes)
+		api.GET("/contacts/domain-groups", h.GetContactDomainGroups)
+		api.POST("/contacts/domain/:domain/link/:accountId", h.LinkDomainToAccount)
+		api.POST("/contacts/domain/:domain/create-account", h.CreateAccountFromDomain)
 	}
 
 	// Use fixed port 8080 for OAuth compatibility

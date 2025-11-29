@@ -583,3 +583,238 @@ func (h *Handler) BulkContactsOperation(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Bulk operation completed"})
 }
+
+// DomainGroup represents contacts grouped by domain with suggestions
+type DomainGroup struct {
+	Domain           string    `json:"domain"`
+	ContactCount     int       `json:"contact_count"`
+	ContactIDs       []string  `json:"contact_ids"`
+	IsInternal       bool      `json:"is_internal"`
+	LinkedAccountID  *string   `json:"linked_account_id,omitempty"`
+	LinkedAccountName string   `json:"linked_account_name,omitempty"`
+	SuggestedAccount *struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"suggested_account,omitempty"`
+	Contacts []Contact `json:"contacts,omitempty"`
+}
+
+// GetContactDomainGroups returns contacts grouped by domain with smart suggestions
+func (h *Handler) GetContactDomainGroups(c *gin.Context) {
+	includeContacts := c.Query("include_contacts") == "true"
+	filter := c.Query("filter") // "unlinked", "all"
+
+	// Get all external contacts grouped by domain
+	query := `
+		SELECT c.domain, COUNT(*) as count, c.is_internal,
+		       GROUP_CONCAT(c.id) as contact_ids,
+		       MAX(c.account_id) as account_id
+		FROM contacts c
+		WHERE c.is_internal = 0
+	`
+	if filter == "unlinked" {
+		query += " AND c.account_id IS NULL"
+	}
+	query += `
+		GROUP BY c.domain
+		ORDER BY count DESC
+	`
+
+	rows, err := h.db.Query(query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	groups := []DomainGroup{}
+	for rows.Next() {
+		var group DomainGroup
+		var isInternal int
+		var contactIDsStr string
+		var accountID sql.NullString
+
+		if err := rows.Scan(&group.Domain, &group.ContactCount, &isInternal, &contactIDsStr, &accountID); err != nil {
+			continue
+		}
+
+		group.IsInternal = isInternal == 1
+		group.ContactIDs = strings.Split(contactIDsStr, ",")
+
+		if accountID.Valid {
+			group.LinkedAccountID = &accountID.String
+			// Get account name
+			h.db.QueryRow("SELECT name FROM accounts WHERE id = ?", accountID.String).Scan(&group.LinkedAccountName)
+		} else {
+			// Try to find a matching account by domain
+			var suggestedID, suggestedName string
+			// Look for accounts that already have contacts with this domain
+			err := h.db.QueryRow(`
+				SELECT a.id, a.name FROM accounts a
+				INNER JOIN contacts c ON c.account_id = a.id
+				WHERE c.domain = ? AND a.deleted_at IS NULL
+				GROUP BY a.id
+				ORDER BY COUNT(*) DESC
+				LIMIT 1
+			`, group.Domain).Scan(&suggestedID, &suggestedName)
+			
+			if err == nil {
+				group.SuggestedAccount = &struct {
+					ID   string `json:"id"`
+					Name string `json:"name"`
+				}{ID: suggestedID, Name: suggestedName}
+			} else {
+				// Try matching by account name containing domain
+				domainParts := strings.Split(group.Domain, ".")
+				if len(domainParts) > 0 {
+					companyName := domainParts[0]
+					err := h.db.QueryRow(`
+						SELECT id, name FROM accounts 
+						WHERE LOWER(name) LIKE ? AND deleted_at IS NULL
+						LIMIT 1
+					`, "%"+companyName+"%").Scan(&suggestedID, &suggestedName)
+					
+					if err == nil {
+						group.SuggestedAccount = &struct {
+							ID   string `json:"id"`
+							Name string `json:"name"`
+						}{ID: suggestedID, Name: suggestedName}
+					}
+				}
+			}
+		}
+
+		groups = append(groups, group)
+	}
+
+	// Optionally include full contact details
+	if includeContacts {
+		for i := range groups {
+			groups[i].Contacts = h.getContactsByDomain(groups[i].Domain)
+		}
+	}
+
+	c.JSON(http.StatusOK, groups)
+}
+
+func (h *Handler) getContactsByDomain(domain string) []Contact {
+	rows, err := h.db.Query(`
+		SELECT c.id, c.email, c.name, c.company, c.domain, c.is_internal,
+		       c.account_id, a.name, c.suggested_account_id, sa.name,
+		       c.suggestion_confirmed, c.source, c.first_seen, c.last_seen,
+		       c.meeting_count, c.created_at, c.updated_at
+		FROM contacts c
+		LEFT JOIN accounts a ON c.account_id = a.id
+		LEFT JOIN accounts sa ON c.suggested_account_id = sa.id
+		WHERE c.domain = ?
+		ORDER BY c.name ASC
+	`, domain)
+	if err != nil {
+		return []Contact{}
+	}
+	defer rows.Close()
+
+	contacts := []Contact{}
+	for rows.Next() {
+		var contact Contact
+		var accountID, accountName, suggestedAccountID, suggestedAccountName sql.NullString
+		var isInternal, suggestionConfirmed int
+
+		err := rows.Scan(
+			&contact.ID, &contact.Email, &contact.Name, &contact.Company, &contact.Domain,
+			&isInternal, &accountID, &accountName, &suggestedAccountID, &suggestedAccountName,
+			&suggestionConfirmed, &contact.Source, &contact.FirstSeen, &contact.LastSeen,
+			&contact.MeetingCount, &contact.CreatedAt, &contact.UpdatedAt,
+		)
+		if err != nil {
+			continue
+		}
+
+		contact.IsInternal = isInternal == 1
+		contact.SuggestionConfirmed = suggestionConfirmed == 1
+		if accountID.Valid {
+			contact.AccountID = &accountID.String
+			contact.AccountName = accountName.String
+		}
+		if suggestedAccountID.Valid {
+			contact.SuggestedAccountID = &suggestedAccountID.String
+			contact.SuggestedAccountName = suggestedAccountName.String
+		}
+		contacts = append(contacts, contact)
+	}
+	return contacts
+}
+
+// LinkDomainToAccount links all contacts with a domain to an account
+func (h *Handler) LinkDomainToAccount(c *gin.Context) {
+	domain := c.Param("domain")
+	accountID := c.Param("accountId")
+
+	if domain == "" || accountID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Domain and account ID required"})
+		return
+	}
+
+	result, err := h.db.Exec(`
+		UPDATE contacts 
+		SET account_id = ?, updated_at = CURRENT_TIMESTAMP 
+		WHERE domain = ? AND is_internal = 0
+	`, accountID, domain)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Domain linked to account",
+		"contacts_updated": rowsAffected,
+	})
+}
+
+// CreateAccountFromDomain creates a new account and links all domain contacts to it
+func (h *Handler) CreateAccountFromDomain(c *gin.Context) {
+	domain := c.Param("domain")
+
+	var req struct {
+		AccountName string `json:"account_name"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// Use domain as account name if not provided
+		domainParts := strings.Split(domain, ".")
+		if len(domainParts) > 0 {
+			req.AccountName = strings.Title(domainParts[0])
+		} else {
+			req.AccountName = domain
+		}
+	}
+
+	// Create account
+	accountID := uuid.New().String()
+	_, err := h.db.Exec(`
+		INSERT INTO accounts (id, name) VALUES (?, ?)
+	`, accountID, req.AccountName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Link all contacts with this domain
+	result, err := h.db.Exec(`
+		UPDATE contacts 
+		SET account_id = ?, updated_at = CURRENT_TIMESTAMP 
+		WHERE domain = ? AND is_internal = 0
+	`, accountID, domain)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Account created and contacts linked",
+		"account_id": accountID,
+		"account_name": req.AccountName,
+		"contacts_updated": rowsAffected,
+	})
+}

@@ -154,6 +154,9 @@ func main() {
 		api.POST("/contacts/:id/link/:accountId", h.LinkContactToAccount)
 		api.GET("/contacts/:id/notes", h.GetContactNotes)
 		api.POST("/contacts/bulk", h.BulkContactsOperation)
+		api.GET("/contacts/domain-groups", h.GetContactDomainGroups)
+		api.POST("/contacts/domain/:domain/link/:accountId", h.LinkDomainToAccount)
+		api.POST("/contacts/domain/:domain/create-account", h.CreateAccountFromDomain)
 	}
 
 	// Get port from environment or default
