@@ -94,7 +94,7 @@ func main() {
 		api.GET("/notes/:id/export", h.ExportNotePDF)
 
 		// Calendar
-		api.GET("/calendar/auth", h.GetCalendarAuthURL)
+		api.GET("/calendar/auth", h.CalendarAuthHandler) // Renamed from GetCalendarAuthURL
 		api.GET("/calendar/callback", h.HandleCalendarCallback)
 		api.GET("/calendar/config", h.GetCalendarConfig)
 		api.POST("/calendar/connect", h.ConnectCalendar)
