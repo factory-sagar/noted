@@ -82,51 +82,22 @@
   }
 
   async function connectCalendar() {
-    // Check if this is Apple Calendar (native app) or Google (browser)
-    const config = await api.getCalendarConfig();
-    if (config.type === 'apple') {
-      await connectAppleCalendar();
-    } else {
-      await connectGoogleCalendar();
-    }
-  }
-
-  async function connectGoogleCalendar() {
-    try {
-      const { url } = await api.getCalendarAuthURL();
-      window.location.href = url;
-    } catch (e: any) {
-      if (e.message.includes('not configured')) {
-        // Try Apple Calendar as fallback in native app
-        await connectAppleCalendar();
-      } else {
-        addToast('error', 'Failed to connect calendar');
-      }
-    }
-  }
-
-  async function connectAppleCalendar() {
     try {
       const result = await api.connectAppleCalendar();
       if (result.success) {
-        addToast('success', 'Apple Calendar connected!');
-        await calendarStore.init(); // Reinitialize store
+        addToast('success', 'Calendar connected!');
+        await calendarStore.init();
       } else {
         addToast('error', result.message || 'Calendar access denied. Check System Settings > Privacy & Security > Calendars');
       }
-    } catch (e: any) {
-      addToast('error', e.message || 'Failed to connect calendar');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to connect calendar';
+      addToast('error', message);
     }
   }
 
-  async function disconnectCalendar() {
-    const config = await api.getCalendarConfig();
-    if (config.type === 'apple') {
-      addToast('info', 'To revoke calendar access, go to System Settings > Privacy & Security > Calendars');
-      return;
-    }
-    await calendarStore.disconnect();
-    addToast('success', 'Calendar disconnected');
+  function manageCalendarAccess() {
+    addToast('info', 'To manage calendar access, go to System Settings > Privacy & Security > Calendars');
   }
 
   function getDaysInMonth(date: Date): (Date | null)[] {
@@ -384,17 +355,17 @@
       
       {#if $calendarConnected}
         <button 
-          class="px-3 py-1.5 text-sm text-red-500 border border-red-200 dark:border-red-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          on:click={disconnectCalendar}
+          class="px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-border)] transition-colors"
+          on:click={manageCalendarAccess}
         >
-          Disconnect
+          Manage Access
         </button>
       {:else}
         <button 
           class="btn-primary btn-sm"
           on:click={connectCalendar}
         >
-          Connect Calendar
+          Connect Apple Calendar
         </button>
       {/if}
     </div>
@@ -424,13 +395,13 @@
     <div class="flex-1 flex items-center justify-center">
       <div class="text-center max-w-md">
         <CalendarIcon class="w-16 h-16 mx-auto mb-4 text-[var(--color-muted)]" />
-        <h2 class="text-xl font-semibold mb-2">Connect Your Calendar</h2>
+        <h2 class="text-xl font-semibold mb-2">Connect Apple Calendar</h2>
         <p class="text-[var(--color-muted)] mb-6">
-          Connect your calendar to see meetings, create notes from events, and keep track of your schedule.
+          Connect to Apple Calendar to see your meetings, create notes from events, and keep track of your schedule. Your Google Calendar events will appear if synced to Apple Calendar.
         </p>
         <button class="btn-primary" on:click={connectCalendar}>
           <CalendarIcon class="w-4 h-4" />
-          Connect Calendar
+          Connect Apple Calendar
         </button>
       </div>
     </div>
