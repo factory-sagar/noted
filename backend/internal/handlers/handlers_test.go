@@ -221,3 +221,80 @@ func TestGetTodos_NPlusOne(t *testing.T) {
 // Mock Row for testing errors (advanced) - simplified for this scope
 type errRow struct{}
 func (r *errRow) Scan(dest ...interface{}) error { return errors.New("mock scan error") }
+
+func TestUpdateNote(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	h := New(db)
+
+	gin.SetMode(gin.TestMode)
+	r := gin.Default()
+	r.PUT("/notes/:id", h.UpdateNote)
+
+	// Setup
+	noteID := "note-to-update"
+	db.Exec("INSERT INTO notes (id, title, created_at, updated_at) VALUES (?, 'Original Title', ?, ?)", noteID, time.Now(), time.Now())
+
+	t.Run("Success", func(t *testing.T) {
+		newTitle := "Updated Title"
+		reqBody := models.UpdateNoteRequest{
+			Title: &newTitle,
+		}
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest("PUT", "/notes/"+noteID, bytes.NewBuffer(body))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		
+		// Verify DB
+		var title string
+		db.QueryRow("SELECT title FROM notes WHERE id = ?", noteID).Scan(&title)
+		assert.Equal(t, "Updated Title", title)
+	})
+
+	t.Run("Not Found", func(t *testing.T) {
+		reqBody := models.UpdateNoteRequest{} // Empty update is fine, check ID
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest("PUT", "/notes/non-existent", bytes.NewBuffer(body))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		// Handler returns 400 if no fields to update, so let's provide one
+		title := "New"
+		reqBody.Title = &title
+		body, _ = json.Marshal(reqBody)
+		req, _ = http.NewRequest("PUT", "/notes/non-existent", bytes.NewBuffer(body))
+		w = httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+}
+
+func TestDeleteNote(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	h := New(db)
+
+	gin.SetMode(gin.TestMode)
+	r := gin.Default()
+	r.DELETE("/notes/:id", h.DeleteNote)
+
+	// Setup
+	noteID := "note-to-delete"
+	db.Exec("INSERT INTO notes (id, title, created_at, updated_at) VALUES (?, 'Title', ?, ?)", noteID, time.Now(), time.Now())
+
+	t.Run("Success Soft Delete", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/notes/"+noteID, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Verify deleted_at is set
+		var deletedAt sql.NullTime
+		db.QueryRow("SELECT deleted_at FROM notes WHERE id = ?", noteID).Scan(&deletedAt)
+		assert.True(t, deletedAt.Valid)
+	})
+}

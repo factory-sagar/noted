@@ -77,6 +77,7 @@ Built with performance and developer experience in mind.
 | **Frontend** | ![Svelte](https://img.shields.io/badge/-SvelteKit-FF3E00?style=flat-square&logo=svelte&logoColor=white) | Reactive UI, TypeScript, Tailwind CSS |
 | **Backend** | ![Go](https://img.shields.io/badge/-Go-00ADD8?style=flat-square&logo=go&logoColor=white) | High-performance REST API (Gin Framework) |
 | **Database** | ![SQLite](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white) | Embedded SQL with FTS4 full-text search |
+| **Testing** | ![Playwright](https://img.shields.io/badge/-Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white) | E2E Testing & Vitest for Unit Tests |
 | **Desktop** | ![Wails](https://img.shields.io/badge/-Wails-CC3534?style=flat-square&logo=wails&logoColor=white) | Native macOS application wrapper |
 
 ---
@@ -127,14 +128,15 @@ We strictly enforce code quality. All PRs must pass our pre-commit hooks.
 ```bash
 make build          # Compile production binaries
 make setup-hooks    # Install git hooks (pre-commit)
+make test           # Run all tests (Backend + Frontend)
 make clean          # Clean build artifacts
 ```
 
 ### 🛡️ Quality Gates
 
 Our `pre-commit` hook runs automatically to ensure:
-*   ✅ **Go**: `go vet`, `gofmt`
-*   ✅ **Frontend**: `svelte-check` (TypeScript validation)
+*   ✅ **Go**: `go vet`, `gofmt`, `go test`
+*   ✅ **Frontend**: `svelte-check`, `vitest`
 *   ✅ **Security**: Secret scanning & sensitive file detection
 
 > **Pro Tip**: Need to bypass hooks for a WIP commit? Use `git commit --no-verify`.

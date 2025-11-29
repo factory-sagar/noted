@@ -22,7 +22,8 @@
     Code,
     Quote,
     Heading2,
-    Minus
+    Minus,
+    Image as ImageIcon
   } from 'lucide-svelte';
   import { api, type Note, type Todo, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -30,6 +31,12 @@
   import { Editor } from '@tiptap/core';
   import StarterKit from '@tiptap/starter-kit';
   import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+  import Image from '@tiptap/extension-image';
+  import Link from '@tiptap/extension-link';
+  import { WikiLink } from '$lib/editor/extensions/WikiLink';
+  import WikiLinkList from '$lib/editor/components/WikiLinkList.svelte';
+  import { SvelteRenderer } from 'svelte-tiptap';
+  import tippy from 'tippy.js';
   import { common, createLowlight } from 'lowlight';
 
   let note: Note | null = null;
@@ -38,6 +45,7 @@
   let saving = false;
   let editor: Editor | null = null;
   let editorElement: HTMLElement;
+  let imageInput: HTMLInputElement;
 
   // Form fields
   let title = '';
@@ -115,6 +123,72 @@
         CodeBlockLowlight.configure({
           lowlight,
         }),
+        Image.configure({
+          inline: true,
+          allowBase64: true, // Fallback, ideally we upload
+        }),
+        Link.configure({
+          openOnClick: true,
+          linkOnPaste: true, // This is very useful
+        }),
+        WikiLink.configure({
+          suggestion: {
+            items: async ({ query }) => {
+              try {
+                if (query.length === 0) return [];
+                const results = await api.search(query);
+                return results.slice(0, 5); // Limit to 5 suggestions
+              } catch (e) {
+                return [];
+              }
+            },
+            render: () => {
+              let component: any;
+              let popup: any;
+
+              return {
+                onStart: (props: any) => {
+                  component = new WikiLinkList({
+                    target: document.body,
+                    props: {
+                      items: props.items,
+                      command: (item: any) => {
+                        props.command(item);
+                      }
+                    }
+                  });
+
+                  popup = tippy('body', {
+                    getReferenceClientRect: props.clientRect,
+                    appendTo: () => document.body,
+                    content: component.$$.root, // Use the root element of the Svelte component
+                    showOnCreate: true,
+                    interactive: true,
+                    trigger: 'manual',
+                    placement: 'bottom-start',
+                  });
+                },
+                onUpdate(props: any) {
+                  component.$set({ items: props.items });
+                  popup[0].setProps({
+                    getReferenceClientRect: props.clientRect,
+                  });
+                },
+                onKeyDown(props: any) {
+                  if (props.event.key === 'Escape') {
+                    popup[0].hide();
+                    return true;
+                  }
+                  return component.onKeyDown(props);
+                },
+                onExit() {
+                  popup[0].destroy();
+                  component.$destroy();
+                },
+              };
+            },
+          },
+        }),
       ],
       content: content || '',
       editable: true,
@@ -122,7 +196,75 @@
       onTransaction: () => {
         editor = editor; // Trigger reactivity
       },
+      editorProps: {
+        handlePaste: (view, event, slice) => {
+          const items = Array.from(event.clipboardData?.items || []);
+          const images = items.filter(item => item.type.indexOf('image') === 0);
+
+          if (images.length === 0) return false;
+
+          event.preventDefault();
+          
+          images.forEach(item => {
+            const file = item.getAsFile();
+            if (file) {
+              handleImageUpload(file);
+            }
+          });
+          return true;
+        },
+        handleDrop: (view, event, slice, moved) => {
+          if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+            const files = Array.from(event.dataTransfer.files);
+            const images = files.filter(file => file.type.indexOf('image') === 0);
+            
+            if (images.length === 0) return false;
+
+            event.preventDefault();
+            images.forEach(file => {
+              handleImageUpload(file);
+            });
+            return true;
+          }
+          return false;
+        }
+      }
     });
+  }
+
+  async function handleImageUpload(file: File) {
+    if (!note || !editor) return;
+    
+    // Insert placeholder
+    // We can't easily insert a loading state in standard TipTap Image without a custom node view
+    // So we'll just upload then insert.
+    
+    const toastId = addToast('loading', 'Uploading image...');
+    
+    try {
+      const attachment = await api.uploadAttachment(note.id, file);
+      // Assuming backend serves uploads at /uploads/filename
+      // We need a helper to get full URL
+      const url = `/uploads/${attachment.filename}`;
+      
+      editor.chain().focus().setImage({ src: url, alt: file.name }).run();
+      addToast('success', 'Image uploaded');
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Failed to upload image');
+    }
+  }
+
+  function triggerImageUpload() {
+    imageInput.click();
+  }
+
+  async function handleImageSelect(e: Event) {
+    const files = (e.target as HTMLInputElement).files;
+    if (files && files.length > 0) {
+      await handleImageUpload(files[0]);
+    }
+    if (imageInput) imageInput.value = '';
   }
 
   async function saveNote() {
@@ -444,6 +586,24 @@
               >
                 <Minus class="w-4 h-4" strokeWidth={2} />
               </button>
+              
+              <div class="w-px h-5 bg-[var(--color-border)] mx-1"></div>
+              
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors"
+                on:click={triggerImageUpload}
+                title="Insert Image"
+              >
+                <ImageIcon class="w-4 h-4" strokeWidth={2} />
+              </button>
+              <input
+                type="file"
+                accept="image/*"
+                class="hidden"
+                bind:this={imageInput}
+                on:change={handleImageSelect}
+              />
             </div>
           {/if}
           

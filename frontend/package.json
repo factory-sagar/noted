@@ -12,6 +12,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.57.0",
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/adapter-node": "^5.4.0",
 		"@sveltejs/adapter-static": "^3.0.10",
@@ -34,13 +35,18 @@
 	"dependencies": {
 		"@tiptap/core": "^3.11.1",
 		"@tiptap/extension-code-block-lowlight": "^3.11.1",
+		"@tiptap/extension-image": "^3.11.1",
+		"@tiptap/extension-link": "^3.11.1",
 		"@tiptap/pm": "^3.11.1",
 		"@tiptap/starter-kit": "^3.11.1",
+		"@tiptap/suggestion": "^3.11.1",
 		"html2canvas": "^1.4.1",
 		"jspdf": "^3.0.4",
 		"lowlight": "^3.3.0",
 		"lucide-svelte": "^0.555.0",
 		"svelte-dnd-action": "^0.9.67",
-		"svelte-motion": "^0.12.2"
+		"svelte-motion": "^0.12.2",
+		"svelte-tiptap": "^3.0.1",
+		"tippy.js": "^6.3.7"
 	}
 }
