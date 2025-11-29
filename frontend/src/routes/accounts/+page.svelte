@@ -40,25 +40,30 @@
   async function loadData() {
     try {
       loading = true;
-      const [accountsData, deleted, notesData, todosData] = await Promise.all([
+      
+      // Load each resource independently to prevent partial failures
+      const [accountsResult, deletedResult, notesResult, todosResult] = await Promise.allSettled([
         api.getAccounts(),
         api.getDeletedAccounts(),
         api.getNotes(),
         api.getTodos()
       ]);
-      accounts = accountsData;
-      deletedAccounts = deleted;
-      notes = notesData;
-      todos = todosData;
+
+      if (accountsResult.status === 'fulfilled') accounts = accountsResult.value;
+      if (deletedResult.status === 'fulfilled') deletedAccounts = deletedResult.value;
+      if (notesResult.status === 'fulfilled') notes = notesResult.value;
+      if (todosResult.status === 'fulfilled') todos = todosResult.value;
+
+      // If critical data fails, show error but try to display what we have
+      if (accountsResult.status === 'rejected' || notesResult.status === 'rejected') {
+        console.error('Failed to load critical data');
+        addToast('error', 'Some data failed to load');
+      }
     } catch (e) {
       addToast('error', 'Failed to load data');
     } finally {
       loading = false;
     }
-  }
-
-  async function requestDeletedAccounts() {
-      return api.getDeletedAccounts();
   }
 
   function getNotesForAccount(accountId: string): Note[] {
