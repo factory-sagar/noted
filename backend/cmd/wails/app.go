@@ -98,10 +98,13 @@ func (a *App) startServer() {
 	api := router.Group("/api")
 	{
 		api.GET("/accounts", h.GetAccounts)
+		api.GET("/accounts/deleted", h.GetDeletedAccounts)
 		api.GET("/accounts/:id", h.GetAccount)
 		api.POST("/accounts", h.CreateAccount)
 		api.PUT("/accounts/:id", h.UpdateAccount)
 		api.DELETE("/accounts/:id", h.DeleteAccount)
+		api.POST("/accounts/:id/restore", h.RestoreAccount)
+		api.DELETE("/accounts/:id/permanent", h.PermanentDeleteAccount)
 
 		api.GET("/notes/archived", h.GetArchivedNotes)
 		api.GET("/notes", h.GetNotes)
