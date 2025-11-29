@@ -329,6 +329,9 @@ func (h *Handler) CreateNote(c *gin.Context) {
 		return
 	}
 
+	// Auto-extract contacts from participants
+	go h.ExtractContactsFromNote(req.InternalParticipants, req.ExternalParticipants)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"id":                    id,
 		"title":                 req.Title,

@@ -248,5 +248,42 @@ func Migrate(db *sql.DB) error {
 		}
 	}
 
+	// Contacts table
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS contacts (
+		id TEXT PRIMARY KEY,
+		email TEXT NOT NULL UNIQUE,
+		name TEXT DEFAULT '',
+		company TEXT DEFAULT '',
+		domain TEXT NOT NULL,
+		is_internal INTEGER DEFAULT 0,
+		account_id TEXT,
+		suggested_account_id TEXT,
+		suggestion_confirmed INTEGER DEFAULT 0,
+		source TEXT DEFAULT 'manual',
+		first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+		last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+		meeting_count INTEGER DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+		FOREIGN KEY (suggested_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+	)`); err != nil {
+		return err
+	}
+
+	// Contacts indexes
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_contacts_email ON contacts(email)`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_contacts_domain ON contacts(domain)`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_contacts_account_id ON contacts(account_id)`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_contacts_is_internal ON contacts(is_internal)`); err != nil {
+		return err
+	}
+
 	return nil
 }

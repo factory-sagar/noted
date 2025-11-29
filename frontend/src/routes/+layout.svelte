@@ -2,11 +2,11 @@
   import '../app.css';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { 
-    LayoutDashboard, 
-    FileText, 
-    CheckSquare, 
-    Calendar, 
+  import {
+    LayoutDashboard,
+    FileText,
+    CheckSquare,
+    Calendar,
     Settings,
     Search,
     Moon,
@@ -16,7 +16,8 @@
     Building2,
     Loader2,
     Plus,
-    ArrowRight
+    ArrowRight,
+    Users
   } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { api, type SearchResult } from '$lib/utils/api';
@@ -36,6 +37,7 @@
     { href: '/notes', label: 'Notes', icon: FileText },
     { href: '/todos', label: 'Todos', icon: CheckSquare },
     { href: '/accounts', label: 'Accounts', icon: Building2 },
+    { href: '/contacts', label: 'Contacts', icon: Users },
     { href: '/calendar', label: 'Calendar', icon: Calendar },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
