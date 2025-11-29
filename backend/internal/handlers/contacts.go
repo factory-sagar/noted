@@ -502,3 +502,84 @@ func (h *Handler) GetContactStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, stats)
 }
+
+type BulkContactsRequest struct {
+	ContactIDs []string               `json:"contact_ids" binding:"required"`
+	Action     string                 `json:"action" binding:"required"` // "delete", "set_internal", "set_account"
+	Value      map[string]interface{} `json:"value"`
+}
+
+// BulkContactsOperation handles bulk actions on contacts
+func (h *Handler) BulkContactsOperation(c *gin.Context) {
+	var req BulkContactsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(req.ContactIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No contacts selected"})
+		return
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer tx.Rollback()
+
+	// Prepare IDs for query
+	placeholders := strings.Repeat("?,", len(req.ContactIDs))
+	placeholders = placeholders[:len(placeholders)-1]
+	args := make([]interface{}, len(req.ContactIDs))
+	for i, id := range req.ContactIDs {
+		args[i] = id
+	}
+
+	switch req.Action {
+	case "delete":
+		query := "DELETE FROM contacts WHERE id IN (" + placeholders + ")"
+		if _, err := tx.Exec(query, args...); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+	case "set_internal":
+		isInternal, ok := req.Value["is_internal"].(bool)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid value for is_internal"})
+			return
+		}
+		query := "UPDATE contacts SET is_internal = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (" + placeholders + ")"
+		execArgs := append([]interface{}{isInternal}, args...)
+		if _, err := tx.Exec(query, execArgs...); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+	case "set_account":
+		accountID, ok := req.Value["account_id"].(string)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid value for account_id"})
+			return
+		}
+		query := "UPDATE contacts SET account_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (" + placeholders + ")"
+		execArgs := append([]interface{}{accountID}, args...)
+		if _, err := tx.Exec(query, execArgs...); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action"})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Bulk operation completed"})
+}

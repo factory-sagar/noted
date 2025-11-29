@@ -17,7 +17,9 @@
     Trash2,
     FileText,
     ChevronRight,
-    ArrowLeft
+    ArrowLeft,
+    MoreHorizontal,
+    CheckSquare
   } from 'lucide-svelte';
   import { api, type Contact, type ContactStats, type Account, type ContactNote } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -29,6 +31,11 @@
   let filter: 'all' | 'internal' | 'external' | 'suggestions' = 'all';
   let sortBy: 'name' | 'company' | 'account' | 'recent' = 'name';
   let searchQuery = '';
+  
+  // Bulk selection
+  let selectedIds: Set<string> = new Set();
+  let isBulkMode = false;
+  let showBulkAccountModal = false;
   
   // Modals
   let linkingContact: Contact | null = null;
@@ -51,8 +58,73 @@
     try {
       const filterParam = filter === 'all' ? undefined : filter;
       contacts = await api.getContacts(filterParam as any);
+      // Reset selection when data changes
+      selectedIds = new Set();
+      isBulkMode = false;
     } catch (e) {
       addToast('error', 'Failed to load contacts');
+    }
+  }
+
+  function toggleSelection(id: string) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+    } else {
+      selectedIds.add(id);
+    }
+    selectedIds = selectedIds; // trigger reactivity
+    isBulkMode = selectedIds.size > 0;
+  }
+
+  function toggleAll() {
+    if (selectedIds.size === filteredContacts.length) {
+      selectedIds = new Set();
+    } else {
+      selectedIds = new Set(filteredContacts.map(c => c.id));
+    }
+    isBulkMode = selectedIds.size > 0;
+  }
+
+  async function bulkDelete() {
+    if (!confirm(`Delete ${selectedIds.size} contacts?`)) return;
+    try {
+      await api.bulkContactsOperation({
+        contact_ids: Array.from(selectedIds),
+        action: 'delete'
+      });
+      addToast('success', 'Contacts deleted');
+      await Promise.all([loadContacts(), loadStats()]);
+    } catch (e) {
+      addToast('error', 'Failed to delete contacts');
+    }
+  }
+
+  async function bulkSetInternal(isInternal: boolean) {
+    try {
+      await api.bulkContactsOperation({
+        contact_ids: Array.from(selectedIds),
+        action: 'set_internal',
+        value: { is_internal: isInternal }
+      });
+      addToast('success', 'Contacts updated');
+      await Promise.all([loadContacts(), loadStats()]);
+    } catch (e) {
+      addToast('error', 'Failed to update contacts');
+    }
+  }
+
+  async function bulkSetAccount(accountId: string) {
+    try {
+      await api.bulkContactsOperation({
+        contact_ids: Array.from(selectedIds),
+        action: 'set_account',
+        value: { account_id: accountId }
+      });
+      addToast('success', 'Contacts linked to account');
+      showBulkAccountModal = false;
+      await Promise.all([loadContacts(), loadStats()]);
+    } catch (e) {
+      addToast('error', 'Failed to link contacts');
     }
   }
 
@@ -231,33 +303,59 @@
 
       <!-- Filters -->
       <div class="flex items-center gap-4 mb-6">
-        <div class="relative flex-1 max-w-md">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted)]" />
-          <input
-            type="text"
-            placeholder="Search contacts..."
-            class="input pl-10"
-            bind:value={searchQuery}
-          />
-        </div>
-        <div class="flex items-center gap-2">
-          <Filter class="w-4 h-4 text-[var(--color-muted)]" />
-          <select class="input w-auto" bind:value={filter} on:change={handleFilterChange}>
-            <option value="all">All Contacts</option>
-            <option value="internal">Internal Only</option>
-            <option value="external">External Only</option>
-            <option value="suggestions">Pending Suggestions</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-[var(--color-muted)]">Sort:</span>
-          <select class="input w-auto" bind:value={sortBy}>
-            <option value="name">Name</option>
-            <option value="company">Company</option>
-            <option value="account">Account</option>
-            <option value="recent">Recent</option>
-          </select>
-        </div>
+        {#if isBulkMode}
+          <div class="flex items-center gap-3 flex-1 animate-slide-in">
+            <div class="text-sm font-medium text-[var(--color-text)]">
+              {selectedIds.size} selected
+            </div>
+            <div class="h-6 w-px bg-[var(--color-border)]"></div>
+            <button class="btn-sm btn-danger" on:click={bulkDelete}>
+              <Trash2 class="w-4 h-4" />
+              Delete
+            </button>
+            <button class="btn-sm btn-secondary" on:click={() => bulkSetInternal(true)}>
+              Set Internal
+            </button>
+            <button class="btn-sm btn-secondary" on:click={() => bulkSetInternal(false)}>
+              Set External
+            </button>
+            <button class="btn-sm btn-secondary" on:click={() => showBulkAccountModal = true}>
+              Link Account
+            </button>
+            <button class="btn-sm btn-ghost ml-auto" on:click={() => { selectedIds = new Set(); isBulkMode = false; }}>
+              <X class="w-4 h-4" />
+              Cancel
+            </button>
+          </div>
+        {:else}
+          <div class="relative flex-1 max-w-md">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted)]" />
+            <input
+              type="text"
+              placeholder="Search contacts..."
+              class="input pl-10"
+              bind:value={searchQuery}
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <Filter class="w-4 h-4 text-[var(--color-muted)]" />
+            <select class="input w-auto" bind:value={filter} on:change={handleFilterChange}>
+              <option value="all">All Contacts</option>
+              <option value="internal">Internal Only</option>
+              <option value="external">External Only</option>
+              <option value="suggestions">Pending Suggestions</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-[var(--color-muted)]">Sort:</span>
+            <select class="input w-auto" bind:value={sortBy}>
+              <option value="name">Name</option>
+              <option value="company">Company</option>
+              <option value="account">Account</option>
+              <option value="recent">Recent</option>
+            </select>
+          </div>
+        {/if}
       </div>
 
       {#if loading}
@@ -273,117 +371,80 @@
           </p>
         </div>
       {:else}
-        <!-- Internal Contacts -->
-        {#if filter === 'all' || filter === 'internal'}
-          {#if internalContacts.length > 0}
-            <div class="mb-8">
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                <UserCheck class="w-5 h-5 text-blue-500" />
-                Internal Contacts
-                <span class="text-sm font-normal text-[var(--color-muted)]">(Your Team)</span>
-              </h2>
-              <div class="grid gap-3">
-                {#each internalContacts as contact}
-                  <button
-                    class="card p-4 flex items-center justify-between w-full text-left hover:border-primary-500 transition-colors {selectedContact?.id === contact.id ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''}"
-                    on:click={() => viewContact(contact)}
-                  >
-                    <div class="flex items-center gap-4">
-                      <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
-                        {contact.name ? contact.name[0].toUpperCase() : contact.email[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div class="font-medium">{contact.name || contact.email}</div>
-                        <div class="text-sm text-[var(--color-muted)] flex items-center gap-2">
-                          <Mail class="w-3 h-3" />
-                          {contact.email}
-                        </div>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                      <div class="text-right text-sm text-[var(--color-muted)]">
-                        <div class="flex items-center gap-1">
-                          <Calendar class="w-3 h-3" />
-                          {contact.meeting_count} meetings
-                        </div>
-                      </div>
-                      <ChevronRight class="w-4 h-4 text-[var(--color-muted)]" />
-                    </div>
-                  </button>
-                {/each}
-              </div>
-            </div>
-          {/if}
-        {/if}
+        <!-- Table Header for selection -->
+        <div class="flex items-center px-4 mb-2 text-sm font-medium text-[var(--color-muted)]">
+          <div class="w-8">
+            <input 
+              type="checkbox" 
+              class="checkbox" 
+              checked={selectedIds.size === filteredContacts.length && filteredContacts.length > 0}
+              on:change={toggleAll}
+            />
+          </div>
+          <div class="flex-1">Contact</div>
+          <div class="hidden md:block w-1/3">Details</div>
+        </div>
 
-        <!-- External Contacts -->
-        {#if filter === 'all' || filter === 'external' || filter === 'suggestions'}
-          {#if externalContacts.length > 0}
-            <div>
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                <UserX class="w-5 h-5 text-green-500" />
-                External Contacts
-              </h2>
-              <div class="grid gap-3">
-                {#each externalContacts as contact}
-                  <div
-                    class="card p-4 w-full text-left hover:border-primary-500 transition-colors cursor-pointer {selectedContact?.id === contact.id ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''}"
-                    role="button"
-                    tabindex="0"
-                    on:click={() => viewContact(contact)}
-                    on:keydown={(e) => e.key === 'Enter' && viewContact(contact)}
-                  >
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
-                          {contact.name ? contact.name[0].toUpperCase() : contact.email[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <div class="font-medium">{contact.name || contact.email}</div>
-                          <div class="text-sm text-[var(--color-muted)] flex items-center gap-2">
-                            <Mail class="w-3 h-3" />
-                            {contact.email}
-                            <span class="px-1.5 py-0.5 bg-[var(--color-border)] rounded text-xs">{contact.domain}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-3">
-                        {#if contact.account_name}
-                          <div class="flex items-center gap-2 text-sm text-purple-500">
-                            <Building2 class="w-4 h-4" />
-                            {contact.account_name}
-                          </div>
-                        {:else if contact.suggested_account_name && !contact.suggestion_confirmed}
-                          <div class="flex items-center gap-2">
-                            <span class="text-sm text-amber-500">Suggested: {contact.suggested_account_name}</span>
-                            <button
-                              class="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded text-green-500"
-                              on:click|stopPropagation={() => confirmSuggestion(contact, true)}
-                              title="Confirm"
-                            >
-                              <Check class="w-4 h-4" />
-                            </button>
-                            <button
-                              class="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500"
-                              on:click|stopPropagation={() => confirmSuggestion(contact, false)}
-                              title="Dismiss"
-                            >
-                              <X class="w-4 h-4" />
-                            </button>
-                          </div>
-                        {/if}
-                        <div class="text-sm text-[var(--color-muted)]">
-                          {contact.meeting_count} meetings
-                        </div>
-                        <ChevronRight class="w-4 h-4 text-[var(--color-muted)]" />
-                      </div>
-                    </div>
-                  </div>
-                {/each}
+        <div class="grid gap-2">
+          {#each filteredContacts as contact (contact.id)}
+            <div 
+              class="card p-3 flex items-center gap-4 group hover:border-primary-500 transition-all {selectedContact?.id === contact.id ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''}"
+            >
+              <div class="flex items-center h-full" on:click|stopPropagation>
+                <input 
+                  type="checkbox" 
+                  class="checkbox" 
+                  checked={selectedIds.has(contact.id)}
+                  on:change={() => toggleSelection(contact.id)}
+                />
               </div>
+              
+              <button 
+                class="flex-1 flex items-center gap-4 min-w-0 text-left"
+                on:click={() => viewContact(contact)}
+              >
+                <div class="w-10 h-10 rounded-full shrink-0 {contact.is_internal ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' : 'bg-green-100 text-green-600 dark:bg-green-900/30'} flex items-center justify-center font-medium">
+                  {contact.name ? contact.name[0].toUpperCase() : contact.email[0].toUpperCase()}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="font-medium truncate" title={contact.name || contact.email}>
+                    {contact.name || contact.email}
+                  </div>
+                  <div class="text-sm text-[var(--color-muted)] flex items-center gap-2 truncate">
+                    <Mail class="w-3 h-3 shrink-0" />
+                    <span class="truncate" title={contact.email}>{contact.email}</span>
+                  </div>
+                </div>
+              </button>
+
+              <div class="hidden md:flex items-center gap-4 w-1/3 shrink-0">
+                {#if contact.account_name}
+                  <div class="flex items-center gap-2 text-sm text-purple-500 truncate" title={contact.account_name}>
+                    <Building2 class="w-4 h-4 shrink-0" />
+                    <span class="truncate">{contact.account_name}</span>
+                  </div>
+                {:else if contact.company}
+                  <div class="flex items-center gap-2 text-sm text-[var(--color-muted)] truncate" title={contact.company}>
+                    <Building2 class="w-4 h-4 shrink-0" />
+                    <span class="truncate">{contact.company}</span>
+                  </div>
+                {/if}
+                
+                <div class="ml-auto flex items-center gap-2 text-sm text-[var(--color-muted)]">
+                  <Calendar class="w-3 h-3 shrink-0" />
+                  {contact.meeting_count}
+                </div>
+              </div>
+              
+              <button 
+                class="p-2 hover:bg-[var(--color-bg)] rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                on:click|stopPropagation={() => viewContact(contact)}
+              >
+                <ChevronRight class="w-4 h-4 text-[var(--color-muted)]" />
+              </button>
             </div>
-          {/if}
-        {/if}
+          {/each}
+        </div>
       {/if}
     </div>
   </div>
@@ -508,6 +569,41 @@
     </div>
   {/if}
 </div>
+
+<!-- Bulk Account Link Modal -->
+{#if showBulkAccountModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => showBulkAccountModal = false}
+      aria-label="Close modal"
+    ></button>
+    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <Link class="w-5 h-5" />
+        Link {selectedIds.size} Contacts to Account
+      </h2>
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+        {#each accounts as account}
+          <button
+            class="w-full p-3 text-left rounded-lg border border-[var(--color-border)] hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+            on:click={() => bulkSetAccount(account.id)}
+          >
+            <div class="font-medium">{account.name}</div>
+            {#if account.account_owner}
+              <div class="text-sm text-[var(--color-muted)]">{account.account_owner}</div>
+            {/if}
+          </button>
+        {/each}
+      </div>
+      <div class="mt-4 flex justify-end">
+        <button class="btn-secondary" on:click={() => showBulkAccountModal = false}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <!-- Link to Account Modal -->
 {#if linkingContact}

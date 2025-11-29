@@ -153,6 +153,7 @@ func main() {
 		api.POST("/contacts/:id/confirm-suggestion", h.ConfirmAccountSuggestion)
 		api.POST("/contacts/:id/link/:accountId", h.LinkContactToAccount)
 		api.GET("/contacts/:id/notes", h.GetContactNotes)
+		api.POST("/contacts/bulk", h.BulkContactsOperation)
 	}
 
 	// Get port from environment or default

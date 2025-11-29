@@ -456,6 +456,8 @@ export const api = {
     request<{ message: string }>(`/contacts/${contactId}/link/${accountId}`, { method: 'POST' }),
   getContactNotes: (id: string) =>
     request<ContactNote[]>(`/contacts/${id}/notes`),
+  bulkContactsOperation: (data: { contact_ids: string[]; action: string; value?: Record<string, any> }) =>
+    request<{ message: string }>('/contacts/bulk', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export interface ContactNote {
