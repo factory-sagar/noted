@@ -532,3 +532,89 @@ User preferences stored in localStorage:
 1. **Single user**: No authentication, designed for local use
 2. **FTS4 vs FTS5**: Using FTS4 for broader SQLite compatibility
 3. **Google Calendar**: Requires OAuth setup (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+
+## Git Workflow & PR Guidelines
+
+### Branch Structure
+```
+main (production - protected)
+  └── dev (development integration)
+        ├── feature/* (new features)
+        ├── fix/* (bug fixes)
+        └── chore/* (maintenance)
+```
+
+### Creating Feature Branches
+```bash
+# Always branch from dev
+git checkout dev
+git pull origin dev
+git checkout -b feature/feature-name
+
+# Or for fixes
+git checkout -b fix/bug-description
+```
+
+### Commit Guidelines
+- Use conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`
+- Keep commits focused (single feature/fix per commit)
+- Write descriptive commit messages explaining "why" not just "what"
+- Use `--no-verify` only for acceptable warnings (e.g., macOS API deprecations)
+
+### Creating Pull Requests
+```bash
+# Push branch
+git push -u origin feature/feature-name
+
+# Create PR targeting dev branch
+gh pr create --base dev --title "feat: Description" --body "..."
+```
+
+### PR Description Template
+```markdown
+## Summary
+Brief description of what this PR does.
+
+## Changes
+- List of changes made
+- Include new endpoints, UI changes, etc.
+
+## Testing
+1. Step-by-step testing instructions
+2. Expected behavior
+```
+
+### Merging Flow
+1. Feature branches → `dev` (via PR review)
+2. `dev` → `main` (release to production)
+
+### Pre-commit Hooks
+- Security checks (secrets, sensitive files)
+- Go: `gofmt`, `go vet`, `go build`
+- Frontend: `svelte-check`
+- Use `--no-verify` to bypass for acceptable warnings only
+
+## Native macOS App (Wails)
+
+### Build Commands
+```bash
+make wails-build    # Build Noted.app (~10-20 sec)
+make wails-install  # Copy to /Applications
+```
+
+### App Location
+- Build output: `backend/cmd/wails/build/bin/Noted.app`
+- Data storage: `~/Library/Application Support/Noted/`
+
+### EventKit (Apple Calendar)
+- Only works in native app (not browser dev mode)
+- Requires Calendar permission in System Settings
+- Uses deprecated APIs for backward compatibility (macOS 10.13+)
+
+## Internal Domain
+- Internal contacts identified by `@factory.ai` email domain
+- Configurable in `backend/internal/handlers/contacts.go`
+
+## Key URLs
+- GitHub: https://github.com/factory-sagar/notes-droid
+- PRs: https://github.com/factory-sagar/notes-droid/pulls
