@@ -356,57 +356,198 @@
 }
 
 /* 
-  THEME 7: Corporate (Enterprise)
-  - Navy/White/Red palette
-  - Roboto font
-  - High density, sharp-ish
+  THEME 7: Dracula
+  - Popular purple/pink dark theme
+  - JetBrains Mono
 */
-.theme-corporate {
-  /* Fonts */
-  --font-sans: 'Roboto', system-ui, sans-serif;
-  
-  /* Radius */
-  --radius: 0.125rem; /* 2px */
+.theme-dracula {
+  --font-sans: 'JetBrains Mono', monospace;
+  --radius: 0.375rem;
 
-  /* Semantic Colors */
-  --color-bg: #f1f5f9; /* slate-100 */
-  --color-bg-elevated: #ffffff;
-  --color-card: #ffffff;
-  --color-card-hover: #f8fafc;
-  --color-border: #cbd5e1; /* slate-300 */
-  --color-border-subtle: #e2e8f0;
-  --color-text: #0f172a; /* slate-900 */
-  --color-text-secondary: #475569; /* slate-600 */
-  --color-muted: #94a3b8;
+  --color-bg: #282a36;
+  --color-bg-elevated: #44475a;
+  --color-card: #44475a;
+  --color-card-hover: #6272a4;
+  --color-border: #6272a4;
+  --color-border-subtle: #44475a;
+  --color-text: #f8f8f2;
+  --color-text-secondary: #f8f8f2;
+  --color-muted: #6272a4;
 
-  /* Primary Palette (Navy Blue) */
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #bd93f9;
+  --color-primary-600: #9580ff;
+  --color-primary-700: #7c3aed;
+  --color-primary-800: #6d28d9;
+  --color-primary-900: #5b21b6;
+  --color-primary-950: #4c1d95;
+
+  --color-accent: #bd93f9; /* Dracula Purple */
+  --color-accent-hover: #ff79c6; /* Dracula Pink */
+}
+
+.dark.theme-dracula {
+  --color-bg: #282a36;
+  --color-bg-elevated: #44475a;
+  --color-card: #44475a;
+  --color-card-hover: #6272a4;
+  --color-border: #6272a4;
+}
+
+/* 
+  THEME 8: Solarized
+  - Classic warm/cool developer scheme
+  - Inter font
+*/
+.theme-solarized {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --radius: 0.25rem;
+
+  /* Solarized Light */
+  --color-bg: #fdf6e3;
+  --color-bg-elevated: #eee8d5;
+  --color-card: #eee8d5;
+  --color-card-hover: #fdf6e3;
+  --color-border: #93a1a1;
+  --color-border-subtle: #eee8d5;
+  --color-text: #657b83;
+  --color-text-secondary: #839496;
+  --color-muted: #93a1a1;
+
   --color-primary-50: #f0f9ff;
   --color-primary-100: #e0f2fe;
   --color-primary-200: #bae6fd;
   --color-primary-300: #7dd3fc;
   --color-primary-400: #38bdf8;
-  --color-primary-500: #0ea5e9;
+  --color-primary-500: #268bd2;
   --color-primary-600: #0284c7;
   --color-primary-700: #0369a1;
   --color-primary-800: #075985;
   --color-primary-900: #0c4a6e;
   --color-primary-950: #082f49;
 
-  --color-accent: #0f172a; /* Navy Black */
-  --color-accent-hover: #1e293b;
+  --color-accent: #268bd2; /* Solarized Blue */
+  --color-accent-hover: #2aa198; /* Solarized Cyan */
 }
 
-.dark.theme-corporate {
-  --color-bg: #020617;
-  --color-bg-elevated: #0f172a;
-  --color-card: #0f172a;
-  --color-card-hover: #1e293b;
-  --color-border: #334155;
-  --color-text: #f8fafc;
-  --color-text-secondary: #cbd5e1;
+.dark.theme-solarized {
+  /* Solarized Dark */
+  --color-bg: #002b36;
+  --color-bg-elevated: #073642;
+  --color-card: #073642;
+  --color-card-hover: #094959;
+  --color-border: #586e75;
+  --color-border-subtle: #073642;
+  --color-text: #839496;
+  --color-text-secondary: #657b83;
+  --color-muted: #586e75;
   
-  --color-accent: #38bdf8; /* Light blue accent in dark mode */
-  --color-accent-hover: #7dd3fc;
+  --color-accent: #268bd2;
+  --color-accent-hover: #2aa198;
+}
+
+/* 
+  THEME 9: Ocean
+  - Deep cyan/teal aquatic theme
+  - Inter font
+*/
+.theme-ocean {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --radius: 0.5rem;
+
+  --color-bg: #ecfeff; /* cyan-50 */
+  --color-bg-elevated: #ffffff;
+  --color-card: #ffffff;
+  --color-card-hover: #cffafe; /* cyan-100 */
+  --color-border: #a5f3fc; /* cyan-200 */
+  --color-border-subtle: #cffafe;
+  --color-text: #164e63; /* cyan-900 */
+  --color-text-secondary: #0e7490; /* cyan-700 */
+  --color-muted: #06b6d4; /* cyan-500 */
+
+  --color-primary-50: #ecfeff;
+  --color-primary-100: #cffafe;
+  --color-primary-200: #a5f3fc;
+  --color-primary-300: #67e8f9;
+  --color-primary-400: #22d3ee;
+  --color-primary-500: #06b6d4;
+  --color-primary-600: #0891b2;
+  --color-primary-700: #0e7490;
+  --color-primary-800: #155e75;
+  --color-primary-900: #164e63;
+  --color-primary-950: #083344;
+
+  --color-accent: #0891b2; /* cyan-600 */
+  --color-accent-hover: #0e7490;
+}
+
+.dark.theme-ocean {
+  --color-bg: #083344; /* cyan-950 */
+  --color-bg-elevated: #164e63;
+  --color-card: #164e63;
+  --color-card-hover: #155e75;
+  --color-border: #0e7490;
+  --color-border-subtle: #155e75;
+  --color-text: #ecfeff;
+  --color-text-secondary: #a5f3fc;
+  --color-muted: #67e8f9;
+  
+  --color-accent: #22d3ee;
+  --color-accent-hover: #67e8f9;
+}
+
+/* 
+  THEME 10: Forest
+  - Deep emerald/green nature theme
+  - DM Sans font
+*/
+.theme-forest {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --radius: 0.5rem;
+
+  --color-bg: #ecfdf5; /* emerald-50 */
+  --color-bg-elevated: #ffffff;
+  --color-card: #ffffff;
+  --color-card-hover: #d1fae5; /* emerald-100 */
+  --color-border: #a7f3d0; /* emerald-200 */
+  --color-border-subtle: #d1fae5;
+  --color-text: #064e3b; /* emerald-900 */
+  --color-text-secondary: #047857; /* emerald-700 */
+  --color-muted: #10b981; /* emerald-500 */
+
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #10b981;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065f46;
+  --color-primary-900: #064e3b;
+  --color-primary-950: #022c22;
+
+  --color-accent: #059669; /* emerald-600 */
+  --color-accent-hover: #047857;
+}
+
+.dark.theme-forest {
+  --color-bg: #022c22; /* emerald-950 */
+  --color-bg-elevated: #064e3b;
+  --color-card: #064e3b;
+  --color-card-hover: #065f46;
+  --color-border: #047857;
+  --color-border-subtle: #065f46;
+  --color-text: #ecfdf5;
+  --color-text-secondary: #a7f3d0;
+  --color-muted: #6ee7b7;
+  
+  --color-accent: #34d399;
+  --color-accent-hover: #6ee7b7;
 }
 
 /* 
@@ -454,122 +595,6 @@
   --color-card: #3e3d32;
   --color-card-hover: #49483e;
   --color-border: #75715e;
-}
-
-/* 
-  THEME 9: Liquid Glass (Refined Apple Style)
-  - VisionOS vibes: Frosted glass, inner glow, specular highlights
-  - Subtle aurora gradients (slow moving)
-  - Thin, bright borders
-*/
-.theme-liquid {
-  /* Fonts */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  /* Radius */
-  --radius: 1.25rem; /* 20px */
-
-  /* Semantic Colors - Light (Frost) */
-  --color-bg: #f5f5f7; /* Very light grey/white */
-  --color-bg-elevated: rgba(255, 255, 255, 0.65);
-  --color-card: rgba(255, 255, 255, 0.65);
-  --color-card-hover: rgba(255, 255, 255, 0.85);
-  --color-border: rgba(255, 255, 255, 0.6); /* White border for glass edge */
-  --color-border-subtle: rgba(255, 255, 255, 0.4);
-  --color-text: #1d1d1f; /* Apple textured black */
-  --color-text-secondary: #86868b; /* Apple textured grey */
-  --color-muted: #a1a1a6;
-
-  /* Primary Palette (Apple Blue) */
-  --color-primary-50: #fbfbfd;
-  --color-primary-100: #f5f5f7;
-  --color-primary-200: #e8e8ed;
-  --color-primary-300: #d2d2d7;
-  --color-primary-400: #409cff; /* Light mode blue highlight */
-  --color-primary-500: #0071e3; /* Apple System Blue */
-  --color-primary-600: #0077ed;
-  --color-primary-700: #006edb;
-  --color-primary-800: #0064cd;
-  --color-primary-900: #005bb8;
-  --color-primary-950: #002b5e;
-
-  --color-accent: var(--color-primary-500);
-  --color-accent-hover: var(--color-primary-600);
-  
-  /* Liquid specifics - Refined */
-  --glass-blur: 20px;
-  /* Inner glow (white rim) + diffuse drop shadow */
-  --glass-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 8px 40px rgba(0, 0, 0, 0.08);
-}
-
-.dark.theme-liquid {
-  /* Semantic Colors - Dark (Vapor) */
-  --color-bg: #000000; /* Deep black background to make glass pop */
-  --color-bg-elevated: rgba(30, 30, 35, 0.6);
-  --color-card: rgba(40, 40, 45, 0.6);
-  --color-card-hover: rgba(60, 60, 65, 0.7);
-  --color-border: rgba(255, 255, 255, 0.15); /* Brighter thin border in dark mode */
-  --color-border-subtle: rgba(255, 255, 255, 0.08);
-  --color-text: #f5f5f7;
-  --color-text-secondary: #86868b;
-  --color-muted: #6e6e73;
-  
-  --color-accent: #0a84ff; /* Dark mode system blue */
-  --color-accent-hover: #409cff;
-  
-  /* Inner glow (subtle white rim) + shadow */
-  --glass-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 40px rgba(0, 0, 0, 0.4);
-}
-
-/* Liquid Theme Overrides */
-.theme-liquid .card,
-.theme-liquid .modal-content,
-.theme-liquid .btn-secondary,
-.theme-liquid .input,
-.theme-liquid .editor-content {
-  backdrop-filter: blur(var(--glass-blur)) saturate(120%); /* Added saturation for vibrancy */
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%);
-  box-shadow: var(--glass-shadow);
-  background-image: none; /* Removed linear gradient to let aurora show through cleanly */
-  border: none; /* Border handled by box-shadow inset */
-}
-
-/* Button overrides for pill shape */
-.theme-liquid .btn {
-  border-radius: 999px;
-}
-
-/* Aurora Background */
-.theme-liquid body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  /* Multi-layered mesh gradient for aurora effect */
-  background: 
-    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%), 
-    radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%), 
-    radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.15) 0px, transparent 50%), 
-    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
-  filter: blur(60px);
-  z-index: -1;
-  animation: aurora 25s ease-in-out infinite alternate;
-  opacity: 0.8;
-}
-
-.dark.theme-liquid body::before {
-  /* Dark mode aurora - slightly more saturated/visible against black */
-  background: 
-    radial-gradient(at 0% 0%, rgba(10, 132, 255, 0.2) 0px, transparent 50%), 
-    radial-gradient(at 100% 0%, rgba(94, 92, 230, 0.2) 0px, transparent 50%), 
-    radial-gradient(at 100% 100%, rgba(48, 209, 88, 0.1) 0px, transparent 50%), 
-    radial-gradient(at 0% 100%, rgba(191, 90, 242, 0.15) 0px, transparent 50%);
-  opacity: 0.6;
-}
-
-@keyframes aurora {
-  0% { background-position: 0% 50%; transform: scale(1); }
-  50% { background-position: 100% 50%; transform: scale(1.1); }
-  100% { background-position: 0% 50%; transform: scale(1); }
 }
 
 html {

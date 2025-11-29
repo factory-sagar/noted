@@ -28,12 +28,6 @@
       colors: ['#547a76', '#f4f1ea', '#2c3333']
     },
     { 
-      id: 'corporate', 
-      name: 'Enterprise', 
-      description: 'Dense, high contrast navy and white. Serious business.',
-      colors: ['#0f172a', '#f1f5f9', '#0369a1']
-    },
-    { 
       id: 'cyber', 
       name: 'Cyber Dev', 
       description: 'High contrast, monospaced, and technical. Neon Lime.',
@@ -46,16 +40,34 @@
       colors: ['#f92672', '#272822', '#f8f8f2']
     },
     { 
-      id: 'liquid', 
-      name: 'Liquid Glass', 
-      description: 'Futuristic, ethereal, and fluid. Animated background.',
-      colors: ['#3b82f6', '#eef2ff', '#1e293b']
-    },
-    { 
       id: 'noir', 
       name: 'Editorial Noir', 
       description: 'Classic, sophisticated, and warm. Gold & Serif.',
       colors: ['#c9a87c', '#faf9f6', '#1a1a1a']
+    },
+    { 
+      id: 'dracula', 
+      name: 'Dracula', 
+      description: 'Popular purple dark theme from code editors.',
+      colors: ['#bd93f9', '#282a36', '#f8f8f2']
+    },
+    { 
+      id: 'solarized', 
+      name: 'Solarized', 
+      description: 'Classic warm/cool developer color scheme.',
+      colors: ['#268bd2', '#fdf6e3', '#002b36']
+    },
+    { 
+      id: 'ocean', 
+      name: 'Ocean', 
+      description: 'Deep blue aquatic vibes. Calm and focused.',
+      colors: ['#0891b2', '#ecfeff', '#164e63']
+    },
+    { 
+      id: 'forest', 
+      name: 'Forest', 
+      description: 'Deep emerald and moss greens. Natural.',
+      colors: ['#059669', '#ecfdf5', '#064e3b']
     }
   ];
 
