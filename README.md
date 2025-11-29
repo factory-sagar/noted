@@ -1,133 +1,143 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/factory-sagar/noted/main/frontend/src/lib/assets/favicon.svg" width="80" height="80" alt="Noted Logo">
+  <a href="https://github.com/factory-sagar/noted">
+    <img src="https://raw.githubusercontent.com/factory-sagar/noted/main/frontend/src/lib/assets/logo-notion-style.svg" width="120" height="120" alt="Noted Logo">
+  </a>
 </p>
 
 <h1 align="center">Noted</h1>
 
 <p align="center">
-  <strong>The Local-First Workspace for Solutions Engineers</strong>
+  <strong>The Local-First Intelligence Workspace for Solutions Engineers</strong>
 </p>
 
 <p align="center">
-  Manage accounts • Track follow-ups • Organize meeting notes • Sync calendars
+  <a href="https://github.com/factory-sagar/noted/actions"><img src="https://img.shields.io/github/actions/workflow/status/factory-sagar/noted/ci.yml?branch=main&style=flat-square" alt="Build Status"></a>
+  <img src="https://img.shields.io/badge/Go-1.24+-00ADD8.svg?style=flat-square&logo=go" alt="Go">
+  <img src="https://img.shields.io/badge/SvelteKit-2.x-FF3E00.svg?style=flat-square&logo=svelte" alt="SvelteKit">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/platform-macOS-lightgrey.svg?style=flat-square&logo=apple" alt="Platform">
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> •
-  <a href="#getting-started">Getting Started</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#development">Development</a> •
-  <a href="#api">API</a>
+  <a href="#-features">Features</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-development">Development</a> •
+  <a href="#-api-reference">API</a>
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
-  <img src="https://img.shields.io/badge/Go-1.24+-00ADD8.svg?logo=go" alt="Go">
-  <img src="https://img.shields.io/badge/SvelteKit-2.x-FF3E00.svg?logo=svelte" alt="SvelteKit">
-  <img src="https://img.shields.io/badge/SQLite-FTS4-003B57.svg?logo=sqlite" alt="SQLite">
-  <a href="https://github.com/factory-sagar/noted/actions"><img src="https://img.shields.io/github/actions/workflow/status/factory-sagar/noted/ci.yml?branch=main" alt="Build Status"></a>
-</p>
-
----
+<br>
 
 ## 🚀 Overview
 
-**Noted** is a high-performance, local-first application designed for the unique workflow of Solutions Engineers. It bridges the gap between your calendar, your customer accounts, and your daily tasks.
+**Noted** is an open-source, high-performance workspace built specifically for **Solutions Engineers** (SEs) and **Sales Engineers**. 
 
-Unlike generic note-taking apps, Noted understands **Accounts**, **Meetings**, and **Follow-ups**.
+Generic note-taking apps treat every document the same. Noted understands the SE workflow: you don't just take notes—you manage **Accounts**, drive **Opportunities**, and track **Follow-ups** across dozens of meetings.
 
-### Key Capabilities
+### Why Noted?
 
-*   **📝 Context-Aware Notes**: Link notes to specific accounts and meetings.
-*   **📊 Kanban Workflow**: Built-in board to track todo status (Not Started → Complete).
-*   **📅 Calendar Sync**: Deep integration with Apple Calendar & Google Calendar.
-*   **🔍 Instant Search**: Full-text search across notes, accounts, and todos (powered by SQLite FTS4).
-*   **🛡️ Local-First**: Your data lives on your machine. No cloud lock-in.
+> *"Stop losing context between meetings. Keep everything organized, searchable, and actionable."*
+
+*   **⚡️ Local-First Speed**: Zero latency. Your data lives on your machine (SQLite). No cloud lock-in.
+*   **🧠 Context-Aware**: Every note is linked to an Account and a Meeting.
+*   **🔄 Workflow Integrated**: Seamlessly bridges your Calendar, Notes, and Tasks.
 
 ---
 
 ## ✨ Features
 
-| Feature | Description |
-|---------|-------------|
-| **Smart Editor** | Rich text editing with TipTap, code blocks, and markdown support. |
-| **Kanban Board** | Drag-and-drop task management with priority levels (H/M/L). |
-| **Account Hub** | Centralized view of customer details, budgets, and engagement stats. |
-| **Quick Capture** | `⌘+Shift+C` to capture thoughts instantly without breaking flow. |
-| **Attachments** | Drag-and-drop file management for every note. |
-| **Analytics** | Dashboard with completion rates, incomplete field tracking, and activity timelines. |
-| **Theming** | Multiple built-in themes (SaaS, Nordic, Retro, Dark Mode). |
+### 📝 Intelligent Note Taking
+*   **Rich Text Editor**: Powered by TipTap with support for code blocks, markdown, and images.
+*   **Template System**: Pre-built templates for *Initial Discovery*, *Technical Deep Dive*, and *POC Planning*.
+*   **Account Linking**: Automatically associate notes with customer accounts.
+
+### ✅ Kanban Task Management
+*   **Integrated Workflow**: Don't just write "follow up"—track it. 
+*   **4-Stage Board**: `Not Started` → `In Progress` → `Stuck` → `Completed`.
+*   **Prioritization**: Visual H/M/L priority indicators.
+
+### 📅 Calendar Intelligence
+*   **Deep Sync**: Integrates with **Apple Calendar** & **Google Calendar**.
+*   **One-Click Notes**: Create a pre-filled note from any calendar event instantly.
+*   **Participant Extraction**: Automatically captures attendee details.
+
+### 📊 Account Hub & Analytics
+*   **360° View**: See all notes, tasks, and activity for a specific customer in one place.
+*   **Dashboard**: Track your completion rates, meeting volume, and "incomplete data" warnings.
+*   **Search**: Instant full-text search (FTS4) across every data point.
 
 ---
 
 ## 🛠️ Tech Stack
 
-*   **Frontend**: [SvelteKit](https://kit.svelte.dev/) (TypeScript, Tailwind CSS)
-*   **Backend**: [Go](https://go.dev/) (Gin Framework)
-*   **Database**: SQLite (with FTS4)
-*   **Desktop App**: [Wails](https://wails.io/) (for macOS native build)
+Built with performance and developer experience in mind.
+
+| Layer | Technology | Description |
+|-------|------------|-------------|
+| **Frontend** | ![Svelte](https://img.shields.io/badge/-SvelteKit-FF3E00?style=flat-square&logo=svelte&logoColor=white) | Reactive UI, TypeScript, Tailwind CSS |
+| **Backend** | ![Go](https://img.shields.io/badge/-Go-00ADD8?style=flat-square&logo=go&logoColor=white) | High-performance REST API (Gin Framework) |
+| **Database** | ![SQLite](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white) | Embedded SQL with FTS4 full-text search |
+| **Desktop** | ![Wails](https://img.shields.io/badge/-Wails-CC3534?style=flat-square&logo=wails&logoColor=white) | Native macOS application wrapper |
 
 ---
 
-## 🏁 Getting Started
+## 🏁 Quick Start
 
 ### Prerequisites
+*   **Go**: 1.24+
+*   **Node.js**: 20+
+*   **Make**: (Optional, for build scripts)
 
-*   **Go**: 1.24 or higher
-*   **Node.js**: 20 or higher
-*   **Make**: For running build commands
+### ⚡️ Instant Dev Environment
 
-### Installation
-
-1.  **Clone the repository**
+1.  **Clone & Setup**
     ```bash
     git clone https://github.com/factory-sagar/noted.git
     cd noted
-    ```
-
-2.  **Setup dependencies & hooks**
-    ```bash
     make setup
     ```
 
-3.  **Start Development Servers**
+2.  **Run**
     ```bash
     make dev
     ```
-    *   Frontend: `http://localhost:5173`
-    *   Backend: `http://localhost:8080`
+    
+    | Service | URL |
+    |---------|-----|
+    | **Frontend** | `http://localhost:5173` |
+    | **Backend API** | `http://localhost:8080` |
 
-### Docker
+### 🐳 Docker
 
-Prefer containers? Run the full stack with Docker Compose:
+Prefer containers? We've got you covered.
 
 ```bash
 make docker
-# Access app at http://localhost:3000
+# Access at http://localhost:3000
 ```
 
 ---
 
-## 💻 Development Workflow
+## 💻 Development
 
-We use a `Makefile` to streamline common tasks.
+We strictly enforce code quality. All PRs must pass our pre-commit hooks.
 
-| Command | Description |
-|---------|-------------|
-| `make dev` | Run both backend and frontend in watch mode. |
-| `make build` | Compile production binaries for both. |
-| `make setup-hooks` | Configure Git hooks (Pre-commit analysis). |
-| `make clean` | Remove build artifacts and temp files. |
+### Common Commands
 
-### Code Quality & Hooks
+```bash
+make build          # Compile production binaries
+make setup-hooks    # Install git hooks (pre-commit)
+make clean          # Clean build artifacts
+```
 
-This project enforces code quality via **Git Hooks**:
+### 🛡️ Quality Gates
 
-*   **Pre-commit**: Runs `go vet`, `gofmt`, `svelte-check`, and security scans.
-*   **Commit-msg**: Enforces [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat: add new sidebar`).
+Our `pre-commit` hook runs automatically to ensure:
+*   ✅ **Go**: `go vet`, `gofmt`
+*   ✅ **Frontend**: `svelte-check` (TypeScript validation)
+*   ✅ **Security**: Secret scanning & sensitive file detection
 
-> **Note**: If you need to bypass hooks (e.g., for WIP commits), use `git commit --no-verify`.
+> **Pro Tip**: Need to bypass hooks for a WIP commit? Use `git commit --no-verify`.
 
 ---
 
@@ -136,47 +146,29 @@ This project enforces code quality via **Git Hooks**:
 ```
 noted/
 ├── backend/
-│   ├── cmd/server/       # API Entry point
+│   ├── cmd/server/       # 🚀 API Entry point
 │   ├── internal/
-│   │   ├── handlers/     # HTTP Controllers (Business Logic)
-│   │   ├── models/       # Data Structures
-│   │   └── db/           # Database & Migrations
-│   └── data/             # SQLite DB storage (gitignored)
+│   │   ├── handlers/     # 🎮 HTTP Controllers
+│   │   ├── models/       # 📦 Data Structures
+│   │   └── db/           # 💾 Database & Migrations
+│   └── data/             # 📂 Local storage (gitignored)
 ├── frontend/
 │   ├── src/
-│   │   ├── routes/       # SvelteKit Pages
-│   │   ├── lib/          # Components & Utilities
-│   │   └── app.html      # Root HTML
-├── .githooks/            # Custom Git Hooks
-└── Makefile              # Task Automation
+│   │   ├── routes/       # 🌐 SvelteKit Pages
+│   │   ├── lib/          # 🧩 Components & Stores
+│   │   └── app.html      # 📄 Root HTML
+├── .githooks/            # 🪝 Git Hooks
+└── Makefile              # 🛠️ Task Automation
 ```
-
----
-
-## 🔌 API Reference
-
-The backend provides a RESTful API.
-
-*   **Notes**: `/api/notes`
-*   **Accounts**: `/api/accounts`
-*   **Todos**: `/api/todos`
-*   **Search**: `/api/search?q={term}`
-*   **Calendar**: `/api/calendar/events`
-
-See [docs/API.md](docs/API.md) for the full OpenAPI specification.
-
----
-
-## 🤝 Contributing
-
-1.  Fork the project.
-2.  Create your feature branch (`git checkout -b feat/amazing-feature`).
-3.  Commit your changes (`git commit -m 'feat: add amazing feature'`).
-4.  Push to the branch (`git push origin feat/amazing-feature`).
-5.  Open a Pull Request.
 
 ---
 
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
+
+<br>
+
+<p align="center">
+  <sub>Built with ❤️ by <a href="https://github.com/factory-sagar">Sagar</a> for Solutions Engineers everywhere.</sub>
+</p>
