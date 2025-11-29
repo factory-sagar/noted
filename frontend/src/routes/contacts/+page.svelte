@@ -500,12 +500,52 @@
 
         <!-- Contact Info -->
         <div class="space-y-4 mb-6">
-          {#if selectedContact.company}
-            <div class="flex items-center gap-3 text-sm">
-              <Building2 class="w-4 h-4 text-[var(--color-muted)]" />
-              <span>{selectedContact.company}</span>
+          <div class="card p-4 bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <h3 class="text-sm font-medium text-[var(--color-muted)] mb-3 flex items-center gap-2">
+              <Pencil class="w-3.5 h-3.5" /> Edit Details
+            </h3>
+            <div class="space-y-3">
+              <div>
+                <label for="inline-name" class="block text-xs font-medium mb-1">Name</label>
+                <input
+                  id="inline-name"
+                  type="text"
+                  class="input text-sm py-1.5"
+                  placeholder="Full name"
+                  value={selectedContact.name}
+                  on:input={(e) => {
+                    if (selectedContact) selectedContact.name = e.currentTarget.value;
+                  }}
+                  on:blur={() => {
+                    openEdit(selectedContact);
+                    editName = selectedContact.name;
+                    editCompany = selectedContact.company;
+                    saveEdit();
+                  }}
+                />
+              </div>
+              <div>
+                <label for="inline-company" class="block text-xs font-medium mb-1">Company</label>
+                <input
+                  id="inline-company"
+                  type="text"
+                  class="input text-sm py-1.5"
+                  placeholder="Company"
+                  value={selectedContact.company}
+                  on:input={(e) => {
+                    if (selectedContact) selectedContact.company = e.currentTarget.value;
+                  }}
+                  on:blur={() => {
+                    openEdit(selectedContact);
+                    editName = selectedContact.name;
+                    editCompany = selectedContact.company;
+                    saveEdit();
+                  }}
+                />
+              </div>
             </div>
-          {/if}
+          </div>
+
           <div class="flex items-center gap-3 text-sm">
             <span class="px-2 py-1 rounded text-xs {selectedContact.is_internal ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}">
               {selectedContact.is_internal ? 'Internal' : 'External'}
@@ -519,7 +559,7 @@
             </div>
           {:else if !selectedContact.is_internal}
             <button
-              class="btn-secondary btn-sm flex items-center gap-2"
+              class="btn-secondary btn-sm flex items-center gap-2 w-full justify-center"
               on:click={() => linkingContact = selectedContact}
             >
               <Link class="w-3 h-3" />
