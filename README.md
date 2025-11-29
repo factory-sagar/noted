@@ -5,287 +5,178 @@
 <h1 align="center">Noted</h1>
 
 <p align="center">
-  <strong>A beautiful, local-first notes app for Solutions Engineers</strong>
+  <strong>The Local-First Workspace for Solutions Engineers</strong>
 </p>
 
 <p align="center">
-  Organize meeting notes • Track follow-ups • Manage customer accounts
+  Manage accounts • Track follow-ups • Organize meeting notes • Sync calendars
 </p>
 
 <p align="center">
   <a href="#features">Features</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#screenshots">Screenshots</a> •
+  <a href="#getting-started">Getting Started</a> •
   <a href="#tech-stack">Tech Stack</a> •
+  <a href="#development">Development</a> •
   <a href="#api">API</a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
-  <img src="https://img.shields.io/badge/platform-macOS-lightgrey.svg" alt="Platform">
   <img src="https://img.shields.io/badge/Go-1.24+-00ADD8.svg?logo=go" alt="Go">
   <img src="https://img.shields.io/badge/SvelteKit-2.x-FF3E00.svg?logo=svelte" alt="SvelteKit">
   <img src="https://img.shields.io/badge/SQLite-FTS4-003B57.svg?logo=sqlite" alt="SQLite">
+  <a href="https://github.com/factory-sagar/noted/actions"><img src="https://img.shields.io/github/actions/workflow/status/factory-sagar/noted/ci.yml?branch=main" alt="Build Status"></a>
 </p>
 
 ---
 
-## Why Noted?
+## 🚀 Overview
 
-Built specifically for **Solutions Engineers** who juggle dozens of customer conversations. Stop losing context between meetings. Keep everything organized, searchable, and actionable.
+**Noted** is a high-performance, local-first application designed for the unique workflow of Solutions Engineers. It bridges the gap between your calendar, your customer accounts, and your daily tasks.
 
-```
-📝 Meeting notes with rich text editing
-📊 Kanban board for follow-ups  
-📅 Calendar integration
-🔍 Instant full-text search
-🎨 Beautiful themes
-```
+Unlike generic note-taking apps, Noted understands **Accounts**, **Meetings**, and **Follow-ups**.
 
----
+### Key Capabilities
 
-## Features
-
-<table>
-<tr>
-<td width="50%">
-
-### 📝 Smart Notes
-- Rich text editor with code blocks
-- Organize by customer account
-- Pin, archive, and tag notes
-- File attachments
-- Export to PDF
-- Drag-to-reorder
-
-</td>
-<td width="50%">
-
-### ✅ Kanban Todos
-- 4-column workflow board
-- Drag-and-drop cards
-- Link todos to notes
-- Priority badges (H/M/L)
-- Filter & bulk operations
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 📅 Calendar Sync
-- Apple Calendar integration
-- Week, Month, Agenda views
-- Create notes from events
-- Auto-populate participants
-
-</td>
-<td width="50%">
-
-### 👥 Contact Management
-- Auto-extract from meetings
-- Internal vs external tracking
-- Domain-based suggestions
-- Meeting history per contact
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 📊 Dashboard
-- Overview stats at a glance
-- Incomplete fields tracker
-- Activity timeline
-- Quick navigation
-
-</td>
-<td width="50%">
-
-### 🎨 Themes
-- Modern SaaS (default)
-- Liquid Glass
-- Retro / Nordic / Corporate
-- Dark mode support
-
-</td>
-</tr>
-</table>
+*   **📝 Context-Aware Notes**: Link notes to specific accounts and meetings.
+*   **📊 Kanban Workflow**: Built-in board to track todo status (Not Started → Complete).
+*   **📅 Calendar Sync**: Deep integration with Apple Calendar & Google Calendar.
+*   **🔍 Instant Search**: Full-text search across notes, accounts, and todos (powered by SQLite FTS4).
+*   **🛡️ Local-First**: Your data lives on your machine. No cloud lock-in.
 
 ---
 
-## Installation
+## ✨ Features
 
-### 🖥️ Native macOS App (Recommended)
+| Feature | Description |
+|---------|-------------|
+| **Smart Editor** | Rich text editing with TipTap, code blocks, and markdown support. |
+| **Kanban Board** | Drag-and-drop task management with priority levels (H/M/L). |
+| **Account Hub** | Centralized view of customer details, budgets, and engagement stats. |
+| **Quick Capture** | `⌘+Shift+C` to capture thoughts instantly without breaking flow. |
+| **Attachments** | Drag-and-drop file management for every note. |
+| **Analytics** | Dashboard with completion rates, incomplete field tracking, and activity timelines. |
+| **Theming** | Multiple built-in themes (SaaS, Nordic, Retro, Dark Mode). |
 
-Download the latest release or build from source:
+---
+
+## 🛠️ Tech Stack
+
+*   **Frontend**: [SvelteKit](https://kit.svelte.dev/) (TypeScript, Tailwind CSS)
+*   **Backend**: [Go](https://go.dev/) (Gin Framework)
+*   **Database**: SQLite (with FTS4)
+*   **Desktop App**: [Wails](https://wails.io/) (for macOS native build)
+
+---
+
+## 🏁 Getting Started
+
+### Prerequisites
+
+*   **Go**: 1.24 or higher
+*   **Node.js**: 20 or higher
+*   **Make**: For running build commands
+
+### Installation
+
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/factory-sagar/noted.git
+    cd noted
+    ```
+
+2.  **Setup dependencies & hooks**
+    ```bash
+    make setup
+    ```
+
+3.  **Start Development Servers**
+    ```bash
+    make dev
+    ```
+    *   Frontend: `http://localhost:5173`
+    *   Backend: `http://localhost:8080`
+
+### Docker
+
+Prefer containers? Run the full stack with Docker Compose:
 
 ```bash
-# Clone and build
-git clone https://github.com/factory-sagar/noted.git
-cd noted
-make wails-build
-
-# Install
-cp -r backend/cmd/wails/build/bin/Noted.app /Applications/
-```
-
-### 🐳 Docker
-
-```bash
-docker-compose up
-# Open http://localhost:3000
-```
-
-### 🛠️ Development
-
-**Prerequisites:** Go 1.24+, Node.js 20+
-
-```bash
-# Backend (port 8080)
-cd backend && go run ./cmd/server/
-
-# Frontend (port 5173)  
-cd frontend && npm install && npm run dev
-```
-
-Or use Make:
-```bash
-make dev          # Run both
-make dev-backend  # Backend only
-make dev-frontend # Frontend only
+make docker
+# Access app at http://localhost:3000
 ```
 
 ---
 
-## Screenshots
+## 💻 Development Workflow
 
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" width="80%" alt="Dashboard">
-</p>
+We use a `Makefile` to streamline common tasks.
 
-<p align="center">
-  <img src="docs/screenshots/notes.png" width="45%" alt="Notes">
-  <img src="docs/screenshots/calendar.png" width="45%" alt="Calendar">
-</p>
+| Command | Description |
+|---------|-------------|
+| `make dev` | Run both backend and frontend in watch mode. |
+| `make build` | Compile production binaries for both. |
+| `make setup-hooks` | Configure Git hooks (Pre-commit analysis). |
+| `make clean` | Remove build artifacts and temp files. |
 
----
+### Code Quality & Hooks
 
-## Tech Stack
+This project enforces code quality via **Git Hooks**:
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | SvelteKit 2.x, Tailwind CSS, TipTap Editor |
-| **Backend** | Go 1.24+, Gin Framework |
-| **Database** | SQLite with FTS4 (full-text search) |
-| **Native App** | Wails v2 (macOS) |
-| **Calendar** | Apple EventKit |
+*   **Pre-commit**: Runs `go vet`, `gofmt`, `svelte-check`, and security scans.
+*   **Commit-msg**: Enforces [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat: add new sidebar`).
+
+> **Note**: If you need to bypass hooks (e.g., for WIP commits), use `git commit --no-verify`.
 
 ---
 
-## Project Structure
+## 📂 Project Structure
 
 ```
 noted/
 ├── backend/
-│   ├── cmd/
-│   │   ├── server/          # HTTP server
-│   │   └── wails/           # Native app
-│   └── internal/
-│       ├── handlers/        # API handlers
-│       ├── calendar/        # EventKit bridge
-│       └── db/              # SQLite + migrations
+│   ├── cmd/server/       # API Entry point
+│   ├── internal/
+│   │   ├── handlers/     # HTTP Controllers (Business Logic)
+│   │   ├── models/       # Data Structures
+│   │   └── db/           # Database & Migrations
+│   └── data/             # SQLite DB storage (gitignored)
 ├── frontend/
-│   └── src/
-│       ├── routes/          # Pages
-│       ├── lib/components/  # UI components
-│       └── lib/stores/      # State management
-└── docs/                    # API documentation
+│   ├── src/
+│   │   ├── routes/       # SvelteKit Pages
+│   │   ├── lib/          # Components & Utilities
+│   │   └── app.html      # Root HTML
+├── .githooks/            # Custom Git Hooks
+└── Makefile              # Task Automation
 ```
 
 ---
 
-## API
+## 🔌 API Reference
 
-Full REST API with 70+ endpoints. See [docs/API.md](docs/API.md) for complete documentation.
+The backend provides a RESTful API.
 
-<details>
-<summary><strong>Quick Reference</strong></summary>
+*   **Notes**: `/api/notes`
+*   **Accounts**: `/api/accounts`
+*   **Todos**: `/api/todos`
+*   **Search**: `/api/search?q={term}`
+*   **Calendar**: `/api/calendar/events`
 
-| Resource | Endpoints |
-|----------|-----------|
-| Accounts | `GET/POST/PUT/DELETE /api/accounts` |
-| Notes | `GET/POST/PUT/DELETE /api/notes` |
-| Todos | `GET/POST/PUT/DELETE /api/todos` |
-| Tags | `GET/POST/PUT/DELETE /api/tags` |
-| Contacts | `GET/POST/PUT/DELETE /api/contacts` |
-| Calendar | `GET /api/calendar/events` |
-| Search | `GET /api/search?q=term` |
-| Analytics | `GET /api/analytics` |
-| Export | `GET /api/export` |
-
-</details>
+See [docs/API.md](docs/API.md) for the full OpenAPI specification.
 
 ---
 
-## Configuration
+## 🤝 Contributing
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 8080 | Server port |
-| `INTERNAL_DOMAIN` | example.com | Your company's email domain |
-
-```bash
-# Example: Set your company domain for contact classification
-export INTERNAL_DOMAIN=mycompany.com
-```
+1.  Fork the project.
+2.  Create your feature branch (`git checkout -b feat/amazing-feature`).
+3.  Commit your changes (`git commit -m 'feat: add amazing feature'`).
+4.  Push to the branch (`git push origin feat/amazing-feature`).
+5.  Open a Pull Request.
 
 ---
 
-## Keyboard Shortcuts
+## 📄 License
 
-| Shortcut | Action |
-|----------|--------|
-| `⌘ K` | Global search |
-| `⌘ ⇧ C` | Quick capture |
-| `⌘ S` | Save note |
-
----
-
-## Roadmap
-
-- [x] Apple Calendar integration
-- [x] Contact management
-- [x] Multiple themes
-- [x] Data export/import
-- [ ] Multi-user support
-- [ ] iOS/Android companion app
-- [ ] AI-powered note summaries
-
----
-
-## Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-```bash
-# Setup hooks
-make setup-hooks
-
-# Run checks before committing
-npm run check        # Frontend
-go vet ./...         # Backend
-```
-
----
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  <sub>Built with ☕ for Solutions Engineers everywhere</sub>
-</p>
+Distributed under the MIT License. See `LICENSE` for more information.
