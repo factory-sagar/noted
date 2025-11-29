@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -89,6 +90,11 @@ func (h *Handler) CreateAccount(c *gin.Context) {
 	var req models.CreateAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Account name is required"})
 		return
 	}
 
@@ -218,8 +224,12 @@ func (h *Handler) GetNotes(c *gin.Context) {
 			return
 		}
 
-		json.Unmarshal([]byte(internalJSON), &n.InternalParticipants)
-		json.Unmarshal([]byte(externalJSON), &n.ExternalParticipants)
+		if err := json.Unmarshal([]byte(internalJSON), &n.InternalParticipants); err != nil {
+			log.Printf("Error unmarshalling internal participants for note %s: %v", n.ID, err)
+		}
+		if err := json.Unmarshal([]byte(externalJSON), &n.ExternalParticipants); err != nil {
+			log.Printf("Error unmarshalling external participants for note %s: %v", n.ID, err)
+		}
 
 		note := map[string]interface{}{
 			"id":                    n.ID,
@@ -266,8 +276,12 @@ func (h *Handler) GetNote(c *gin.Context) {
 		return
 	}
 
-	json.Unmarshal([]byte(internalJSON), &n.InternalParticipants)
-	json.Unmarshal([]byte(externalJSON), &n.ExternalParticipants)
+	if err := json.Unmarshal([]byte(internalJSON), &n.InternalParticipants); err != nil {
+		log.Printf("Error unmarshalling internal participants for note %s: %v", n.ID, err)
+	}
+	if err := json.Unmarshal([]byte(externalJSON), &n.ExternalParticipants); err != nil {
+		log.Printf("Error unmarshalling external participants for note %s: %v", n.ID, err)
+	}
 
 	// Get linked todos
 	todoRows, err := h.db.Query(`
@@ -309,6 +323,11 @@ func (h *Handler) CreateNote(c *gin.Context) {
 		return
 	}
 
+	if req.Title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Note title is required"})
+		return
+	}
+
 	id := uuid.New().String()
 	now := time.Now()
 
@@ -322,9 +341,11 @@ func (h *Handler) CreateNote(c *gin.Context) {
 	var meetingDate *time.Time
 	if req.MeetingDate != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.MeetingDate)
-		if err == nil {
-			meetingDate = &parsed
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meeting date format"})
+			return
 		}
+		meetingDate = &parsed
 	}
 
 	_, err := h.db.Exec(`
@@ -397,7 +418,11 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 		args = append(args, *req.MeetingID)
 	}
 	if req.MeetingDate != nil {
-		parsed, _ := time.Parse(time.RFC3339, *req.MeetingDate)
+		parsed, err := time.Parse(time.RFC3339, *req.MeetingDate)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meeting date format"})
+			return
+		}
 		updates = append(updates, "meeting_date = ?")
 		args = append(args, parsed)
 	}
@@ -533,8 +558,12 @@ func (h *Handler) GetNotesByAccount(c *gin.Context) {
 			&externalJSON, &n.Content, &n.MeetingID, &n.MeetingDate, &n.CreatedAt, &n.UpdatedAt); err != nil {
 			continue
 		}
-		json.Unmarshal([]byte(internalJSON), &n.InternalParticipants)
-		json.Unmarshal([]byte(externalJSON), &n.ExternalParticipants)
+		if err := json.Unmarshal([]byte(internalJSON), &n.InternalParticipants); err != nil {
+			log.Printf("Error unmarshalling internal participants for note %s: %v", n.ID, err)
+		}
+		if err := json.Unmarshal([]byte(externalJSON), &n.ExternalParticipants); err != nil {
+			log.Printf("Error unmarshalling external participants for note %s: %v", n.ID, err)
+		}
 		notes = append(notes, n)
 	}
 
@@ -568,28 +597,13 @@ func (h *Handler) GetTodos(c *gin.Context) {
 	defer rows.Close()
 
 	todos := []map[string]interface{}{}
+	var todoIDs []interface{}
+
 	for rows.Next() {
 		var t models.Todo
 		var accountName string
 		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.Priority, &t.DueDate, &t.AccountID, &accountName, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			continue
-		}
-
-		// Get linked notes for this todo
-		noteRows, _ := h.db.Query(`
-			SELECT n.id, n.title FROM notes n
-			JOIN note_todos nt ON n.id = nt.note_id
-			WHERE nt.todo_id = ?
-		`, t.ID)
-
-		linkedNotes := []map[string]string{}
-		if noteRows != nil {
-			for noteRows.Next() {
-				var noteID, noteTitle string
-				noteRows.Scan(&noteID, &noteTitle)
-				linkedNotes = append(linkedNotes, map[string]string{"id": noteID, "title": noteTitle})
-			}
-			noteRows.Close()
 		}
 
 		todos = append(todos, map[string]interface{}{
@@ -603,8 +617,54 @@ func (h *Handler) GetTodos(c *gin.Context) {
 			"account_name": accountName,
 			"created_at":   t.CreatedAt,
 			"updated_at":   t.UpdatedAt,
-			"linked_notes": linkedNotes,
+			"linked_notes": []map[string]string{},
 		})
+		todoIDs = append(todoIDs, t.ID)
+	}
+
+	if len(todos) == 0 {
+		c.JSON(http.StatusOK, todos)
+		return
+	}
+
+	// Batch fetch linked notes
+	placeholders := strings.Repeat("?,", len(todoIDs))
+	placeholders = placeholders[:len(placeholders)-1]
+
+	notesQuery := `
+		SELECT nt.todo_id, n.id, n.title
+		FROM note_todos nt
+		JOIN notes n ON nt.note_id = n.id
+		WHERE nt.todo_id IN (` + placeholders + `)
+	`
+
+	noteRows, err := h.db.Query(notesQuery, todoIDs...)
+	if err != nil {
+		log.Printf("Error fetching linked notes: %v", err)
+		// Return todos even if linked notes fail
+		c.JSON(http.StatusOK, todos)
+		return
+	}
+	defer noteRows.Close()
+
+	linkedNotesMap := make(map[string][]map[string]string)
+	for noteRows.Next() {
+		var todoID, noteID, noteTitle string
+		if err := noteRows.Scan(&todoID, &noteID, &noteTitle); err != nil {
+			continue
+		}
+		if _, ok := linkedNotesMap[todoID]; !ok {
+			linkedNotesMap[todoID] = []map[string]string{}
+		}
+		linkedNotesMap[todoID] = append(linkedNotesMap[todoID], map[string]string{"id": noteID, "title": noteTitle})
+	}
+
+	// Attach linked notes to todos
+	for i, todo := range todos {
+		id := todo["id"].(string)
+		if notes, ok := linkedNotesMap[id]; ok {
+			todos[i]["linked_notes"] = notes
+		}
 	}
 
 	c.JSON(http.StatusOK, todos)
@@ -670,6 +730,11 @@ func (h *Handler) CreateTodo(c *gin.Context) {
 		return
 	}
 
+	if req.Title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Todo title is required"})
+		return
+	}
+
 	id := uuid.New().String()
 	now := time.Now()
 
@@ -683,9 +748,11 @@ func (h *Handler) CreateTodo(c *gin.Context) {
 	var dueDate *time.Time
 	if req.DueDate != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.DueDate)
-		if err == nil {
-			dueDate = &parsed
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format"})
+			return
 		}
+		dueDate = &parsed
 	}
 
 	_, err := h.db.Exec(`
@@ -751,7 +818,11 @@ func (h *Handler) UpdateTodo(c *gin.Context) {
 		args = append(args, *req.Priority)
 	}
 	if req.DueDate != nil {
-		parsed, _ := time.Parse(time.RFC3339, *req.DueDate)
+		parsed, err := time.Parse(time.RFC3339, *req.DueDate)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format"})
+			return
+		}
 		updates = append(updates, "due_date = ?")
 		args = append(args, parsed)
 	}
