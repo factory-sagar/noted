@@ -142,7 +142,7 @@ const char* getEvents(const char* startDate, const char* endDate, const char* ca
 
     NSMutableArray *eventList = [NSMutableArray array];
     NSDateFormatter *outputFormatter = [[NSDateFormatter alloc] init];
-    [outputFormatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ssZ"];
+    [outputFormatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ssZZZZZ"];
 
     for (EKEvent *event in events) {
         NSMutableArray *attendees = [NSMutableArray array];
@@ -197,7 +197,7 @@ const char* getEvent(const char* eventId) {
     }
 
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-    [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ssZ"];
+    [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ssZZZZZ"];
 
     NSMutableArray *attendees = [NSMutableArray array];
     for (EKParticipant *participant in event.attendees) {

@@ -161,8 +161,12 @@ func (h *Handler) CreateNote(c *gin.Context) {
 	if req.MeetingDate != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.MeetingDate)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meeting date format"})
-			return
+			// Try parsing apple format (no colon in offset)
+			parsed, err = time.Parse("2006-01-02T15:04:05-0700", *req.MeetingDate)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meeting date format"})
+				return
+			}
 		}
 		meetingDate = &parsed
 	}
@@ -239,8 +243,12 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 	if req.MeetingDate != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.MeetingDate)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meeting date format"})
-			return
+			// Try parsing apple format
+			parsed, err = time.Parse("2006-01-02T15:04:05-0700", *req.MeetingDate)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meeting date format"})
+				return
+			}
 		}
 		updates = append(updates, "meeting_date = ?")
 		args = append(args, parsed)
