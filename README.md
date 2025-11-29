@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/factory-sagar/notes-droid">
-    <img src="https://raw.githubusercontent.com/factory-sagar/notes-droid/main/frontend/src/lib/assets/logo-notion-style.svg" width="120" height="120" alt="Noted Logo">
+    <img src="frontend/src/lib/assets/logo-notion-style.svg" width="120" height="120" alt="Noted Logo">
   </a>
 </p>
 
