@@ -248,6 +248,13 @@ func Migrate(db *sql.DB) error {
 		}
 	}
 
+	// Add deleted_at to accounts (soft delete)
+	if !columnExists(db, "accounts", "deleted_at") {
+		if _, err := db.Exec(`ALTER TABLE accounts ADD COLUMN deleted_at DATETIME`); err != nil {
+			return err
+		}
+	}
+
 	// Contacts table
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS contacts (
 		id TEXT PRIMARY KEY,

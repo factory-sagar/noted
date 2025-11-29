@@ -54,13 +54,17 @@ func main() {
 	{
 		// Accounts
 		api.GET("/accounts", h.GetAccounts)
+		api.GET("/accounts/deleted", h.GetDeletedAccounts)
 		api.GET("/accounts/:id", h.GetAccount)
 		api.POST("/accounts", h.CreateAccount)
 		api.PUT("/accounts/:id", h.UpdateAccount)
 		api.DELETE("/accounts/:id", h.DeleteAccount)
+		api.POST("/accounts/:id/restore", h.RestoreAccount)
+		api.DELETE("/accounts/:id/permanent", h.PermanentDeleteAccount)
 
 		// Notes - archived must come before :id to avoid route capture
 		api.GET("/notes/archived", h.GetArchivedNotes)
+		api.GET("/notes/deleted", h.GetDeletedNotes)
 		api.GET("/notes", h.GetNotes)
 		api.GET("/notes/:id", h.GetNote)
 		api.POST("/notes", h.CreateNote)
@@ -68,18 +72,17 @@ func main() {
 		api.DELETE("/notes/:id", h.DeleteNote)
 		api.POST("/notes/:id/restore", h.RestoreNote)
 		api.DELETE("/notes/:id/permanent", h.PermanentDeleteNote)
-		api.GET("/notes/deleted", h.GetDeletedNotes)
 		api.GET("/accounts/:id/notes", h.GetNotesByAccount)
 
 		// Todos
 		api.GET("/todos", h.GetTodos)
+		api.GET("/todos/deleted", h.GetDeletedTodos)
 		api.GET("/todos/:id", h.GetTodo)
 		api.POST("/todos", h.CreateTodo)
 		api.PUT("/todos/:id", h.UpdateTodo)
 		api.DELETE("/todos/:id", h.DeleteTodo)
 		api.POST("/todos/:id/restore", h.RestoreTodo)
 		api.DELETE("/todos/:id/permanent", h.PermanentDeleteTodo)
-		api.GET("/todos/deleted", h.GetDeletedTodos)
 		api.POST("/todos/:id/notes/:noteId", h.LinkTodoToNote)
 		api.DELETE("/todos/:id/notes/:noteId", h.UnlinkTodoFromNote)
 

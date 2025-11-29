@@ -14,7 +14,7 @@ import (
 func (h *Handler) GetAccounts(c *gin.Context) {
 	rows, err := h.db.Query(`
 		SELECT id, name, account_owner, budget, est_engineers, created_at, updated_at 
-		FROM accounts ORDER BY name ASC
+		FROM accounts WHERE deleted_at IS NULL ORDER BY name ASC
 	`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -45,7 +45,7 @@ func (h *Handler) GetAccount(c *gin.Context) {
 	var accountOwner sql.NullString
 	err := h.db.QueryRow(`
 		SELECT id, name, account_owner, budget, est_engineers, created_at, updated_at 
-		FROM accounts WHERE id = ?
+		FROM accounts WHERE id = ? AND deleted_at IS NULL
 	`, id).Scan(&a.ID, &a.Name, &accountOwner, &a.Budget, &a.EstEngineers, &a.CreatedAt, &a.UpdatedAt)
 
 	if accountOwner.Valid {
@@ -157,7 +157,8 @@ func (h *Handler) UpdateAccount(c *gin.Context) {
 
 func (h *Handler) DeleteAccount(c *gin.Context) {
 	id := c.Param("id")
-	result, err := h.db.Exec("DELETE FROM accounts WHERE id = ?", id)
+	// Soft delete
+	result, err := h.db.Exec("UPDATE accounts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL", id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -170,4 +171,71 @@ func (h *Handler) DeleteAccount(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Account deleted"})
+}
+
+func (h *Handler) RestoreAccount(c *gin.Context) {
+	id := c.Param("id")
+	result, err := h.db.Exec("UPDATE accounts SET deleted_at = NULL WHERE id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Account restored"})
+}
+
+func (h *Handler) PermanentDeleteAccount(c *gin.Context) {
+	id := c.Param("id")
+	result, err := h.db.Exec("DELETE FROM accounts WHERE id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Account permanently deleted"})
+}
+
+func (h *Handler) GetDeletedAccounts(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT id, name, account_owner, budget, est_engineers, created_at, updated_at, deleted_at 
+		FROM accounts WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	accounts := []map[string]interface{}{}
+	for rows.Next() {
+		var a models.Account
+		var accountOwner sql.NullString
+		var deletedAt sql.NullString
+		if err := rows.Scan(&a.ID, &a.Name, &accountOwner, &a.Budget, &a.EstEngineers, &a.CreatedAt, &a.UpdatedAt, &deletedAt); err != nil {
+			continue
+		}
+		acc := map[string]interface{}{
+			"id":            a.ID,
+			"name":          a.Name,
+			"budget":        a.Budget,
+			"est_engineers": a.EstEngineers,
+			"created_at":    a.CreatedAt,
+			"updated_at":    a.UpdatedAt,
+			"deleted_at":    deletedAt.String,
+		}
+		if accountOwner.Valid {
+			acc["account_owner"] = accountOwner.String
+		}
+		accounts = append(accounts, acc)
+	}
+
+	c.JSON(http.StatusOK, accounts)
 }

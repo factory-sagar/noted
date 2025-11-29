@@ -70,6 +70,7 @@ func (h *Handler) GetIncompleteFields(c *gin.Context) {
 			   n.content, n.internal_participants
 		FROM notes n
 		JOIN accounts a ON n.account_id = a.id
+		WHERE n.deleted_at IS NULL
 	`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
