@@ -162,6 +162,16 @@ func (a *App) startServer() {
 		api.POST("/notes/:id/pin", h.ToggleNotePin)
 		api.POST("/notes/:id/archive", h.ToggleNoteArchive)
 		api.POST("/todos/:id/pin", h.ToggleTodoPin)
+
+		// Contacts
+		api.GET("/contacts", h.GetContacts)
+		api.GET("/contacts/stats", h.GetContactStats)
+		api.GET("/contacts/:id", h.GetContact)
+		api.POST("/contacts", h.CreateContact)
+		api.PUT("/contacts/:id", h.UpdateContact)
+		api.DELETE("/contacts/:id", h.DeleteContact)
+		api.POST("/contacts/:id/confirm-suggestion", h.ConfirmAccountSuggestion)
+		api.POST("/contacts/:id/link/:accountId", h.LinkContactToAccount)
 	}
 
 	// Use fixed port 8080 for OAuth compatibility

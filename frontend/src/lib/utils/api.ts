@@ -236,6 +236,35 @@ export interface QuickCaptureRequest {
   description?: string;
 }
 
+// Contact types
+export interface Contact {
+  id: string;
+  email: string;
+  name: string;
+  company: string;
+  domain: string;
+  is_internal: boolean;
+  account_id?: string;
+  account_name?: string;
+  suggested_account_id?: string;
+  suggested_account_name?: string;
+  suggestion_confirmed: boolean;
+  source: string;
+  first_seen: string;
+  last_seen: string;
+  meeting_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactStats {
+  total_contacts: number;
+  internal_contacts: number;
+  external_contacts: number;
+  linked_contacts: number;
+  pending_suggestions: number;
+}
+
 // API functions
 export const api = {
   // Accounts
@@ -375,6 +404,27 @@ export const api = {
   toggleTodoPin: (todoId: string) =>
     request<{ pinned: boolean }>(`/todos/${todoId}/pin`, { method: 'POST' }),
   getArchivedNotes: () => request<Note[]>('/notes/archived'),
+
+  // Contacts
+  getContacts: (filter?: 'internal' | 'external' | 'unlinked' | 'suggestions', accountId?: string) => {
+    const params = new URLSearchParams();
+    if (filter) params.append('filter', filter);
+    if (accountId) params.append('account_id', accountId);
+    const query = params.toString();
+    return request<Contact[]>(`/contacts${query ? `?${query}` : ''}`);
+  },
+  getContactStats: () => request<ContactStats>('/contacts/stats'),
+  getContact: (id: string) => request<Contact>(`/contacts/${id}`),
+  createContact: (data: { email: string; name?: string; company?: string }) =>
+    request<{ id: string; email: string }>('/contacts', { method: 'POST', body: JSON.stringify(data) }),
+  updateContact: (id: string, data: { name?: string; company?: string; account_id?: string }) =>
+    request<{ message: string }>(`/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteContact: (id: string) =>
+    request<{ message: string }>(`/contacts/${id}`, { method: 'DELETE' }),
+  confirmContactSuggestion: (id: string, confirm: boolean) =>
+    request<{ message: string }>(`/contacts/${id}/confirm-suggestion`, { method: 'POST', body: JSON.stringify({ confirm }) }),
+  linkContactToAccount: (contactId: string, accountId: string) =>
+    request<{ message: string }>(`/contacts/${contactId}/link/${accountId}`, { method: 'POST' }),
 };
 
 // Helper for attachment download URL
