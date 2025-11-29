@@ -280,7 +280,7 @@
               <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
                 <UserCheck class="w-5 h-5 text-blue-500" />
                 Internal Contacts
-                <span class="text-sm font-normal text-[var(--color-muted)]">(@factory.ai)</span>
+                <span class="text-sm font-normal text-[var(--color-muted)]">(Your Team)</span>
               </h2>
               <div class="grid gap-3">
                 {#each internalContacts as contact}

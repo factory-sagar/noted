@@ -53,10 +53,10 @@ notes-droid/
 │           └── utils/
 │               ├── api.ts      # API client with types
 │               └── pdf.ts      # PDF generation (jsPDF)
-├── .githooks/                  # Git hooks with dashcode integration
-│   ├── pre-commit              # Linting, security checks, dashcode
+├── .githooks/                  # Git hooks for code quality
+│   ├── pre-commit              # Linting and security checks
 │   ├── commit-msg              # Conventional commit validation
-│   └── post-commit             # Dashcode tracking
+│   └── post-commit             # Commit tracking
 ├── docs/                       # Additional documentation
 ├── docker-compose.yml          # Container orchestration
 └── Makefile                    # Development commands
@@ -84,7 +84,7 @@ type Note struct {
     Title                string
     AccountID            string      // Foreign key
     TemplateType         string      // "initial" or "followup"
-    InternalParticipants []string    // @factory.ai emails
+    InternalParticipants []string    // Internal team emails
     ExternalParticipants []string    // Customer emails
     Content              string      // HTML from TipTap
     MeetingID            *string     // Google Calendar event ID
@@ -327,9 +327,9 @@ make setup            # Install deps + configure hooks
 make setup-hooks      # Configure git hooks only
 ```
 
-## Git Hooks & Dashcode Integration
+## Git Hooks
 
-This repo uses custom git hooks that report to **Dashcode** at `localhost:3001`.
+This repo uses custom git hooks for code quality and security checks.
 
 ### Pre-commit Hook (`.githooks/pre-commit`)
 
@@ -355,30 +355,6 @@ This repo uses custom git hooks that report to **Dashcode** at `localhost:3001`.
    - Merge conflict markers
    - Trailing whitespace
    - Debugger statements
-
-**Dashcode Payload**:
-```json
-{
-  "repoId": "e8450e26-c573-4aee-af1b-248405af0acc",
-  "commitHash": "<current-hash>",
-  "branch": "<branch-name>",
-  "trigger": "pre-commit",
-  "status": "success|fail",
-  "durationMs": 0,
-  "meta": {
-    "author": "<git-user>",
-    "stagedFiles": <count>,
-    "errors": <count>,
-    "warnings": <count>
-  },
-  "results": [
-    {"type": "security", "status": "pass", "output": "...", "durationMs": 0, "exitCode": 0},
-    {"type": "general", "status": "pass", "output": "...", "durationMs": 0, "exitCode": 0}
-  ]
-}
-```
-
-**Endpoint**: `POST http://localhost:3001/api/hooks/report`
 
 ### Commit-msg Hook (`.githooks/commit-msg`)
 
@@ -408,45 +384,7 @@ This repo uses custom git hooks that report to **Dashcode** at `localhost:3001`.
 
 ### Post-commit Hook (`.githooks/post-commit`)
 
-**Purpose**: Reports successful commits to Dashcode for tracking.
-
-**Data collected**:
-- Commit hash (full and short)
-- Commit message
-- Author name and email
-- Branch name
-- Repository name
-- Files changed count
-
-**Dashcode Payload**:
-```json
-{
-  "repoName": "notes-droid",
-  "commitHash": "<full-hash>",
-  "branch": "<branch-name>",
-  "trigger": "post-commit",
-  "status": "success",
-  "durationMs": 100,
-  "meta": {
-    "author": "<author-name>",
-    "email": "<author-email>",
-    "message": "<commit-message>",
-    "shortHash": "<short-hash>",
-    "filesChanged": <count>
-  },
-  "results": [
-    {
-      "type": "commit",
-      "status": "pass",
-      "output": "Commit <short-hash> by <author>",
-      "durationMs": 100,
-      "exitCode": 0
-    }
-  ]
-}
-```
-
-**Endpoint**: `POST http://localhost:3001/api/hooks/report`
+**Purpose**: Tracks successful commits.
 
 **Note**: Post-commit never blocks - always exits 0.
 
@@ -511,11 +449,6 @@ This repo uses custom git hooks that report to **Dashcode** at `localhost:3001`.
 - Dev port: 5173
 - Production port: 3000
 - API URL: `http://localhost:8080` (hardcoded in `api.ts`)
-
-### Dashcode
-- URL: `http://localhost:3001`
-- Endpoint: `/api/hooks/report`
-- Required for hook tracking (non-blocking if unavailable)
 
 ## Settings Storage
 
@@ -612,9 +545,6 @@ make wails-install  # Copy to /Applications
 - Uses deprecated APIs for backward compatibility (macOS 10.13+)
 
 ## Internal Domain
-- Internal contacts identified by `@factory.ai` email domain
-- Configurable in `backend/internal/handlers/contacts.go`
-
-## Key URLs
-- GitHub: https://github.com/factory-sagar/notes-droid
-- PRs: https://github.com/factory-sagar/notes-droid/pulls
+- Internal contacts identified by email domain (default: `example.com`)
+- Configure via `INTERNAL_DOMAIN` environment variable
+- Example: `INTERNAL_DOMAIN=mycompany.com`

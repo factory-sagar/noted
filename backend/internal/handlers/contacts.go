@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -10,7 +11,14 @@ import (
 	"github.com/google/uuid"
 )
 
-const InternalDomain = "factory.ai"
+// GetInternalDomain returns the internal email domain for identifying internal contacts.
+// Set INTERNAL_DOMAIN environment variable to customize (default: "example.com")
+func GetInternalDomain() string {
+	if domain := os.Getenv("INTERNAL_DOMAIN"); domain != "" {
+		return domain
+	}
+	return "example.com"
+}
 
 type Contact struct {
 	ID                  string     `json:"id"`
@@ -48,7 +56,7 @@ func extractDomain(email string) string {
 }
 
 func isInternalEmail(email string) bool {
-	return strings.HasSuffix(strings.ToLower(email), "@"+InternalDomain)
+	return strings.HasSuffix(strings.ToLower(email), "@"+GetInternalDomain())
 }
 
 // GetContacts returns all contacts with optional filtering
@@ -374,7 +382,7 @@ func (h *Handler) UpsertContactFromEmail(email, name, source string) error {
 
 // suggestAccountForContact tries to match a contact's domain to an existing account
 func (h *Handler) suggestAccountForContact(contactID, domain string) {
-	if domain == "" || domain == InternalDomain {
+	if domain == "" || domain == GetInternalDomain() {
 		return
 	}
 

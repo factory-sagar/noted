@@ -211,8 +211,7 @@
       creatingNote = true;
       
       const { internal, external } = await api.parseParticipants(
-        selectedEvent.attendees || [],
-        'factory.ai'
+        selectedEvent.attendees || []
       );
       
       let accountId: string;

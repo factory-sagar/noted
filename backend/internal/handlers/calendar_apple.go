@@ -148,7 +148,7 @@ func (h *Handler) ParseParticipantsApple(c *gin.Context) {
 
 	internalDomain := req.InternalDomain
 	if internalDomain == "" {
-		internalDomain = "factory.ai"
+		internalDomain = GetInternalDomain()
 	}
 
 	internal := make([]string, 0)

@@ -107,7 +107,7 @@ Response:
     "account_id": "account-uuid",
     "account_name": "Acme Corp",
     "template_type": "initial",
-    "internal_participants": ["john@factory.ai"],
+    "internal_participants": ["john@acme.com"],
     "external_participants": ["jane@acme.com"],
     "content": "<p>Meeting notes...</p>",
     "meeting_id": "google-calendar-id",
@@ -134,7 +134,7 @@ Content-Type: application/json
   "title": "Initial Discovery Call",
   "account_id": "account-uuid",
   "template_type": "initial",
-  "internal_participants": ["john@factory.ai"],
+  "internal_participants": ["john@acme.com"],
   "external_participants": ["jane@acme.com"],
   "content": "<p>Meeting notes...</p>",
   "meeting_date": "2024-01-15T10:00:00Z"
@@ -636,7 +636,7 @@ Response:
     "description": "Daily standup meeting",
     "start_time": "2024-01-15T09:00:00Z",
     "end_time": "2024-01-15T09:30:00Z",
-    "attendees": ["john@acme.com", "jane@factory.ai"],
+    "attendees": ["john@acme.com", "jane@example.com"],
     "meet_link": "https://meet.google.com/..."
   }
 ]
@@ -653,15 +653,15 @@ POST /calendar/parse-participants
 Content-Type: application/json
 
 {
-  "attendees": ["john@acme.com", "jane@factory.ai", "bob@factory.ai"],
-  "internal_domain": "factory.ai"
+  "attendees": ["john@acme.com", "jane@example.com", "bob@example.com"],
+  "internal_domain": "example.com"
 }
 ```
 
 Response:
 ```json
 {
-  "internal": ["jane@factory.ai", "bob@factory.ai"],
+  "internal": ["jane@example.com", "bob@example.com"],
   "external": ["john@acme.com"]
 }
 ```
