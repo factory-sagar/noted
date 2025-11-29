@@ -138,6 +138,7 @@
         content: editor.getHTML(),
       });
       addToast('success', 'Note saved');
+      goto('/notes');
     } catch (e) {
       addToast('error', 'Failed to save note');
     } finally {
