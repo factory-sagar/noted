@@ -97,6 +97,10 @@ func main() {
 		// PDF Export
 		api.GET("/notes/:id/export", h.ExportNotePDF)
 
+		// Markdown Import/Export
+		api.POST("/import/markdown", h.ImportMarkdown)
+		api.GET("/notes/:id/export/markdown", h.ExportMarkdown)
+
 		// Calendar
 		api.GET("/calendar/auth", h.CalendarAuthHandler) // Renamed from GetCalendarAuthURL
 		api.GET("/calendar/callback", h.HandleCalendarCallback)

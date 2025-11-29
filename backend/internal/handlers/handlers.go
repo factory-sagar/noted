@@ -1309,7 +1309,130 @@ func (h *Handler) ExportNotePDF(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// --- Tag Handlers ---
+// --- Markdown Import/Export ---
+
+func (h *Handler) ImportMarkdown(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+
+	// Open uploaded file
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer src.Close()
+
+	// Read content
+	contentBytes := make([]byte, file.Size)
+	if _, err := src.Read(contentBytes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+	content := string(contentBytes)
+
+	// Basic Markdown parsing (very simple for now)
+	// Assume Title is first line # Title, or filename if not present
+	lines := strings.Split(content, "\n")
+	title := strings.TrimSuffix(file.Filename, ".md")
+	if len(lines) > 0 && strings.HasPrefix(lines[0], "# ") {
+		title = strings.TrimPrefix(lines[0], "# ")
+		// Remove title from content if we extracted it
+		content = strings.Join(lines[1:], "\n")
+	}
+
+	// Convert Markdown to HTML (simple conversion or store raw)
+	// For this app, the editor expects HTML. 
+	// Since we don't have a full MD->HTML parser here, we'll just wrap paragraphs.
+	// Ideally, use a library like blackfriday or goldmark.
+	// For now, let's just store it as raw text wrapped in p tags to avoid breaking the editor completely
+	// Or better, just treat it as raw content if the editor supports it.
+	// TipTap can handle some HTML. Let's just replace newlines with <br> or wrap in <p>
+	
+	// Simple naive conversion for lines
+	var htmlBuilder strings.Builder
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "# ") {
+			// Skip title if we already extracted it, or convert to h1
+			continue 
+		}
+		if strings.HasPrefix(line, "## ") {
+			htmlBuilder.WriteString("<h2>" + strings.TrimPrefix(line, "## ") + "</h2>")
+		} else if strings.HasPrefix(line, "- ") {
+			htmlBuilder.WriteString("<ul><li>" + strings.TrimPrefix(line, "- ") + "</li></ul>")
+		} else {
+			htmlBuilder.WriteString("<p>" + line + "</p>")
+		}
+	}
+	htmlContent := htmlBuilder.String()
+
+	id := uuid.New().String()
+	now := time.Now()
+
+	// Create note
+	_, err = h.db.Exec(`
+		INSERT INTO notes (id, title, content, template_type, created_at, updated_at)
+		VALUES (?, ?, ?, 'imported', ?, ?)
+	`, id, title, htmlContent, now, now)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"id":    id,
+		"title": title,
+	})
+}
+
+func (h *Handler) ExportMarkdown(c *gin.Context) {
+	id := c.Param("id")
+	var n models.Note
+	err := h.db.QueryRow("SELECT title, content FROM notes WHERE id = ?", id).Scan(&n.Title, &n.Content)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+		return
+	}
+
+	// Simple HTML to Markdown conversion (naive)
+	// Replace tags with MD equivalents
+	md := n.Content
+	md = strings.ReplaceAll(md, "<h1>", "# ")
+	md = strings.ReplaceAll(md, "</h1>", "\n\n")
+	md = strings.ReplaceAll(md, "<h2>", "## ")
+	md = strings.ReplaceAll(md, "</h2>", "\n\n")
+	md = strings.ReplaceAll(md, "<h3>", "### ")
+	md = strings.ReplaceAll(md, "</h3>", "\n\n")
+	md = strings.ReplaceAll(md, "<p>", "")
+	md = strings.ReplaceAll(md, "</p>", "\n\n")
+	md = strings.ReplaceAll(md, "<b>", "**")
+	md = strings.ReplaceAll(md, "</b>", "**")
+	md = strings.ReplaceAll(md, "<strong>", "**")
+	md = strings.ReplaceAll(md, "</strong>", "**")
+	md = strings.ReplaceAll(md, "<i>", "*")
+	md = strings.ReplaceAll(md, "</i>", "*")
+	md = strings.ReplaceAll(md, "<em>", "*")
+	md = strings.ReplaceAll(md, "</em>", "*")
+	md = strings.ReplaceAll(md, "<ul>", "")
+	md = strings.ReplaceAll(md, "</ul>", "")
+	md = strings.ReplaceAll(md, "<li>", "- ")
+	md = strings.ReplaceAll(md, "</li>", "\n")
+	md = strings.ReplaceAll(md, "<br>", "\n")
+	
+	// Add title at top
+	finalMD := "# " + n.Title + "\n\n" + md
+
+	c.Header("Content-Disposition", "attachment; filename="+n.Title+".md")
+	c.Data(http.StatusOK, "text/markdown", []byte(finalMD))
+}
+
 
 func (h *Handler) GetTags(c *gin.Context) {
 	rows, err := h.db.Query("SELECT id, name, color, created_at FROM tags ORDER BY name")

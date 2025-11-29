@@ -237,6 +237,12 @@
     }
   }
 
+  function exportMarkdown() {
+    if (!note) return;
+    const url = api.exportNoteMarkdown(note.id);
+    window.open(url, '_blank');
+  }
+
   function formatDate(dateStr: string): string {
     return new Date(dateStr).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -315,10 +321,16 @@
               Full Export
             </button>
             <button 
-              class="w-full px-4 py-2 text-left text-sm hover:bg-[var(--color-bg)] rounded-b-lg"
+              class="w-full px-4 py-2 text-left text-sm hover:bg-[var(--color-bg)]"
               on:click={() => exportPDF('minimal')}
             >
               Minimal (Notes + Account)
+            </button>
+            <button 
+              class="w-full px-4 py-2 text-left text-sm hover:bg-[var(--color-bg)] rounded-b-lg"
+              on:click={exportMarkdown}
+            >
+              Markdown
             </button>
           </div>
         </div>

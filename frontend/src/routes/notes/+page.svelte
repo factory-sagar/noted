@@ -32,6 +32,7 @@
   let newNoteName = '';
   let newNoteAccountId = '';
   let filterQuery = '';
+  let importFileInput: HTMLInputElement;
   
   let moveNoteId = '';
   let moveTargetAccountId = '';
@@ -256,6 +257,26 @@
     return accounts.find(a => a.id === accountId)?.name || 'Unknown';
   }
 
+  async function handleImport(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await api.importMarkdown(file);
+      addToast('success', 'Note imported');
+      // Reload data to show new note
+      await loadData();
+      // Optionally navigate to it
+      // goto(`/notes/${result.id}`);
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Failed to import markdown');
+    } finally {
+      // Reset input
+      if (importFileInput) importFileInput.value = '';
+    }
+  }
+
   $: allNotes = (filterQuery
     ? notes.filter(n => 
         n.title.toLowerCase().includes(filterQuery.toLowerCase()) ||
@@ -318,6 +339,17 @@
         <Plus class="w-4 h-4" strokeWidth={1.5} />
         <span class="hidden sm:inline">Account</span>
       </button>
+      <button class="btn-secondary" on:click={() => importFileInput.click()}>
+        <span class="hidden sm:inline">Import MD</span>
+        <span class="sm:hidden">Imp</span>
+      </button>
+      <input 
+        type="file" 
+        accept=".md" 
+        class="hidden" 
+        bind:this={importFileInput}
+        on:change={handleImport}
+      />
       <button class="btn-primary" on:click={() => showNewNoteModal = true} disabled={accounts.length === 0}>
         <Plus class="w-4 h-4" strokeWidth={1.5} />
         Note

@@ -294,6 +294,26 @@ export const api = {
   getDeletedNotes: () => request<Note[]>('/notes/deleted'),
   exportNote: (id: string, type: 'full' | 'minimal' = 'full') =>
     request<any>(`/notes/${id}/export?type=${type}`),
+  
+  // Markdown
+  exportNoteMarkdown: (id: string) => {
+    // Return URL for direct download
+    return `${getApiBaseSync()}/notes/${id}/export/markdown`;
+  },
+  importMarkdown: async (file: File): Promise<{ id: string; title: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const apiBase = await getApiBase();
+    const response = await fetch(`${apiBase}/import/markdown`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Import failed' }));
+      throw new Error(error.error);
+    }
+    return response.json();
+  },
 
   // Todos
   getTodos: (status?: string) =>
