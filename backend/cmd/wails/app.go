@@ -169,6 +169,7 @@ func (a *App) startServer() {
 		// Contacts
 		api.GET("/contacts", h.GetContacts)
 		api.GET("/contacts/stats", h.GetContactStats)
+		api.POST("/contacts/bulk", h.BulkContactsOperation)
 		api.GET("/contacts/:id", h.GetContact)
 		api.POST("/contacts", h.CreateContact)
 		api.PUT("/contacts/:id", h.UpdateContact)
