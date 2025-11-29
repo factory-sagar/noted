@@ -2,11 +2,11 @@
   import '../app.css';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { 
-    LayoutDashboard, 
-    FileText, 
-    CheckSquare, 
-    Calendar, 
+  import {
+    LayoutDashboard,
+    FileText,
+    CheckSquare,
+    Calendar,
     Settings,
     Search,
     Moon,
@@ -15,7 +15,9 @@
     X,
     Building2,
     Loader2,
-    Zap
+    Plus,
+    ArrowRight,
+    Users
   } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { api, type SearchResult } from '$lib/utils/api';
@@ -33,14 +35,14 @@
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/notes', label: 'Notes', icon: FileText },
-    { href: '/accounts', label: 'Accounts', icon: Building2 },
     { href: '/todos', label: 'Todos', icon: CheckSquare },
+    { href: '/accounts', label: 'Accounts', icon: Building2 },
+    { href: '/contacts', label: 'Contacts', icon: Users },
     { href: '/calendar', label: 'Calendar', icon: Calendar },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
   onMount(() => {
-    // Check system preference
     if (typeof window !== 'undefined') {
       darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const saved = localStorage.getItem('darkMode');
@@ -66,7 +68,6 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    // Cmd/Ctrl + K for search
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
       searchOpen = !searchOpen;
@@ -75,7 +76,6 @@
         searchResults = [];
       }
     }
-    // Cmd/Ctrl + Shift + C for quick capture
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
       e.preventDefault();
       quickCaptureOpen = !quickCaptureOpen;
@@ -119,7 +119,7 @@
   function highlightMatch(text: string, query: string): string {
     if (!query || query.length < 2) return text;
     const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark class="bg-yellow-300 dark:bg-yellow-500/50 px-0.5 rounded">$1</mark>');
+    return text.replace(regex, '<mark class="bg-primary-200 dark:bg-primary-900/50 px-0.5">$1</mark>');
   }
 
   function getResultIcon(type: string) {
@@ -151,23 +151,20 @@
 <div class="min-h-screen flex">
   <!-- Sidebar -->
   <aside 
-    class="fixed inset-y-0 left-0 z-50 w-64 bg-[var(--color-card)] border-r border-[var(--color-border)] transform transition-transform duration-300 ease-in-out lg:translate-x-0"
+    class="fixed inset-y-0 left-0 z-50 w-72 bg-[var(--color-card)] border-r border-[var(--color-border)] transform transition-transform duration-300 ease-out lg:translate-x-0"
     class:translate-x-0={sidebarOpen}
     class:-translate-x-full={!sidebarOpen}
   >
     <div class="flex flex-col h-full">
       <!-- Logo -->
-      <div class="flex items-center justify-between h-16 px-6 border-b border-[var(--color-border)]">
-        <a href="/" class="flex items-center gap-2 group">
-          <img 
-            src="https://cdn.jsdelivr.net/gh/selfhst/icons@master/png/flatnotes-dark.png" 
-            alt="Noted" 
-            class="w-8 h-8 group-hover:scale-105 transition-all duration-200"
-          />
-          <span class="text-lg font-semibold bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">Noted</span>
+      <div class="flex items-center justify-between h-20 px-6 border-b border-[var(--color-border)]">
+        <a href="/" class="group">
+          <h1 class="font-serif text-2xl tracking-tight text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+            Noted<span class="text-[var(--color-accent)]">.</span>
+          </h1>
         </a>
         <button 
-          class="lg:hidden p-1 hover:bg-[var(--color-border)] rounded"
+          class="btn-icon btn-icon-ghost lg:hidden"
           on:click={() => sidebarOpen = false}
         >
           <X class="w-5 h-5" />
@@ -175,30 +172,33 @@
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+      <nav class="flex-1 px-3 py-8 space-y-1 overflow-y-auto">
+        <p class="px-4 mb-4 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]">
+          Menu
+        </p>
         {#each navItems as item}
           <a 
             href={item.href}
-            class="sidebar-link {isActive(item.href, $page.url.pathname) ? 'sidebar-link-active' : 'sidebar-link-inactive'}"
+            class="nav-link {isActive(item.href, $page.url.pathname) ? 'nav-link-active' : 'nav-link-inactive'}"
           >
-            <svelte:component this={item.icon} class="w-5 h-5" />
+            <svelte:component this={item.icon} class="w-5 h-5" strokeWidth={1.5} />
             {item.label}
           </a>
         {/each}
       </nav>
 
       <!-- Theme Toggle -->
-      <div class="px-4 py-4 border-t border-[var(--color-border)]">
+      <div class="px-3 py-6 border-t border-[var(--color-border)]">
         <button 
-          class="sidebar-link sidebar-link-inactive w-full"
+          class="nav-link nav-link-inactive w-full"
           on:click={toggleDarkMode}
         >
           {#if darkMode}
-            <Sun class="w-5 h-5" />
-            Light Mode
+            <Sun class="w-5 h-5" strokeWidth={1.5} />
+            <span>Light Mode</span>
           {:else}
-            <Moon class="w-5 h-5" />
-            Dark Mode
+            <Moon class="w-5 h-5" strokeWidth={1.5} />
+            <span>Dark Mode</span>
           {/if}
         </button>
       </div>
@@ -206,49 +206,45 @@
   </aside>
 
   <!-- Main Content -->
-  <div class="flex-1 lg:ml-64">
+  <div class="flex-1 lg:ml-72">
     <!-- Top Bar -->
-    <header class="sticky top-0 z-40 h-16 bg-[var(--color-bg)]/80 backdrop-blur-sm border-b border-[var(--color-border)]">
-      <div class="flex items-center justify-between h-full px-6">
-        <div class="flex items-center gap-4">
-          <button 
-            class="lg:hidden p-2 hover:bg-[var(--color-card)] rounded-lg"
-            on:click={() => sidebarOpen = true}
-          >
-            <Menu class="w-5 h-5" />
-          </button>
-        </div>
+    <header class="sticky top-0 z-40 h-20 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
+      <div class="flex items-center justify-between h-full px-8">
+        <button 
+          class="btn-icon btn-icon-ghost lg:hidden"
+          on:click={() => sidebarOpen = true}
+        >
+          <Menu class="w-5 h-5" />
+        </button>
 
-        <div class="flex items-center gap-3">
+        <div class="flex-1 flex items-center justify-end gap-4">
           <!-- Search -->
           <button 
-            class="flex items-center gap-2 px-4 py-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-[var(--color-muted)] hover:border-primary-500 transition-colors"
+            class="btn-secondary"
             on:click={() => searchOpen = true}
           >
-            <Search class="w-4 h-4" />
-            <span class="text-sm hidden sm:inline">Search...</span>
-            <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-[var(--color-border)] rounded">
+            <Search class="w-4 h-4" strokeWidth={1.5} />
+            <span class="hidden sm:inline">Search</span>
+            <kbd class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
               ⌘K
             </kbd>
           </button>
 
-          <!-- Quick Capture -->
+          <!-- Quick Create -->
           <button 
-            class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 hover:shadow-lg hover:shadow-primary-500/25 active:scale-95 transition-all duration-200"
+            class="btn-primary"
             on:click={() => quickCaptureOpen = true}
-            title="Quick Capture (⌘⇧C)"
+            title="Quick Create (⌘⇧C)"
           >
-            <Zap class="w-4 h-4" />
-            <span class="text-sm hidden sm:inline">Quick</span>
+            <Plus class="w-4 h-4" strokeWidth={1.5} />
+            <span class="hidden sm:inline">New</span>
           </button>
         </div>
-
-        <div class="w-10"></div>
       </div>
     </header>
 
     <!-- Page Content -->
-    <main class="p-6 animate-fade-in">
+    <main class="p-8 lg:p-12">
       <slot />
     </main>
   </div>
@@ -256,71 +252,75 @@
 
 <!-- Search Modal -->
 {#if searchOpen}
-  <div class="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh]">
-    <!-- Backdrop -->
+  <div class="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
     <button 
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      class="modal-backdrop"
       on:click={() => searchOpen = false}
+      aria-label="Close search"
     ></button>
     
-    <!-- Search Box -->
-    <div class="relative w-full max-w-xl mx-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-2xl animate-slide-up">
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
+    <div class="relative z-[101] w-full max-w-2xl mx-4 bg-[var(--color-card)] border border-[var(--color-border)] shadow-editorial-lg animate-scale-in" style="border-radius: 2px;">
+      <div class="flex items-center gap-4 px-6 py-4 border-b border-[var(--color-border)]">
         {#if searching}
-          <Loader2 class="w-5 h-5 text-[var(--color-muted)] animate-spin" />
+          <Loader2 class="w-5 h-5 text-[var(--color-muted)] animate-spin" strokeWidth={1.5} />
         {:else}
-          <Search class="w-5 h-5 text-[var(--color-muted)]" />
+          <Search class="w-5 h-5 text-[var(--color-muted)]" strokeWidth={1.5} />
         {/if}
+        <!-- svelte-ignore a11y-autofocus -->
         <input 
           type="text"
           placeholder="Search notes, accounts, todos..."
-          class="flex-1 bg-transparent outline-none text-[var(--color-text)] placeholder-[var(--color-muted)]"
+          class="flex-1 bg-transparent outline-none text-[var(--color-text)] placeholder-[var(--color-muted)] text-lg"
           value={searchQuery}
           on:input={handleSearchInput}
           autofocus
         />
-        <kbd class="px-2 py-1 text-xs bg-[var(--color-border)] text-[var(--color-muted)] rounded">ESC</kbd>
+        <kbd class="px-2 py-1 text-xs bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-muted)]" style="border-radius: 2px;">ESC</kbd>
       </div>
       
-      <div class="max-h-80 overflow-y-auto p-2">
+      <div class="max-h-96 overflow-y-auto">
         {#if searchQuery.length < 2}
-          <p class="px-4 py-8 text-center text-[var(--color-muted)]">
-            Type at least 2 characters to search...
-          </p>
+          <div class="px-6 py-12 text-center">
+            <p class="text-[var(--color-muted)]">Type at least 2 characters to search</p>
+          </div>
         {:else if searching}
-          <p class="px-4 py-8 text-center text-[var(--color-muted)]">
-            Searching...
-          </p>
+          <div class="px-6 py-12 text-center">
+            <p class="text-[var(--color-muted)]">Searching...</p>
+          </div>
         {:else if searchResults.length === 0}
-          <p class="px-4 py-8 text-center text-[var(--color-muted)]">
-            No results found for "{searchQuery}"
-          </p>
+          <div class="px-6 py-12 text-center">
+            <p class="text-[var(--color-muted)]">No results found for "{searchQuery}"</p>
+          </div>
         {:else}
-          <div class="space-y-1">
+          <div class="p-2">
             {#each searchResults as result}
               <button
-                class="w-full flex items-start gap-3 p-3 rounded-lg hover:bg-[var(--color-bg)] transition-colors text-left"
+                class="w-full flex items-start gap-4 p-4 hover:bg-[var(--color-card-hover)] transition-colors text-left group"
                 on:click={() => selectResult(result)}
               >
-                <svelte:component 
-                  this={getResultIcon(result.type)} 
-                  class="w-5 h-5 mt-0.5 text-[var(--color-muted)]" 
-                />
+                <div class="p-2 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                  <svelte:component 
+                    this={getResultIcon(result.type)} 
+                    class="w-4 h-4 text-[var(--color-muted)]" 
+                    strokeWidth={1.5}
+                  />
+                </div>
                 <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span class="font-medium truncate">
+                  <div class="flex items-center gap-3 mb-1">
+                    <span class="font-medium">
                       {@html highlightMatch(result.title, searchQuery)}
                     </span>
-                    <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-border)] text-[var(--color-muted)]">
+                    <span class="tag-default text-[10px]">
                       {result.type}
                     </span>
                   </div>
                   {#if result.snippet}
-                    <p class="text-sm text-[var(--color-muted)] mt-1 line-clamp-2">
+                    <p class="text-sm text-[var(--color-muted)] line-clamp-2">
                       {@html result.snippet}
                     </p>
                   {/if}
                 </div>
+                <ArrowRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
               </button>
             {/each}
           </div>

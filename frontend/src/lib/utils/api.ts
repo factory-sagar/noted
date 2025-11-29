@@ -1,7 +1,46 @@
-const API_BASE = 'http://localhost:8080/api';
+// Detect if running in Wails (embedded in native app)
+declare global {
+  interface Window {
+    go?: {
+      main?: {
+        App?: {
+          GetServerPort: () => Promise<number>;
+        };
+      };
+    };
+  }
+}
+
+let cachedPort: number | null = null;
+
+async function getApiBase(): Promise<string> {
+  // Browser development mode
+  if (typeof window === 'undefined' || !window.go?.main?.App) {
+    return 'http://localhost:8080/api';
+  }
+
+  // Wails mode - get dynamic port from Go backend
+  if (cachedPort === null) {
+    try {
+      cachedPort = await window.go.main.App.GetServerPort();
+    } catch {
+      cachedPort = 8080;
+    }
+  }
+  return `http://127.0.0.1:${cachedPort}/api`;
+}
+
+// For sync access (fallback to default)
+function getApiBaseSync(): string {
+  if (cachedPort !== null) {
+    return `http://127.0.0.1:${cachedPort}/api`;
+  }
+  return 'http://localhost:8080/api';
+}
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const apiBase = await getApiBase();
+  const response = await fetch(`${apiBase}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -68,7 +107,7 @@ export interface Todo {
   id: string;
   title: string;
   description: string;
-  status: 'not_started' | 'in_progress' | 'completed';
+  status: 'not_started' | 'in_progress' | 'stuck' | 'completed';
   priority: 'low' | 'medium' | 'high';
   due_date?: string;
   account_id?: string;
@@ -117,6 +156,14 @@ export interface SearchResult {
 export interface CalendarConfig {
   connected: boolean;
   email?: string;
+  type?: 'google' | 'apple';
+}
+
+export interface AppleCalendar {
+  id: string;
+  title: string;
+  color: string;
+  type: string;
 }
 
 export interface CalendarEvent {
@@ -189,12 +236,41 @@ export interface QuickCaptureRequest {
   description?: string;
 }
 
+// Contact types
+export interface Contact {
+  id: string;
+  email: string;
+  name: string;
+  company: string;
+  domain: string;
+  is_internal: boolean;
+  account_id?: string;
+  account_name?: string;
+  suggested_account_id?: string;
+  suggested_account_name?: string;
+  suggestion_confirmed: boolean;
+  source: string;
+  first_seen: string;
+  last_seen: string;
+  meeting_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactStats {
+  total_contacts: number;
+  internal_contacts: number;
+  external_contacts: number;
+  linked_contacts: number;
+  pending_suggestions: number;
+}
+
 // API functions
 export const api = {
   // Accounts
   getAccounts: () => request<Account[]>('/accounts'),
   getAccount: (id: string) => request<Account>(`/accounts/${id}`),
-  createAccount: (data: CreateAccountRequest) => 
+  createAccount: (data: CreateAccountRequest) =>
     request<Account>('/accounts', { method: 'POST', body: JSON.stringify(data) }),
   updateAccount: (id: string, data: Partial<CreateAccountRequest>) =>
     request<Account>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -220,7 +296,7 @@ export const api = {
     request<any>(`/notes/${id}/export?type=${type}`),
 
   // Todos
-  getTodos: (status?: string) => 
+  getTodos: (status?: string) =>
     request<Todo[]>(`/todos${status ? `?status=${status}` : ''}`),
   getTodo: (id: string) => request<Todo>(`/todos/${id}`),
   createTodo: (data: CreateTodoRequest) =>
@@ -246,14 +322,17 @@ export const api = {
   getAnalytics: () => request<Analytics>('/analytics'),
   getIncompleteFields: () => request<IncompleteField[]>('/analytics/incomplete'),
 
-  // Calendar
+  // Calendar (supports both Google OAuth and Apple EventKit)
   getCalendarAuthURL: () => request<{ url: string }>('/calendar/auth'),
   getCalendarConfig: () => request<CalendarConfig>('/calendar/config'),
   disconnectCalendar: () => request<{ message: string }>('/calendar/disconnect', { method: 'DELETE' }),
-  getCalendarEvents: (start?: string, end?: string) => {
+  connectAppleCalendar: () => request<{ success: boolean; message: string }>('/calendar/connect', { method: 'POST' }),
+  getAppleCalendars: () => request<AppleCalendar[]>('/calendar/calendars'),
+  getCalendarEvents: (start?: string, end?: string, calendarId?: string) => {
     const params = new URLSearchParams();
     if (start) params.append('start', start);
     if (end) params.append('end', end);
+    if (calendarId) params.append('calendar_id', calendarId);
     const query = params.toString();
     return request<CalendarEvent[]>(`/calendar/events${query ? `?${query}` : ''}`);
   },
@@ -289,7 +368,8 @@ export const api = {
   uploadAttachment: async (noteId: string, file: File): Promise<Attachment> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch(`${API_BASE}/notes/${noteId}/attachments`, {
+    const apiBase = await getApiBase();
+    const response = await fetch(`${apiBase}/notes/${noteId}/attachments`, {
       method: 'POST',
       body: formData,
     });
@@ -324,8 +404,42 @@ export const api = {
   toggleTodoPin: (todoId: string) =>
     request<{ pinned: boolean }>(`/todos/${todoId}/pin`, { method: 'POST' }),
   getArchivedNotes: () => request<Note[]>('/notes/archived'),
+
+  // Contacts
+  getContacts: (filter?: 'internal' | 'external' | 'unlinked' | 'suggestions', accountId?: string) => {
+    const params = new URLSearchParams();
+    if (filter) params.append('filter', filter);
+    if (accountId) params.append('account_id', accountId);
+    const query = params.toString();
+    return request<Contact[]>(`/contacts${query ? `?${query}` : ''}`);
+  },
+  getContactStats: () => request<ContactStats>('/contacts/stats'),
+  getContact: (id: string) => request<Contact>(`/contacts/${id}`),
+  createContact: (data: { email: string; name?: string; company?: string }) =>
+    request<{ id: string; email: string }>('/contacts', { method: 'POST', body: JSON.stringify(data) }),
+  updateContact: (id: string, data: { name?: string; company?: string; account_id?: string }) =>
+    request<{ message: string }>(`/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteContact: (id: string) =>
+    request<{ message: string }>(`/contacts/${id}`, { method: 'DELETE' }),
+  confirmContactSuggestion: (id: string, confirm: boolean) =>
+    request<{ message: string }>(`/contacts/${id}/confirm-suggestion`, { method: 'POST', body: JSON.stringify({ confirm }) }),
+  linkContactToAccount: (contactId: string, accountId: string) =>
+    request<{ message: string }>(`/contacts/${contactId}/link/${accountId}`, { method: 'POST' }),
+  getContactNotes: (id: string) =>
+    request<ContactNote[]>(`/contacts/${id}/notes`),
 };
 
+export interface ContactNote {
+  id: string;
+  title: string;
+  account_id?: string;
+  account_name?: string;
+  meeting_date?: string;
+  created_at: string;
+}
+
 // Helper for attachment download URL
-export const getAttachmentUrl = (filename: string) =>
-  `http://localhost:8080/uploads/${filename}`;
+export const getAttachmentUrl = (filename: string) => {
+  const base = getApiBaseSync().replace('/api', '');
+  return `${base}/uploads/${filename}`;
+};

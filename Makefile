@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build build-backend build-frontend docker docker-build docker-up docker-down clean help setup setup-hooks
+.PHONY: dev dev-backend dev-frontend build build-backend build-frontend docker docker-build docker-up docker-down clean help setup setup-hooks wails-dev wails-build
 
 # Default target
 help:
@@ -13,6 +13,10 @@ help:
 	@echo "  make build         - Build both backend and frontend"
 	@echo "  make build-backend - Build backend binary"
 	@echo "  make build-frontend- Build frontend for production"
+	@echo ""
+	@echo "Native App (Wails):"
+	@echo "  make wails-build   - Build native macOS .app bundle"
+	@echo "  make wails-install - Install Noted.app to /Applications"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make docker        - Build and run with Docker Compose"
@@ -77,9 +81,32 @@ setup-hooks:
 	chmod +x .githooks/pre-commit .githooks/post-commit .githooks/commit-msg
 	@echo "Git hooks configured!"
 
+# Wails (Native App)
+wails-dev:
+	@echo "Starting Wails development mode..."
+	@echo "Note: For development, use 'make dev' instead. Wails dev mode is for testing the native wrapper."
+	cd backend/cmd/wails && ~/go/bin/wails dev
+
+wails-build:
+	@echo "Building native macOS app..."
+	cd frontend && npm run build
+	rm -rf backend/cmd/wails/frontend
+	cp -r frontend/build backend/cmd/wails/frontend
+	cd backend/cmd/wails && ~/go/bin/wails build -platform darwin/arm64
+	@echo ""
+	@echo "Build complete! App is at: backend/cmd/wails/build/bin/Noted.app"
+	@echo "To install: cp -r backend/cmd/wails/build/bin/Noted.app /Applications/"
+
+wails-install:
+	@echo "Installing Noted.app to /Applications..."
+	cp -r backend/cmd/wails/build/bin/Noted.app /Applications/
+	@echo "Done! You can now launch Noted from your Applications folder."
+
 # Clean
 clean:
 	rm -f backend/server
 	rm -rf frontend/build
 	rm -rf frontend/.svelte-kit
 	rm -rf .dashcode_queue
+	rm -rf backend/cmd/wails/build
+	rm -rf backend/cmd/wails/frontend

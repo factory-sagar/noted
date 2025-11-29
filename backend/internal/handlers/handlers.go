@@ -329,6 +329,9 @@ func (h *Handler) CreateNote(c *gin.Context) {
 		return
 	}
 
+	// Auto-extract contacts from participants
+	go h.ExtractContactsFromNote(req.InternalParticipants, req.ExternalParticipants)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"id":                    id,
 		"title":                 req.Title,
@@ -1040,14 +1043,18 @@ func (h *Handler) Search(c *gin.Context) {
 func (h *Handler) GetAnalytics(c *gin.Context) {
 	var analytics models.Analytics
 
-	// Total counts
-	h.db.QueryRow("SELECT COUNT(*) FROM notes").Scan(&analytics.TotalNotes)
-	h.db.QueryRow("SELECT COUNT(*) FROM accounts").Scan(&analytics.TotalAccounts)
-	h.db.QueryRow("SELECT COUNT(*) FROM todos").Scan(&analytics.TotalTodos)
+	// Total counts - exclude deleted items and Unassigned account
+	h.db.QueryRow(`
+		SELECT COUNT(*) FROM notes n
+		JOIN accounts a ON n.account_id = a.id
+		WHERE n.deleted_at IS NULL AND a.name != 'Unassigned'
+	`).Scan(&analytics.TotalNotes)
+	h.db.QueryRow("SELECT COUNT(*) FROM accounts WHERE name != 'Unassigned'").Scan(&analytics.TotalAccounts)
+	h.db.QueryRow("SELECT COUNT(*) FROM todos WHERE deleted_at IS NULL").Scan(&analytics.TotalTodos)
 
-	// Todos by status
+	// Todos by status - exclude deleted
 	analytics.TodosByStatus = map[string]int{}
-	statusRows, _ := h.db.Query("SELECT status, COUNT(*) FROM todos GROUP BY status")
+	statusRows, _ := h.db.Query("SELECT status, COUNT(*) FROM todos WHERE deleted_at IS NULL GROUP BY status")
 	if statusRows != nil {
 		defer statusRows.Close()
 		for statusRows.Next() {
@@ -1058,11 +1065,12 @@ func (h *Handler) GetAnalytics(c *gin.Context) {
 		}
 	}
 
-	// Notes by account
+	// Notes by account - exclude deleted notes and Unassigned account
 	accountRows, _ := h.db.Query(`
 		SELECT a.id, a.name, COUNT(n.id) as note_count
 		FROM accounts a
-		LEFT JOIN notes n ON a.id = n.account_id
+		LEFT JOIN notes n ON a.id = n.account_id AND n.deleted_at IS NULL
+		WHERE a.name != 'Unassigned'
 		GROUP BY a.id
 		ORDER BY note_count DESC
 	`)
@@ -1075,12 +1083,13 @@ func (h *Handler) GetAnalytics(c *gin.Context) {
 		}
 	}
 
-	// Count notes with incomplete fields
+	// Count notes with incomplete fields - exclude deleted and Unassigned
 	h.db.QueryRow(`
 		SELECT COUNT(*) FROM notes n
 		JOIN accounts a ON n.account_id = a.id
-		WHERE a.budget IS NULL OR a.est_engineers IS NULL OR a.account_owner = ''
-		   OR n.content = '' OR n.internal_participants = '[]'
+		WHERE n.deleted_at IS NULL AND a.name != 'Unassigned'
+		  AND (a.budget IS NULL OR a.est_engineers IS NULL OR a.account_owner = ''
+		   OR n.content = '' OR n.internal_participants = '[]')
 	`).Scan(&analytics.IncompleteCount)
 
 	c.JSON(http.StatusOK, analytics)

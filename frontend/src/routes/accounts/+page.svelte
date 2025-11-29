@@ -22,7 +22,6 @@
   let searchQuery = '';
   let selectedAccountId: string | null = null;
   
-  // Modal states
   let showNewAccountModal = false;
   let showEditAccountModal = false;
   let editingAccount: Account | null = null;
@@ -107,7 +106,7 @@
 
   async function deleteAccount(accountId: string) {
     const stats = getAccountStats(accountId);
-    if (!confirm(`Delete this account? This will also delete ${stats.noteCount} notes and ${stats.todoCount} todos.`)) return;
+    if (!confirm(`Delete this account and ${stats.noteCount} notes?`)) return;
     try {
       await api.deleteAccount(accountId);
       accounts = accounts.filter(a => a.id !== accountId);
@@ -136,9 +135,10 @@
 
   function getStatusColor(status: string): string {
     switch (status) {
-      case 'completed': return 'bg-green-500';
+      case 'completed': return 'bg-emerald-500';
       case 'in_progress': return 'bg-blue-500';
-      default: return 'bg-gray-400';
+      case 'stuck': return 'bg-red-500';
+      default: return 'bg-charcoal-400';
     }
   }
 
@@ -158,53 +158,55 @@
   <title>Accounts - Noted</title>
 </svelte:head>
 
-<div class="max-w-7xl mx-auto">
-  <div class="flex items-center justify-between mb-8">
-    <div>
+<div class="max-w-6xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-start justify-between mb-12">
+    <div class="page-header mb-0">
+      <div class="divider-accent mb-6"></div>
       <h1 class="page-title">Accounts</h1>
-      <p class="page-subtitle">Manage customer accounts and their data</p>
+      <p class="page-subtitle">Manage customer accounts</p>
     </div>
     <button class="btn-primary" on:click={() => showNewAccountModal = true}>
-      <Plus class="w-4 h-4" />
+      <Plus class="w-4 h-4" strokeWidth={1.5} />
       New Account
     </button>
   </div>
 
   <!-- Search -->
-  <div class="mb-6">
+  <div class="mb-8">
     <div class="relative">
-      <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-muted)]" />
+      <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-muted)]" strokeWidth={1.5} />
       <input 
         type="text"
         placeholder="Search accounts..."
-        class="input pl-10"
+        class="input pl-12"
         bind:value={searchQuery}
       />
     </div>
   </div>
 
   {#if loading}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-1">
-        <div class="card animate-pulse">
+        <div class="card">
           <div class="space-y-4">
             {#each [1, 2, 3] as _}
-              <div class="h-20 bg-[var(--color-border)] rounded"></div>
+              <div class="skeleton h-20"></div>
             {/each}
           </div>
         </div>
       </div>
       <div class="lg:col-span-2">
-        <div class="card animate-pulse h-96"></div>
+        <div class="card skeleton h-96"></div>
       </div>
     </div>
   {:else}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- Accounts List -->
       <div class="lg:col-span-1">
-        <div class="card p-2">
+        <div class="card p-3">
           {#if filteredAccounts.length === 0}
-            <div class="text-center py-8 text-[var(--color-muted)]">
+            <div class="text-center py-12 text-[var(--color-muted)]">
               {searchQuery ? 'No accounts found' : 'No accounts yet'}
             </div>
           {:else}
@@ -212,12 +214,13 @@
               {#each filteredAccounts as account (account.id)}
                 {@const stats = getAccountStats(account.id)}
                 <button
-                  class="w-full flex items-center justify-between p-3 rounded-lg transition-colors text-left group hover:bg-[var(--color-bg)] {selectedAccountId === account.id ? 'bg-primary-100 dark:bg-primary-900/20' : ''}"
+                  class="w-full flex items-center justify-between p-4 transition-all text-left group hover:bg-[var(--color-card-hover)] {selectedAccountId === account.id ? 'bg-[var(--color-accent)]/5 border-l-2 border-l-[var(--color-accent)]' : ''}"
+                  style="border-radius: 2px;"
                   on:click={() => selectedAccountId = account.id}
                 >
-                  <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center flex-shrink-0">
-                      <Building2 class="w-5 h-5 text-primary-500" />
+                  <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-10 h-10 flex items-center justify-center bg-[var(--color-bg)] border border-[var(--color-border)] flex-shrink-0" style="border-radius: 2px;">
+                      <Building2 class="w-5 h-5 text-[var(--color-accent)]" strokeWidth={1.5} />
                     </div>
                     <div class="min-w-0">
                       <p class="font-medium truncate">{account.name}</p>
@@ -226,7 +229,7 @@
                       </p>
                     </div>
                   </div>
-                  <ChevronRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100" />
+                  <ChevronRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 flex-shrink-0" strokeWidth={1.5} />
                 </button>
               {/each}
             </div>
@@ -238,19 +241,19 @@
       <div class="lg:col-span-2">
         {#if selectedAccount}
           {@const stats = getAccountStats(selectedAccount.id)}
-          <div class="space-y-6">
+          <div class="space-y-6 animate-stagger">
             <!-- Account Header -->
             <div class="card">
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-4">
-                  <div class="w-14 h-14 rounded-xl bg-primary-500/10 flex items-center justify-center">
-                    <Building2 class="w-7 h-7 text-primary-500" />
+              <div class="flex items-start justify-between mb-8">
+                <div class="flex items-center gap-5">
+                  <div class="w-16 h-16 flex items-center justify-center bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                    <Building2 class="w-8 h-8 text-[var(--color-accent)]" strokeWidth={1.5} />
                   </div>
                   <div>
-                    <h2 class="text-xl font-semibold">{selectedAccount.name}</h2>
+                    <h2 class="font-serif text-2xl tracking-tight">{selectedAccount.name}</h2>
                     {#if selectedAccount.account_owner}
-                      <p class="text-[var(--color-muted)] flex items-center gap-1">
-                        <Users class="w-4 h-4" />
+                      <p class="text-[var(--color-muted)] flex items-center gap-2 mt-1">
+                        <Users class="w-4 h-4" strokeWidth={1.5} />
                         {selectedAccount.account_owner}
                       </p>
                     {/if}
@@ -258,51 +261,51 @@
                 </div>
                 <div class="flex items-center gap-2">
                   <button 
-                    class="btn-ghost p-2"
+                    class="btn-icon btn-icon-ghost"
                     on:click={() => openEditModal(selectedAccount)}
                   >
-                    <Edit3 class="w-4 h-4" />
+                    <Edit3 class="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button 
-                    class="btn-ghost p-2 text-red-500"
+                    class="btn-icon btn-icon-danger"
                     on:click={() => deleteAccount(selectedAccount.id)}
                   >
-                    <Trash2 class="w-4 h-4" />
+                    <Trash2 class="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               </div>
 
               <!-- Stats -->
-              <div class="grid grid-cols-4 gap-4 mt-6">
-                <div class="text-center p-3 bg-[var(--color-bg)] rounded-lg">
-                  <p class="text-2xl font-bold">{stats.noteCount}</p>
-                  <p class="text-xs text-[var(--color-muted)]">Notes</p>
+              <div class="grid grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                  <p class="font-serif text-2xl">{stats.noteCount}</p>
+                  <p class="text-xs text-[var(--color-muted)] uppercase tracking-wider mt-1">Notes</p>
                 </div>
-                <div class="text-center p-3 bg-[var(--color-bg)] rounded-lg">
-                  <p class="text-2xl font-bold">{stats.todoCount}</p>
-                  <p class="text-xs text-[var(--color-muted)]">Todos</p>
+                <div class="text-center p-4 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                  <p class="font-serif text-2xl">{stats.todoCount}</p>
+                  <p class="text-xs text-[var(--color-muted)] uppercase tracking-wider mt-1">Todos</p>
                 </div>
-                <div class="text-center p-3 bg-[var(--color-bg)] rounded-lg">
-                  <p class="text-2xl font-bold text-green-500">{stats.completedTodos}</p>
-                  <p class="text-xs text-[var(--color-muted)]">Completed</p>
+                <div class="text-center p-4 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                  <p class="font-serif text-2xl text-emerald-600 dark:text-emerald-400">{stats.completedTodos}</p>
+                  <p class="text-xs text-[var(--color-muted)] uppercase tracking-wider mt-1">Done</p>
                 </div>
-                <div class="text-center p-3 bg-[var(--color-bg)] rounded-lg">
-                  <p class="text-2xl font-bold text-orange-500">{stats.pendingTodos}</p>
-                  <p class="text-xs text-[var(--color-muted)]">Pending</p>
+                <div class="text-center p-4 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                  <p class="font-serif text-2xl text-[var(--color-accent)]">{stats.pendingTodos}</p>
+                  <p class="text-xs text-[var(--color-muted)] uppercase tracking-wider mt-1">Pending</p>
                 </div>
               </div>
 
               {#if selectedAccount.budget || selectedAccount.est_engineers}
-                <div class="flex gap-4 mt-4 pt-4 border-t border-[var(--color-border)]">
+                <div class="flex gap-6 mt-6 pt-6 border-t border-[var(--color-border)]">
                   {#if selectedAccount.budget}
                     <div class="flex items-center gap-2 text-sm">
-                      <DollarSign class="w-4 h-4 text-[var(--color-muted)]" />
+                      <DollarSign class="w-4 h-4 text-[var(--color-muted)]" strokeWidth={1.5} />
                       <span>Budget: ${selectedAccount.budget.toLocaleString()}</span>
                     </div>
                   {/if}
                   {#if selectedAccount.est_engineers}
                     <div class="flex items-center gap-2 text-sm">
-                      <Users class="w-4 h-4 text-[var(--color-muted)]" />
+                      <Users class="w-4 h-4 text-[var(--color-muted)]" strokeWidth={1.5} />
                       <span>Est. Engineers: {selectedAccount.est_engineers}</span>
                     </div>
                   {/if}
@@ -312,12 +315,12 @@
 
             <!-- Notes Section -->
             <div class="card">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold flex items-center gap-2">
-                  <FileText class="w-5 h-5" />
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="font-serif text-lg flex items-center gap-2">
+                  <FileText class="w-5 h-5 text-[var(--color-accent)]" strokeWidth={1.5} />
                   Notes ({selectedNotes.length})
                 </h3>
-                <a href="/notes" class="text-sm text-primary-500 hover:underline">
+                <a href="/notes" class="text-sm text-[var(--color-accent)] editorial-underline">
                   View All
                 </a>
               </div>
@@ -328,18 +331,19 @@
                   {#each selectedNotes.slice(0, 5) as note}
                     <a 
                       href="/notes/{note.id}"
-                      class="flex items-center justify-between p-3 bg-[var(--color-bg)] rounded-lg hover:bg-[var(--color-border)] transition-colors"
+                      class="flex items-center justify-between p-4 bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[var(--color-accent)]/40 transition-colors group"
+                      style="border-radius: 2px;"
                     >
-                      <div class="flex items-center gap-3">
-                        <FileText class="w-4 h-4 text-primary-500" />
+                      <div class="flex items-center gap-4">
+                        <FileText class="w-4 h-4 text-[var(--color-muted)]" strokeWidth={1.5} />
                         <div>
-                          <p class="font-medium text-sm">{note.title}</p>
+                          <p class="font-medium text-sm group-hover:text-[var(--color-accent)] transition-colors">{note.title}</p>
                           <p class="text-xs text-[var(--color-muted)]">
                             {note.template_type} · {formatDate(note.created_at)}
                           </p>
                         </div>
                       </div>
-                      <ChevronRight class="w-4 h-4 text-[var(--color-muted)]" />
+                      <ChevronRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100" strokeWidth={1.5} />
                     </a>
                   {/each}
                   {#if selectedNotes.length > 5}
@@ -353,12 +357,12 @@
 
             <!-- Todos Section -->
             <div class="card">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold flex items-center gap-2">
-                  <CheckSquare class="w-5 h-5" />
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="font-serif text-lg flex items-center gap-2">
+                  <CheckSquare class="w-5 h-5 text-blue-500" strokeWidth={1.5} />
                   Todos ({selectedTodos.length})
                 </h3>
-                <a href="/todos" class="text-sm text-primary-500 hover:underline">
+                <a href="/todos" class="text-sm text-[var(--color-accent)] editorial-underline">
                   View All
                 </a>
               </div>
@@ -367,9 +371,9 @@
               {:else}
                 <div class="space-y-2">
                   {#each selectedTodos.slice(0, 5) as todo}
-                    <div class="flex items-center justify-between p-3 bg-[var(--color-bg)] rounded-lg">
-                      <div class="flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full {getStatusColor(todo.status)}"></div>
+                    <div class="flex items-center justify-between p-4 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                      <div class="flex items-center gap-4">
+                        <div class="w-2 h-2 {getStatusColor(todo.status)}" style="border-radius: 1px;"></div>
                         <div>
                           <p class="font-medium text-sm" class:line-through={todo.status === 'completed'}>
                             {todo.title}
@@ -393,7 +397,9 @@
         {:else}
           <div class="card h-96 flex items-center justify-center text-[var(--color-muted)]">
             <div class="text-center">
-              <Building2 class="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <div class="w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                <Building2 class="w-8 h-8 opacity-50" strokeWidth={1.5} />
+              </div>
               <p>Select an account to view details</p>
             </div>
           </div>
@@ -406,16 +412,15 @@
 <!-- New Account Modal -->
 {#if showNewAccountModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button 
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      on:click={() => showNewAccountModal = false}
-    ></button>
-    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
-      <h2 class="text-lg font-semibold mb-4">New Account</h2>
+    <button class="modal-backdrop" on:click={() => showNewAccountModal = false} aria-label="Close modal"></button>
+    <div class="relative modal-content animate-scale-in">
+      <h2 class="modal-title">New Account</h2>
       <form on:submit|preventDefault={createAccount}>
-        <div class="mb-4">
-          <label class="label">Account Name</label>
+        <div class="mb-6">
+          <label class="label" for="new-account-name">Account Name</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="new-account-name"
             type="text"
             class="input"
             placeholder="e.g., Acme Corp"
@@ -423,9 +428,10 @@
             autofocus
           />
         </div>
-        <div class="mb-4">
-          <label class="label">Account Owner (optional)</label>
+        <div class="mb-6">
+          <label class="label" for="new-account-owner">Account Owner (optional)</label>
           <input 
+            id="new-account-owner"
             type="text"
             class="input"
             placeholder="Sales rep name"
@@ -433,15 +439,11 @@
           />
         </div>
         <div class="flex justify-end gap-3">
-          <button 
-            type="button"
-            class="btn-secondary"
-            on:click={() => showNewAccountModal = false}
-          >
+          <button type="button" class="btn-secondary" on:click={() => showNewAccountModal = false}>
             Cancel
           </button>
           <button type="submit" class="btn-primary" disabled={!newAccountName.trim()}>
-            Create Account
+            Create
           </button>
         </div>
       </form>
@@ -452,40 +454,36 @@
 <!-- Edit Account Modal -->
 {#if showEditAccountModal && editingAccount}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button 
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      on:click={() => showEditAccountModal = false}
-    ></button>
-    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
-      <h2 class="text-lg font-semibold mb-4">Edit Account</h2>
+    <button class="modal-backdrop" on:click={() => showEditAccountModal = false} aria-label="Close modal"></button>
+    <div class="relative modal-content animate-scale-in">
+      <h2 class="modal-title">Edit Account</h2>
       <form on:submit|preventDefault={updateAccount}>
-        <div class="mb-4">
-          <label class="label">Account Name</label>
+        <div class="mb-6">
+          <label class="label" for="edit-account-name">Account Name</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="edit-account-name"
             type="text"
             class="input"
             bind:value={editingAccount.name}
             autofocus
           />
         </div>
-        <div class="mb-4">
-          <label class="label">Account Owner</label>
+        <div class="mb-6">
+          <label class="label" for="edit-account-owner">Account Owner</label>
           <input 
+            id="edit-account-owner"
             type="text"
             class="input"
             bind:value={editingAccount.account_owner}
           />
         </div>
         <div class="flex justify-end gap-3">
-          <button 
-            type="button"
-            class="btn-secondary"
-            on:click={() => showEditAccountModal = false}
-          >
+          <button type="button" class="btn-secondary" on:click={() => showEditAccountModal = false}>
             Cancel
           </button>
           <button type="submit" class="btn-primary">
-            Save Changes
+            Save
           </button>
         </div>
       </form>

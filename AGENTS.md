@@ -89,8 +89,13 @@ type Note struct {
     Content              string      // HTML from TipTap
     MeetingID            *string     // Google Calendar event ID
     MeetingDate          *time.Time
+    Pinned               bool        // Pin to top
+    Archived             bool        // Archive (hide from main list)
+    DeletedAt            *time.Time  // Soft delete timestamp
+    DisplayOrder         int         // Custom ordering within account
     Tags                 []Tag       // Many-to-many relationship
     Todos                []Todo      // Linked todos
+    Attachments          []Attachment // File attachments
 }
 ```
 
@@ -106,7 +111,38 @@ type Todo struct {
     DueDate     *time.Time
     AccountID   *string   // Optional account tag
     AccountName string    // Populated from join
+    Pinned      bool      // Pin to top
+    DeletedAt   *time.Time // Soft delete timestamp
     Notes       []Note    // Many-to-many relationship
+}
+```
+
+### Activity
+Activity timeline for accounts.
+```go
+type Activity struct {
+    ID          string
+    AccountID   string
+    Type        string    // "note_created", "todo_completed", etc.
+    Title       string
+    Description string
+    EntityType  string    // "note", "todo", etc.
+    EntityID    string
+    CreatedAt   time.Time
+}
+```
+
+### Attachment
+File attachments for notes.
+```go
+type Attachment struct {
+    ID           string
+    NoteID       string
+    Filename     string    // UUID-prefixed filename
+    OriginalName string    // Original upload name
+    MimeType     string
+    Size         int64
+    CreatedAt    time.Time
 }
 ```
 
@@ -139,9 +175,16 @@ type Tag struct {
 | POST | `/api/notes` | Create note |
 | GET | `/api/notes/:id` | Get note with linked todos and tags |
 | PUT | `/api/notes/:id` | Update note |
-| DELETE | `/api/notes/:id` | Delete note |
+| DELETE | `/api/notes/:id` | Soft delete note |
 | GET | `/api/accounts/:id/notes` | Get notes by account |
 | GET | `/api/notes/:id/export` | Export note for PDF |
+| GET | `/api/notes/deleted` | List deleted notes |
+| POST | `/api/notes/:id/restore` | Restore deleted note |
+| DELETE | `/api/notes/:id/permanent` | Permanently delete note |
+| GET | `/api/notes/archived` | List archived notes |
+| POST | `/api/notes/:id/pin` | Toggle pin status |
+| POST | `/api/notes/:id/archive` | Toggle archive status |
+| POST | `/api/accounts/:id/notes/reorder` | Reorder notes in account |
 
 ### Todos
 | Method | Path | Description |
@@ -150,9 +193,13 @@ type Tag struct {
 | POST | `/api/todos` | Create todo |
 | GET | `/api/todos/:id` | Get todo by ID |
 | PUT | `/api/todos/:id` | Update todo (status for kanban) |
-| DELETE | `/api/todos/:id` | Delete todo |
+| DELETE | `/api/todos/:id` | Soft delete todo |
 | POST | `/api/todos/:id/notes/:noteId` | Link todo to note |
 | DELETE | `/api/todos/:id/notes/:noteId` | Unlink todo from note |
+| GET | `/api/todos/deleted` | List deleted todos |
+| POST | `/api/todos/:id/restore` | Restore deleted todo |
+| DELETE | `/api/todos/:id/permanent` | Permanently delete todo |
+| POST | `/api/todos/:id/pin` | Toggle pin status |
 
 ### Tags
 | Method | Path | Description |
@@ -165,12 +212,27 @@ type Tag struct {
 | POST | `/api/notes/:id/tags/:tagId` | Add tag to note |
 | DELETE | `/api/notes/:id/tags/:tagId` | Remove tag from note |
 
+### Activities
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/accounts/:id/activities` | Get account activity timeline |
+| POST | `/api/activities` | Create activity |
+
+### Attachments
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/notes/:id/attachments` | List note attachments |
+| POST | `/api/notes/:id/attachments` | Upload attachment (multipart/form-data) |
+| DELETE | `/api/notes/:id/attachments/:attachmentId` | Delete attachment |
+| GET | `/uploads/:filename` | Access uploaded file |
+
 ### Search & Analytics
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/search?q=term` | Full-text search (fuzzy, FTS4) |
 | GET | `/api/analytics` | Dashboard statistics |
 | GET | `/api/analytics/incomplete` | Notes with missing fields |
+| POST | `/api/quick-capture` | Quick create note or todo |
 
 ### Calendar (Google OAuth)
 | Method | Path | Description |
@@ -197,12 +259,18 @@ type Tag struct {
 - PDF export (full/minimal)
 - Move notes between accounts
 - Merge accounts functionality
+- Pin important notes (sort to top)
+- Archive notes (hide from main list)
+- Soft delete with trash/restore
+- File attachments
+- Drag-to-reorder notes within accounts
 
 ### Accounts (`/accounts`)
 - Split view: accounts list + detail panel
 - Account stats (notes, todos, completed/pending)
 - Recent notes and todos per account
 - Create, edit, delete accounts
+- Activity timeline per account
 
 ### Todos (`/todos`)
 - **4-column Kanban**: Not Started, In Progress, Stuck, Completed
@@ -213,6 +281,8 @@ type Tag struct {
 - Sort by: date, priority, title
 - Bulk operations (select, move, delete)
 - Account tags on cards
+- Pin important todos
+- Soft delete with trash/restore
 
 ### Calendar (`/calendar`)
 - Google OAuth integration
@@ -226,7 +296,14 @@ type Tag struct {
 - **Templates**: Customize note templates
 - **Calendar**: Connect/disconnect Google Calendar
 - **Data**: Export all data, delete all data
+- **Trash**: View/restore/permanently delete items
 - Theme toggle (light/dark)
+
+### Quick Capture
+- Accessible via keyboard shortcut or button
+- Fast creation of notes or todos
+- Optional account assignment
+- Appears as modal overlay
 
 ## Development Commands
 
@@ -403,12 +480,32 @@ This repo uses custom git hooks that report to **Dashcode** at `localhost:3001`.
 2. API: `/api/tags` CRUD + `/api/notes/:id/tags/:tagId` linking
 3. Frontend: Tag management in Settings, tag display/selection in notes
 
+### Working with Soft Delete
+1. Delete sets `deleted_at` timestamp (not NULL = deleted)
+2. Main queries filter `WHERE deleted_at IS NULL`
+3. `/deleted` endpoints return items where `deleted_at IS NOT NULL`
+4. Restore sets `deleted_at = NULL`
+5. Permanent delete removes row from database
+
+### Working with Attachments
+1. Upload via multipart/form-data to `/api/notes/:id/attachments`
+2. Files stored in `./data/uploads/` with UUID-prefixed names
+3. Access via `/uploads/:filename` static route
+4. Metadata stored in `attachments` table
+
+### Working with Activities
+1. Activities are linked to accounts via `account_id`
+2. Auto-created on certain actions or manually via API
+3. Displayed as timeline in account detail view
+
 ## Environment
 
 ### Backend
 - Port: 8080 (configurable via `PORT` env var)
 - Database: `./data/notes.db` (auto-created)
+- Uploads: `./data/uploads/` (auto-created)
 - No authentication (local use only)
+- Google Calendar: Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
 
 ### Frontend
 - Dev port: 5173
@@ -435,3 +532,89 @@ User preferences stored in localStorage:
 1. **Single user**: No authentication, designed for local use
 2. **FTS4 vs FTS5**: Using FTS4 for broader SQLite compatibility
 3. **Google Calendar**: Requires OAuth setup (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+
+## Git Workflow & PR Guidelines
+
+### Branch Structure
+```
+main (production - protected)
+  └── dev (development integration)
+        ├── feature/* (new features)
+        ├── fix/* (bug fixes)
+        └── chore/* (maintenance)
+```
+
+### Creating Feature Branches
+```bash
+# Always branch from dev
+git checkout dev
+git pull origin dev
+git checkout -b feature/feature-name
+
+# Or for fixes
+git checkout -b fix/bug-description
+```
+
+### Commit Guidelines
+- Use conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`
+- Keep commits focused (single feature/fix per commit)
+- Write descriptive commit messages explaining "why" not just "what"
+- Use `--no-verify` only for acceptable warnings (e.g., macOS API deprecations)
+
+### Creating Pull Requests
+```bash
+# Push branch
+git push -u origin feature/feature-name
+
+# Create PR targeting dev branch
+gh pr create --base dev --title "feat: Description" --body "..."
+```
+
+### PR Description Template
+```markdown
+## Summary
+Brief description of what this PR does.
+
+## Changes
+- List of changes made
+- Include new endpoints, UI changes, etc.
+
+## Testing
+1. Step-by-step testing instructions
+2. Expected behavior
+```
+
+### Merging Flow
+1. Feature branches → `dev` (via PR review)
+2. `dev` → `main` (release to production)
+
+### Pre-commit Hooks
+- Security checks (secrets, sensitive files)
+- Go: `gofmt`, `go vet`, `go build`
+- Frontend: `svelte-check`
+- Use `--no-verify` to bypass for acceptable warnings only
+
+## Native macOS App (Wails)
+
+### Build Commands
+```bash
+make wails-build    # Build Noted.app (~10-20 sec)
+make wails-install  # Copy to /Applications
+```
+
+### App Location
+- Build output: `backend/cmd/wails/build/bin/Noted.app`
+- Data storage: `~/Library/Application Support/Noted/`
+
+### EventKit (Apple Calendar)
+- Only works in native app (not browser dev mode)
+- Requires Calendar permission in System Settings
+- Uses deprecated APIs for backward compatibility (macOS 10.13+)
+
+## Internal Domain
+- Internal contacts identified by `@factory.ai` email domain
+- Configurable in `backend/internal/handlers/contacts.go`
+
+## Key URLs
+- GitHub: https://github.com/factory-sagar/notes-droid
+- PRs: https://github.com/factory-sagar/notes-droid/pulls

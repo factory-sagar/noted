@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { FileText, Users, CheckSquare, AlertCircle, TrendingUp, ArrowRight } from 'lucide-svelte';
+  import { FileText, Users, CheckSquare, AlertCircle, TrendingUp, ArrowRight, ArrowUpRight } from 'lucide-svelte';
   import { api, type Analytics, type IncompleteField } from '$lib/utils/api';
 
   let analytics: Analytics | null = null;
@@ -34,92 +34,109 @@
   <title>Dashboard - Noted</title>
 </svelte:head>
 
-<div class="max-w-7xl mx-auto">
-  <div class="mb-8">
+<div class="max-w-6xl mx-auto">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="divider-accent mb-6"></div>
     <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Overview of your notes and tasks</p>
+    <p class="page-subtitle">Your workspace at a glance</p>
   </div>
 
   {#if loading}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
       {#each [1, 2, 3, 4] as _}
-        <div class="card animate-pulse">
-          <div class="h-4 bg-[var(--color-border)] rounded w-24 mb-4"></div>
-          <div class="h-8 bg-[var(--color-border)] rounded w-16"></div>
+        <div class="card p-8">
+          <div class="skeleton h-4 w-24 mb-4"></div>
+          <div class="skeleton h-10 w-16"></div>
         </div>
       {/each}
     </div>
   {:else if error}
-    <div class="card border-red-500/50 bg-red-500/10">
-      <div class="flex items-center gap-3 text-red-500">
-        <AlertCircle class="w-5 h-5" />
-        <span>{error}</span>
+    <div class="card border-red-500/30 bg-red-500/5">
+      <div class="flex items-start gap-4">
+        <div class="p-2 bg-red-500/10 border border-red-500/20" style="border-radius: 2px;">
+          <AlertCircle class="w-5 h-5 text-red-500" strokeWidth={1.5} />
+        </div>
+        <div>
+          <h3 class="font-medium text-red-600 dark:text-red-400 mb-1">Connection Error</h3>
+          <p class="text-sm text-[var(--color-muted)]">
+            Make sure the backend server is running on port 8080.
+          </p>
+        </div>
       </div>
-      <p class="mt-2 text-sm text-[var(--color-muted)]">
-        Make sure the backend server is running on port 8080.
-      </p>
     </div>
   {:else if analytics}
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 stagger-children">
-      <a href="/notes" class="card card-hover group">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-primary-500 transition-colors">Total Notes</span>
-          <div class="p-2 bg-primary-500/10 rounded-lg group-hover:scale-110 transition-transform">
-            <FileText class="w-5 h-5 text-primary-500" />
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 animate-stagger">
+      <a href="/notes" class="stat-card group hover-lift">
+        <div class="flex items-start justify-between mb-6">
+          <div class="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] group-hover:border-[var(--color-accent)]/40 transition-colors" style="border-radius: 2px;">
+            <FileText class="w-5 h-5 text-[var(--color-accent)]" strokeWidth={1.5} />
           </div>
+          <ArrowUpRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
         </div>
-        <p class="text-3xl font-semibold">{analytics.total_notes}</p>
+        <p class="stat-value">{analytics.total_notes}</p>
+        <p class="stat-label">Total Notes</p>
       </a>
 
-      <a href="/accounts" class="card card-hover group">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-green-500 transition-colors">Accounts</span>
-          <div class="p-2 bg-green-500/10 rounded-lg group-hover:scale-110 transition-transform">
-            <Users class="w-5 h-5 text-green-500" />
+      <a href="/accounts" class="stat-card group hover-lift">
+        <div class="flex items-start justify-between mb-6">
+          <div class="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] group-hover:border-emerald-500/40 transition-colors" style="border-radius: 2px;">
+            <Users class="w-5 h-5 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
           </div>
+          <ArrowUpRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
         </div>
-        <p class="text-3xl font-semibold">{analytics.total_accounts}</p>
+        <p class="stat-value">{analytics.total_accounts}</p>
+        <p class="stat-label">Accounts</p>
       </a>
 
-      <a href="/todos" class="card card-hover group">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-orange-500 transition-colors">Total Todos</span>
-          <div class="p-2 bg-orange-500/10 rounded-lg group-hover:scale-110 transition-transform">
-            <CheckSquare class="w-5 h-5 text-orange-500" />
+      <a href="/todos" class="stat-card group hover-lift">
+        <div class="flex items-start justify-between mb-6">
+          <div class="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] group-hover:border-blue-500/40 transition-colors" style="border-radius: 2px;">
+            <CheckSquare class="w-5 h-5 text-blue-600 dark:text-blue-400" strokeWidth={1.5} />
           </div>
+          <ArrowUpRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
         </div>
-        <p class="text-3xl font-semibold">{analytics.total_todos}</p>
+        <p class="stat-value">{analytics.total_todos}</p>
+        <p class="stat-label">Total Todos</p>
       </a>
 
-      <a href="/todos" class="card card-hover group">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-[var(--color-muted)] text-sm font-medium group-hover:text-purple-500 transition-colors">Completion Rate</span>
-          <div class="p-2 bg-purple-500/10 rounded-lg group-hover:scale-110 transition-transform">
-            <TrendingUp class="w-5 h-5 text-purple-500" />
+      <a href="/todos" class="stat-card group hover-lift">
+        <div class="flex items-start justify-between mb-6">
+          <div class="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] group-hover:border-violet-500/40 transition-colors" style="border-radius: 2px;">
+            <TrendingUp class="w-5 h-5 text-violet-600 dark:text-violet-400" strokeWidth={1.5} />
           </div>
+          <ArrowUpRight class="w-4 h-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
         </div>
-        <p class="text-3xl font-semibold">{getCompletionRate()}%</p>
+        <p class="stat-value">{getCompletionRate()}<span class="text-2xl">%</span></p>
+        <p class="stat-label">Completion Rate</p>
       </a>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Two Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
       <!-- Notes by Account -->
       <div class="card">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg font-semibold">Notes by Account</h2>
-          <a href="/notes" class="text-sm text-primary-500 hover:text-primary-600 flex items-center gap-1">
-            View all <ArrowRight class="w-4 h-4" />
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h2 class="font-serif text-xl tracking-tight">Notes by Account</h2>
+            <p class="text-sm text-[var(--color-muted)] mt-1">Distribution across accounts</p>
+          </div>
+          <a href="/notes" class="text-sm text-[var(--color-accent)] editorial-underline flex items-center gap-1 hover:gap-2 transition-all">
+            View all <ArrowRight class="w-3 h-3" strokeWidth={1.5} />
           </a>
         </div>
-        {#if analytics.notes_by_account.length === 0}
-          <p class="text-[var(--color-muted)] text-sm">No accounts yet. Create one to get started.</p>
+        {#if !analytics.notes_by_account || analytics.notes_by_account.length === 0}
+          <p class="text-[var(--color-muted)]">No accounts yet. Create one to get started.</p>
         {:else}
           <div class="space-y-4">
-            {#each analytics.notes_by_account.slice(0, 5) as item}
-              <div class="flex items-center justify-between">
-                <span class="font-medium">{item.account_name || 'Unknown'}</span>
-                <span class="text-[var(--color-muted)]">{item.note_count} notes</span>
+            {#each analytics.notes_by_account.slice(0, 5) as item, i}
+              <div class="flex items-center gap-4 group">
+                <span class="text-xs text-[var(--color-muted)] w-4">{String(i + 1).padStart(2, '0')}</span>
+                <div class="flex-1 flex items-center justify-between py-3 border-b border-[var(--color-border)] group-hover:border-[var(--color-accent)]/30 transition-colors">
+                  <span class="font-medium">{item.account_name || 'Unknown'}</span>
+                  <span class="text-[var(--color-muted)] tabular-nums">{item.note_count}</span>
+                </div>
               </div>
             {/each}
           </div>
@@ -128,84 +145,91 @@
 
       <!-- Todos by Status -->
       <div class="card">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg font-semibold">Todos Status</h2>
-          <a href="/todos" class="text-sm text-primary-500 hover:text-primary-600 flex items-center gap-1">
-            View all <ArrowRight class="w-4 h-4" />
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h2 class="font-serif text-xl tracking-tight">Todo Status</h2>
+            <p class="text-sm text-[var(--color-muted)] mt-1">Current workflow state</p>
+          </div>
+          <a href="/todos" class="text-sm text-[var(--color-accent)] editorial-underline flex items-center gap-1 hover:gap-2 transition-all">
+            View all <ArrowRight class="w-3 h-3" strokeWidth={1.5} />
           </a>
         </div>
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+        <div class="space-y-5">
+          <div class="flex items-center gap-4">
+            <div class="w-3 h-3 bg-charcoal-400" style="border-radius: 1px;"></div>
+            <div class="flex-1 flex items-center justify-between">
               <span>Not Started</span>
+              <span class="font-serif text-xl tabular-nums">{analytics.todos_by_status['not_started'] || 0}</span>
             </div>
-            <span class="font-medium">{analytics.todos_by_status['not_started'] || 0}</span>
           </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+          <div class="flex items-center gap-4">
+            <div class="w-3 h-3 bg-blue-500" style="border-radius: 1px;"></div>
+            <div class="flex-1 flex items-center justify-between">
               <span>In Progress</span>
+              <span class="font-serif text-xl tabular-nums">{analytics.todos_by_status['in_progress'] || 0}</span>
             </div>
-            <span class="font-medium">{analytics.todos_by_status['in_progress'] || 0}</span>
           </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+          <div class="flex items-center gap-4">
+            <div class="w-3 h-3 bg-red-500" style="border-radius: 1px;"></div>
+            <div class="flex-1 flex items-center justify-between">
               <span>Stuck</span>
+              <span class="font-serif text-xl tabular-nums">{analytics.todos_by_status['stuck'] || 0}</span>
             </div>
-            <span class="font-medium">{analytics.todos_by_status['stuck'] || 0}</span>
           </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+          <div class="flex items-center gap-4">
+            <div class="w-3 h-3 bg-emerald-500" style="border-radius: 1px;"></div>
+            <div class="flex-1 flex items-center justify-between">
               <span>Completed</span>
+              <span class="font-serif text-xl tabular-nums">{analytics.todos_by_status['completed'] || 0}</span>
             </div>
-            <span class="font-medium">{analytics.todos_by_status['completed'] || 0}</span>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Incomplete Fields -->
-      <div class="card lg:col-span-2">
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-2">
-            <h2 class="text-lg font-semibold">Incomplete Fields</h2>
-            {#if incompleteFields.length > 0}
-              <span class="px-2 py-0.5 text-xs font-medium bg-orange-500/10 text-orange-500 rounded-full">
-                {incompleteFields.length}
-              </span>
-            {/if}
+    <!-- Incomplete Fields -->
+    <div class="card-accent">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-4">
+          <div>
+            <h2 class="font-serif text-xl tracking-tight">Incomplete Fields</h2>
+            <p class="text-sm text-[var(--color-muted)] mt-1">Notes that need attention</p>
           </div>
+          {#if incompleteFields.length > 0}
+            <span class="tag-accent">
+              {incompleteFields.length}
+            </span>
+          {/if}
         </div>
-        {#if incompleteFields.length === 0}
-          <div class="flex items-center gap-2 text-green-500">
-            <CheckSquare class="w-5 h-5" />
-            <span>All notes have complete information!</span>
-          </div>
-        {:else}
-          <div class="space-y-3">
-            {#each incompleteFields.slice(0, 5) as item}
-              <a 
-                href="/notes/{item.note_id}"
-                class="flex items-center justify-between p-3 bg-[var(--color-bg)] rounded-lg hover:bg-[var(--color-border)] transition-colors"
-              >
-                <div>
-                  <p class="font-medium">{item.note_title}</p>
-                  <p class="text-sm text-[var(--color-muted)]">{item.account_name}</p>
-                </div>
-                <div class="flex flex-wrap gap-1 max-w-[200px]">
-                  {#each item.missing_fields as field}
-                    <span class="px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500 rounded">
-                      {field.replace('_', ' ')}
-                    </span>
-                  {/each}
-                </div>
-              </a>
-            {/each}
-          </div>
-        {/if}
       </div>
+      {#if incompleteFields.length === 0}
+        <div class="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
+          <CheckSquare class="w-5 h-5" strokeWidth={1.5} />
+          <span>All notes have complete information</span>
+        </div>
+      {:else}
+        <div class="space-y-3">
+          {#each incompleteFields.slice(0, 5) as item}
+            <a 
+              href="/notes/{item.note_id}"
+              class="flex items-center justify-between p-4 bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[var(--color-accent)]/40 transition-all group"
+              style="border-radius: 2px;"
+            >
+              <div>
+                <p class="font-medium group-hover:text-[var(--color-accent)] transition-colors">{item.note_title}</p>
+                <p class="text-sm text-[var(--color-muted)]">{item.account_name}</p>
+              </div>
+              <div class="flex flex-wrap gap-2 max-w-[200px]">
+                {#each item.missing_fields as field}
+                  <span class="tag-default">
+                    {field.replace('_', ' ')}
+                  </span>
+                {/each}
+              </div>
+            </a>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

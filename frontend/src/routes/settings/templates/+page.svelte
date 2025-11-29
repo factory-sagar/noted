@@ -225,7 +225,7 @@
 
 <div class="max-w-4xl mx-auto">
   <div class="flex items-center gap-4 mb-8">
-    <a href="/settings" class="p-2 hover:bg-[var(--color-card)] rounded-lg transition-colors">
+    <a href="/settings" class="btn-icon btn-icon-ghost">
       <ArrowLeft class="w-5 h-5" />
     </a>
     <div class="flex-1">
@@ -259,8 +259,9 @@
 
       <div class="space-y-6">
         <div>
-          <label class="label">Template Name</label>
+          <label class="label" for="template-name">Template Name</label>
           <input 
+            id="template-name"
             type="text" 
             class="input" 
             bind:value={editingTemplate.name}
@@ -269,7 +270,8 @@
         </div>
 
         <div>
-          <label class="label">Suggested Fields</label>
+          <!-- svelte-ignore a11y-label-has-associated-control -->
+          <label class="label" id="template-fields-label">Suggested Fields</label>
           <p class="text-sm text-[var(--color-muted)] mb-3">
             Select which fields to include in this template
           </p>
@@ -291,12 +293,12 @@
 
         <div>
           <div class="flex items-center justify-between mb-2">
-            <label class="label mb-0">Default Content (HTML)</label>
+            <label class="label mb-0" for="template-content">Default Content (HTML)</label>
             <button 
-              class="btn-ghost text-sm py-1"
+              class="btn-ghost btn-sm"
               on:click={() => showVariablesHelp = !showVariablesHelp}
             >
-              <Code class="w-4 h-4 mr-1" />
+              <Code class="w-4 h-4" />
               {showVariablesHelp ? 'Hide' : 'Show'} Variables
             </button>
           </div>
@@ -355,13 +357,13 @@
               </p>
               <div class="flex gap-2">
                 <button 
-                  class="btn-secondary text-sm py-1.5"
+                  class="btn-secondary btn-sm"
                   on:click={() => editTemplate(template)}
                 >
                   Edit
                 </button>
                 <button 
-                  class="btn-ghost text-sm py-1.5"
+                  class="btn-ghost btn-sm"
                   on:click={() => duplicateTemplate(template)}
                 >
                   <Copy class="w-4 h-4" />
@@ -369,7 +371,7 @@
                 </button>
                 {#if template.type === 'custom'}
                   <button 
-                    class="btn-ghost text-sm py-1.5 text-red-500"
+                    class="btn-danger btn-sm"
                     on:click={() => deleteTemplate(template.id)}
                   >
                     <Trash2 class="w-4 h-4" />
@@ -391,13 +393,16 @@
     <button 
       class="absolute inset-0 bg-black/50 backdrop-blur-sm"
       on:click={() => showNewTemplateModal = false}
+      aria-label="Close modal"
     ></button>
     <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
       <h2 class="text-lg font-semibold mb-4">New Template</h2>
       <form on:submit|preventDefault={createTemplate}>
         <div class="mb-4">
-          <label class="label">Template Name</label>
+          <label class="label" for="new-template-name">Template Name</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="new-template-name"
             type="text"
             class="input"
             placeholder="e.g., Technical Deep Dive"

@@ -12,6 +12,9 @@ make setup
 
 # Start development
 make dev
+
+# Or use Docker
+docker-compose up
 ```
 
 ## Development Workflow
@@ -254,22 +257,22 @@ curl "http://localhost:8080/api/search?q=test"
 
 ```
 notes-droid/
-├── backend/              # Go API
+├── backend/              # Go API (1.24+)
 │   ├── cmd/server/       # Entry point
 │   └── internal/         # Business logic
 │       ├── handlers/     # HTTP handlers
 │       ├── models/       # Data types
-│       └── db/           # Database
+│       └── db/           # SQLite + FTS4
 ├── frontend/             # SvelteKit
 │   └── src/
-│       ├── routes/       # Pages
-│       └── lib/          # Shared code
+│       ├── routes/       # Pages (dashboard, notes, todos, accounts, calendar, settings)
+│       └── lib/          # Shared code (components, stores, utils)
 ├── .githooks/            # Git hooks
 │   ├── pre-commit        # Security + linting
 │   ├── commit-msg        # Message validation
 │   └── post-commit       # Dashcode tracking
-├── docs/                 # Documentation
-├── .factory/skills/      # Agent skills
+├── docs/                 # Documentation (API, ARCHITECTURE, SETUP)
+├── data/                 # SQLite database + uploads (gitignored)
 └── docker-compose.yml
 ```
 

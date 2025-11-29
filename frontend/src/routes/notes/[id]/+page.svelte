@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { 
@@ -14,7 +14,15 @@
     DollarSign,
     Users2,
     CheckSquare,
-    X
+    X,
+    Bold,
+    Italic,
+    List,
+    ListOrdered,
+    Code,
+    Quote,
+    Heading2,
+    Minus
   } from 'lucide-svelte';
   import { api, type Note, type Todo, type Account } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
@@ -33,7 +41,7 @@
 
   // Form fields
   let title = '';
-  let templateType = 'initial';
+  let isFirstCall = true;
   let internalParticipants: string[] = [];
   let externalParticipants: string[] = [];
   let newInternalParticipant = '';
@@ -43,10 +51,15 @@
   let todos: Todo[] = [];
   let showNewTodoModal = false;
   let newTodoTitle = '';
+  let newTodoDescription = '';
 
-  $: noteId = $page.params.id;
+  $: noteId = $page.params.id as string;
 
   onMount(async () => {
+    if (!noteId) {
+      goto('/notes');
+      return;
+    }
     await loadNote();
   });
 
@@ -61,7 +74,7 @@
       loading = true;
       note = await api.getNote(noteId);
       title = note.title;
-      templateType = note.template_type;
+      isFirstCall = note.template_type === 'initial';
       internalParticipants = note.internal_participants || [];
       externalParticipants = note.external_participants || [];
       todos = note.todos || [];
@@ -71,17 +84,26 @@
         account = await api.getAccount(note.account_id);
       }
 
-      // Initialize editor after note is loaded
+      // Set loading false BEFORE tick so DOM renders the editor element
+      loading = false;
+      
+      // Wait for DOM to update (editor element to be rendered)
+      await tick();
+      
+      // Initialize editor after DOM is ready
       initEditor(note.content || '');
     } catch (e) {
       addToast('error', 'Failed to load note');
       goto('/notes');
-    } finally {
-      loading = false;
     }
   }
 
   function initEditor(content: string) {
+    if (!editorElement) {
+      console.error('Editor element not found');
+      return;
+    }
+    
     const lowlight = createLowlight(common);
     
     editor = new Editor({
@@ -94,12 +116,9 @@
           lowlight,
         }),
       ],
-      content: content || '<p>Start writing your notes here...</p>',
-      editorProps: {
-        attributes: {
-          class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[300px]',
-        },
-      },
+      content: content || '',
+      editable: true,
+      autofocus: 'end',
       onTransaction: () => {
         editor = editor; // Trigger reactivity
       },
@@ -113,12 +132,13 @@
       saving = true;
       await api.updateNote(noteId, {
         title,
-        template_type: templateType,
+        template_type: isFirstCall ? 'initial' : 'followup',
         internal_participants: internalParticipants,
         external_participants: externalParticipants,
         content: editor.getHTML(),
       });
       addToast('success', 'Note saved');
+      goto('/notes');
     } catch (e) {
       addToast('error', 'Failed to save note');
     } finally {
@@ -149,10 +169,12 @@
     try {
       const todo = await api.createTodo({
         title: newTodoTitle.trim(),
+        description: newTodoDescription.trim() || undefined,
         note_id: noteId
       });
       todos = [...todos, todo];
       newTodoTitle = '';
+      newTodoDescription = '';
       showNewTodoModal = false;
       addToast('success', 'Todo created');
     } catch (e) {
@@ -177,6 +199,21 @@
       goto('/notes');
     } catch (e) {
       addToast('error', 'Failed to delete note');
+    }
+  }
+
+  async function saveAccountDetails() {
+    if (!account) return;
+    try {
+      await api.updateAccount(account.id, {
+        name: account.name,
+        account_owner: account.account_owner || '',
+        budget: account.budget || undefined,
+        est_engineers: account.est_engineers || undefined
+      });
+      addToast('success', 'Account updated');
+    } catch (e) {
+      addToast('error', 'Failed to update account');
     }
   }
 
@@ -290,11 +327,11 @@
           {saving ? 'Saving...' : 'Save'}
         </button>
         <button 
-          class="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
+          class="btn-icon btn-icon-danger"
           title="Delete note"
           on:click={deleteNote}
         >
-          <Trash2 class="w-5 h-5 text-red-500" />
+          <Trash2 class="w-5 h-5" />
         </button>
       </div>
     </div>
@@ -306,15 +343,99 @@
         <div class="card">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-medium">Notes</h3>
-            <select 
-              class="text-sm bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-2 py-1"
-              bind:value={templateType}
-            >
-              <option value="initial">Initial Call</option>
-              <option value="followup">Follow-up</option>
-            </select>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="checkbox" 
+                bind:checked={isFirstCall}
+                class="w-4 h-4 accent-[var(--color-accent)]"
+              />
+              <span class="text-sm">1st Call</span>
+            </label>
           </div>
-          <div bind:this={editorElement} class="min-h-[300px]"></div>
+          
+          <!-- Editor Toolbar -->
+          {#if editor}
+            <div class="flex items-center gap-1 mb-3 p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-sm">
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors {editor.isActive('bold') ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : ''}"
+                on:click={() => editor?.chain().focus().toggleBold().run()}
+                title="Bold (Ctrl+B)"
+              >
+                <Bold class="w-4 h-4" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors {editor.isActive('italic') ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : ''}"
+                on:click={() => editor?.chain().focus().toggleItalic().run()}
+                title="Italic (Ctrl+I)"
+              >
+                <Italic class="w-4 h-4" strokeWidth={2} />
+              </button>
+              
+              <div class="w-px h-5 bg-[var(--color-border)] mx-1"></div>
+              
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors {editor.isActive('heading', { level: 2 }) ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : ''}"
+                on:click={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                title="Heading"
+              >
+                <Heading2 class="w-4 h-4" strokeWidth={2} />
+              </button>
+              
+              <div class="w-px h-5 bg-[var(--color-border)] mx-1"></div>
+              
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors {editor.isActive('bulletList') ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : ''}"
+                on:click={() => editor?.chain().focus().toggleBulletList().run()}
+                title="Bullet List"
+              >
+                <List class="w-4 h-4" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors {editor.isActive('orderedList') ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : ''}"
+                on:click={() => editor?.chain().focus().toggleOrderedList().run()}
+                title="Numbered List"
+              >
+                <ListOrdered class="w-4 h-4" strokeWidth={2} />
+              </button>
+              
+              <div class="w-px h-5 bg-[var(--color-border)] mx-1"></div>
+              
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors {editor.isActive('blockquote') ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : ''}"
+                on:click={() => editor?.chain().focus().toggleBlockquote().run()}
+                title="Quote"
+              >
+                <Quote class="w-4 h-4" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors {editor.isActive('code') ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : ''}"
+                on:click={() => editor?.chain().focus().toggleCode().run()}
+                title="Inline Code"
+              >
+                <Code class="w-4 h-4" strokeWidth={2} />
+              </button>
+              
+              <div class="w-px h-5 bg-[var(--color-border)] mx-1"></div>
+              
+              <button
+                type="button"
+                class="p-2 rounded-sm hover:bg-[var(--color-card-hover)] transition-colors"
+                on:click={() => editor?.chain().focus().setHorizontalRule().run()}
+                title="Horizontal Rule"
+              >
+                <Minus class="w-4 h-4" strokeWidth={2} />
+              </button>
+            </div>
+          {/if}
+          
+          <div bind:this={editorElement} class="editor-content"></div>
         </div>
 
         <!-- Todos -->
@@ -328,7 +449,7 @@
               {/if}
             </h3>
             <button 
-              class="btn-secondary text-sm py-1.5"
+              class="btn-secondary btn-sm"
               on:click={() => showNewTodoModal = true}
             >
               <Plus class="w-4 h-4" />
@@ -354,10 +475,10 @@
                       View in Kanban
                     </a>
                     <button 
-                      class="p-1 hover:bg-[var(--color-border)] rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      class="btn-icon-sm btn-icon-danger opacity-0 group-hover:opacity-100"
                       on:click={() => deleteTodo(todo.id)}
                     >
-                      <Trash2 class="w-4 h-4 text-red-500" />
+                      <Trash2 class="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -378,22 +499,40 @@
             </h3>
             <div class="space-y-3">
               <div>
-                <label class="label">Account Owner</label>
-                <p class="text-sm">{account.account_owner || 'Not set'}</p>
+                <label class="label" for="note-account-owner">Account Owner</label>
+                <input 
+                  id="note-account-owner"
+                  type="text"
+                  class="input text-sm"
+                  bind:value={account.account_owner}
+                  placeholder="Account owner name"
+                  on:change={saveAccountDetails}
+                />
               </div>
               <div>
-                <label class="label">Budget</label>
-                <p class="text-sm flex items-center gap-1">
-                  <DollarSign class="w-4 h-4" />
-                  {account.budget ? `$${account.budget.toLocaleString()}` : 'Not set'}
-                </p>
+                <label class="label" for="note-account-budget">Budget</label>
+                <div class="relative">
+                  <DollarSign class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted)]" />
+                  <input 
+                    id="note-account-budget"
+                    type="number"
+                    class="input text-sm pl-8"
+                    bind:value={account.budget}
+                    placeholder="Budget amount"
+                    on:change={saveAccountDetails}
+                  />
+                </div>
               </div>
               <div>
-                <label class="label">Est. Engineers (POC Size)</label>
-                <p class="text-sm flex items-center gap-1">
-                  <Users2 class="w-4 h-4" />
-                  {account.est_engineers ?? 'Not set'}
-                </p>
+                <label class="label" for="note-account-engineers">Est. Engineers (POC Size)</label>
+                <input 
+                  id="note-account-engineers"
+                  type="number"
+                  class="input text-sm"
+                  bind:value={account.est_engineers}
+                  placeholder="Team size"
+                  on:change={saveAccountDetails}
+                />
               </div>
             </div>
           </div>
@@ -410,7 +549,7 @@
               <div class="flex items-center justify-between px-3 py-2 bg-primary-500/10 rounded-lg text-sm">
                 <span>{participant}</span>
                 <button 
-                  class="p-1 hover:bg-primary-500/20 rounded"
+                  class="btn-icon-sm hover:bg-primary-500/20"
                   on:click={() => removeParticipant('internal', i)}
                 >
                   <X class="w-3 h-3" />
@@ -427,7 +566,7 @@
               on:keypress={(e) => e.key === 'Enter' && addParticipant('internal')}
             />
             <button 
-              class="btn-secondary py-1.5"
+              class="btn-secondary btn-sm"
               on:click={() => addParticipant('internal')}
             >
               <Plus class="w-4 h-4" />
@@ -446,7 +585,7 @@
               <div class="flex items-center justify-between px-3 py-2 bg-green-500/10 rounded-lg text-sm">
                 <span>{participant}</span>
                 <button 
-                  class="p-1 hover:bg-green-500/20 rounded"
+                  class="btn-icon-sm hover:bg-green-500/20"
                   on:click={() => removeParticipant('external', i)}
                 >
                   <X class="w-3 h-3" />
@@ -463,7 +602,7 @@
               on:keypress={(e) => e.key === 'Enter' && addParticipant('external')}
             />
             <button 
-              class="btn-secondary py-1.5"
+              class="btn-secondary btn-sm"
               on:click={() => addParticipant('external')}
             >
               <Plus class="w-4 h-4" />
@@ -481,19 +620,32 @@
     <button 
       class="absolute inset-0 bg-black/50 backdrop-blur-sm"
       on:click={() => showNewTodoModal = false}
+      aria-label="Close modal"
     ></button>
     <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-md animate-slide-up">
       <h2 class="text-lg font-semibold mb-4">New Follow-up Item</h2>
       <form on:submit|preventDefault={createTodo}>
         <div class="mb-4">
-          <label class="label">Todo Title</label>
+          <label class="label" for="note-new-todo-title">Todo Title</label>
+          <!-- svelte-ignore a11y-autofocus -->
           <input 
+            id="note-new-todo-title"
             type="text"
             class="input"
             placeholder="e.g., Send technical documentation"
             bind:value={newTodoTitle}
             autofocus
           />
+        </div>
+        <div class="mb-4">
+          <label class="label" for="note-new-todo-desc">Description (optional)</label>
+          <textarea
+            id="note-new-todo-desc"
+            class="input"
+            rows="3"
+            placeholder="Add more details about this follow-up..."
+            bind:value={newTodoDescription}
+          ></textarea>
         </div>
         <div class="flex justify-end gap-3">
           <button 

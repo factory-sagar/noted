@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"net"
 	"os"
+	"path/filepath"
 
 	"github.com/factory-sagar/notes-droid/backend/internal/db"
 	"github.com/factory-sagar/notes-droid/backend/internal/handlers"
@@ -10,56 +14,95 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func main() {
-	// Create uploads directory
-	if err := os.MkdirAll("./data/uploads", 0755); err != nil {
+type App struct {
+	ctx      context.Context
+	port     int
+	shutdown chan struct{}
+}
+
+func NewApp() *App {
+	return &App{
+		shutdown: make(chan struct{}),
+	}
+}
+
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+	go a.startServer()
+}
+
+func (a *App) shutdown_(ctx context.Context) {
+	close(a.shutdown)
+}
+
+func (a *App) GetServerPort() int {
+	return a.port
+}
+
+func (a *App) GetDataDir() string {
+	return getDataDir()
+}
+
+func getDataDir() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Printf("Warning: Could not get home directory: %v", err)
+		return "./data"
+	}
+
+	dataDir := filepath.Join(homeDir, "Library", "Application Support", "Noted")
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Printf("Warning: Could not create data directory: %v", err)
+		return "./data"
+	}
+
+	return dataDir
+}
+
+func (a *App) startServer() {
+	dataDir := getDataDir()
+	uploadsDir := filepath.Join(dataDir, "uploads")
+
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
 		log.Printf("Warning: Could not create uploads directory: %v", err)
 	}
 
-	// Initialize database
-	database, err := db.Initialize("./data/notes.db")
+	dbPath := filepath.Join(dataDir, "notes.db")
+	database, err := db.Initialize(dbPath)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer database.Close()
 
-	// Run migrations
 	if err := db.Migrate(database); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	// Initialize handlers
 	h := handlers.New(database)
 
-	// Setup Gin router
-	router := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
+	router.Use(gin.Recovery())
 
-	// CORS configuration
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:5173", "http://localhost:3000"}
+	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	router.Use(cors.New(config))
 
-	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	// Static file serving for uploads
-	router.Static("/uploads", "./data/uploads")
+	router.Static("/uploads", uploadsDir)
 
-	// API routes
 	api := router.Group("/api")
 	{
-		// Accounts
 		api.GET("/accounts", h.GetAccounts)
 		api.GET("/accounts/:id", h.GetAccount)
 		api.POST("/accounts", h.CreateAccount)
 		api.PUT("/accounts/:id", h.UpdateAccount)
 		api.DELETE("/accounts/:id", h.DeleteAccount)
 
-		// Notes - archived must come before :id to avoid route capture
 		api.GET("/notes/archived", h.GetArchivedNotes)
 		api.GET("/notes", h.GetNotes)
 		api.GET("/notes/:id", h.GetNote)
@@ -71,7 +114,6 @@ func main() {
 		api.GET("/notes/deleted", h.GetDeletedNotes)
 		api.GET("/accounts/:id/notes", h.GetNotesByAccount)
 
-		// Todos
 		api.GET("/todos", h.GetTodos)
 		api.GET("/todos/:id", h.GetTodo)
 		api.POST("/todos", h.CreateTodo)
@@ -83,27 +125,21 @@ func main() {
 		api.POST("/todos/:id/notes/:noteId", h.LinkTodoToNote)
 		api.DELETE("/todos/:id/notes/:noteId", h.UnlinkTodoFromNote)
 
-		// Search
 		api.GET("/search", h.Search)
 
-		// Analytics
 		api.GET("/analytics", h.GetAnalytics)
 		api.GET("/analytics/incomplete", h.GetIncompleteFields)
 
-		// PDF Export
 		api.GET("/notes/:id/export", h.ExportNotePDF)
 
-		// Calendar
-		api.GET("/calendar/auth", h.GetCalendarAuthURL)
-		api.GET("/calendar/callback", h.HandleCalendarCallback)
-		api.GET("/calendar/config", h.GetCalendarConfig)
-		api.POST("/calendar/connect", h.ConnectCalendar)
-		api.DELETE("/calendar/disconnect", h.DisconnectCalendar)
-		api.GET("/calendar/events", h.GetCalendarEvents)
-		api.GET("/calendar/events/:eventId", h.GetCalendarEvent)
-		api.POST("/calendar/parse-participants", h.ParseParticipants)
+		// Apple Calendar (EventKit) - native macOS integration
+		api.GET("/calendar/config", h.GetAppleCalendarStatus)
+		api.POST("/calendar/connect", h.RequestAppleCalendarAccess)
+		api.GET("/calendar/calendars", h.GetAppleCalendars)
+		api.GET("/calendar/events", h.GetAppleCalendarEvents)
+		api.GET("/calendar/events/:eventId", h.GetAppleCalendarEvent)
+		api.POST("/calendar/parse-participants", h.ParseParticipantsApple)
 
-		// Tags
 		api.GET("/tags", h.GetTags)
 		api.POST("/tags", h.CreateTag)
 		api.PUT("/tags/:id", h.UpdateTag)
@@ -112,22 +148,17 @@ func main() {
 		api.POST("/notes/:id/tags/:tagId", h.AddTagToNote)
 		api.DELETE("/notes/:id/tags/:tagId", h.RemoveTagFromNote)
 
-		// Activities
 		api.GET("/accounts/:id/activities", h.GetActivities)
 		api.POST("/activities", h.CreateActivity)
 
-		// Attachments
 		api.GET("/notes/:id/attachments", h.GetAttachments)
 		api.POST("/notes/:id/attachments", h.UploadAttachment)
 		api.DELETE("/notes/:id/attachments/:attachmentId", h.DeleteAttachment)
 
-		// Reorder notes
 		api.POST("/accounts/:id/notes/reorder", h.ReorderNotes)
 
-		// Quick capture
 		api.POST("/quick-capture", h.QuickCapture)
 
-		// Pin/Archive
 		api.POST("/notes/:id/pin", h.ToggleNotePin)
 		api.POST("/notes/:id/archive", h.ToggleNoteArchive)
 		api.POST("/todos/:id/pin", h.ToggleTodoPin)
@@ -144,14 +175,27 @@ func main() {
 		api.GET("/contacts/:id/notes", h.GetContactNotes)
 	}
 
-	// Get port from environment or default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// Use fixed port 8080 for OAuth compatibility
+	a.port = 8080
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", a.port))
+	if err != nil {
+		// If 8080 is busy, try a random port (OAuth won't work but app will run)
+		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			log.Fatalf("Failed to find available port: %v", err)
+		}
+		a.port = listener.Addr().(*net.TCPAddr).Port
+		log.Printf("Warning: Port 8080 unavailable, using %d. Google Calendar OAuth may not work.", a.port)
 	}
+	log.Printf("Internal server starting on port %d", a.port)
 
-	log.Printf("Server starting on port %s", port)
-	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	go func() {
+		<-a.shutdown
+		listener.Close()
+		database.Close()
+	}()
+
+	if err := router.RunListener(listener); err != nil {
+		log.Printf("Server stopped: %v", err)
 	}
 }

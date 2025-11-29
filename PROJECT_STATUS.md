@@ -2,7 +2,7 @@
 
 **Last Updated**: November 2024
 
-## Current State: Feature Complete ✓
+## Current State: Feature Complete
 
 The application is fully functional with all planned features implemented.
 
@@ -24,6 +24,15 @@ The application is fully functional with all planned features implemented.
 - [x] Participant parsing by email domain
 - [x] PDF export endpoint
 - [x] Health check endpoint with CORS
+- [x] **Soft delete (trash/recycle bin)** for notes and todos
+- [x] **Restore deleted items** functionality
+- [x] **Permanent delete** option
+- [x] **Pin notes and todos**
+- [x] **Archive notes**
+- [x] **Activity timeline** per account
+- [x] **File attachments** with upload/download
+- [x] **Quick capture** for fast note/todo creation
+- [x] **Reorder notes** within accounts
 
 ### Frontend (SvelteKit)
 - [x] Dashboard with clickable statistics cards
@@ -34,8 +43,7 @@ The application is fully functional with all planned features implemented.
 - [x] Move notes between accounts
 - [x] Merge accounts functionality
 - [x] Accounts management page with split view
-- [x] Kanban todo board with 4 columns
-- [x] Stuck column for blocked items
+- [x] **Kanban todo board with 4 columns** (including Stuck)
 - [x] Full-width completed section
 - [x] Priority indicators (H/M/L colored badges)
 - [x] High priority auto-sort to top
@@ -52,6 +60,12 @@ The application is fully functional with all planned features implemented.
 - [x] Global search (Cmd+K) with fuzzy matching
 - [x] Search result highlighting
 - [x] Responsive sidebar
+- [x] **Trash/recycle bin** for notes and todos
+- [x] **Restore deleted items** UI
+- [x] **Pin notes and todos**
+- [x] **Archive notes**
+- [x] **Quick capture** modal
+- [x] **File attachments** UI
 
 ### DevOps
 - [x] Docker containerization (Go 1.24, Node 20)
@@ -67,7 +81,7 @@ The application is fully functional with all planned features implemented.
 - [x] PROJECT_STATUS.md (this file)
 - [x] CONTRIBUTING.md
 - [x] API documentation in docs/
-- [x] Skills files in .factory/skills/
+- [x] Architecture documentation in docs/
 
 ## Feature Details
 
@@ -94,6 +108,12 @@ The application is fully functional with all planned features implemented.
 - **Medium (M)**: Yellow/amber badge
 - **Low (L)**: Green badge
 
+### Soft Delete System
+- **Delete** moves items to trash (sets `deleted_at` timestamp)
+- **Trash view** shows all deleted items
+- **Restore** moves items back to active state
+- **Permanent delete** removes items forever
+
 ### Settings Options
 - Default Notes View: folders / cards / organized
 - Default Todos View: kanban / list
@@ -111,30 +131,17 @@ The application is fully functional with all planned features implemented.
 | commit-msg | Conventional commit validation | No |
 | post-commit | Track successful commits | Yes - after successful commits |
 
-### Dashcode Payload Structure
-```json
-{
-  "repoName": "notes-droid",
-  "commitHash": "abc123...",
-  "branch": "main",
-  "trigger": "pre-commit|post-commit",
-  "status": "success|fail",
-  "durationMs": 100,
-  "meta": { ... },
-  "results": [ ... ]
-}
-```
-
 ### Dashcode Endpoint
 - **URL**: `http://localhost:3001/api/hooks/report`
 - **Method**: POST
 - **Content-Type**: application/json
 
-## Known Issues
+## Known Limitations
 
-1. **FTS5 not available**: Using FTS4 for SQLite compatibility
-2. **Google Calendar OAuth**: Requires environment variables setup
-3. **Large TipTap bundle**: Could benefit from code-splitting
+1. **Single user**: No authentication, designed for local use
+2. **FTS4 vs FTS5**: Using FTS4 for broader SQLite compatibility
+3. **Google Calendar OAuth**: Requires environment variables setup
+4. **No offline support**: Requires backend connection
 
 ## Technical Debt
 
@@ -143,6 +150,7 @@ The application is fully functional with all planned features implemented.
 - [ ] Extract common UI components
 - [ ] Add error boundary in frontend
 - [ ] Improve error messages in API
+- [ ] Add pagination for large lists
 
 ## Environment Requirements
 
@@ -166,6 +174,7 @@ docker-compose logs   # View logs
 curl localhost:8080/health
 curl localhost:8080/api/accounts
 curl localhost:8080/api/tags
+curl localhost:8080/api/notes/deleted
 
 # Build
 make build-backend
