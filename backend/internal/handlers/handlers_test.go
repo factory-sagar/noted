@@ -234,16 +234,20 @@ func TestUpdateNote(t *testing.T) {
 	// Setup
 	noteID := "note-to-update"
 	// Create dummy account to avoid NULL constraint issues if any, and linking
-	db.Exec("INSERT INTO accounts (id, name) VALUES ('acc-update-test', 'Test Acc')")
+	if _, err := db.Exec("INSERT INTO accounts (id, name) VALUES ('acc-update-test', 'Test Acc')"); err != nil {
+		t.Fatalf("Failed to insert account: %v", err)
+	}
 	// Populate ALL non-nullable string fields
-	db.Exec(`
+	if _, err := db.Exec(`
 		INSERT INTO notes (
 			id, title, account_id, template_type, internal_participants, external_participants, 
 			content, created_at, updated_at
 		) VALUES (
 			?, 'Original Title', 'acc-update-test', 'initial', '[]', '[]', 
 			'<p>Content</p>', ?, ?
-		)`, noteID, time.Now(), time.Now())
+		)`, noteID, time.Now(), time.Now()); err != nil {
+		t.Fatalf("Failed to insert note: %v", err)
+	}
 
 	t.Run("Success", func(t *testing.T) {
 		newTitle := "Updated Title"

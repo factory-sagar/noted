@@ -280,7 +280,6 @@
         content: editor.getHTML(),
       });
       addToast('success', 'Note saved');
-      goto('/notes');
     } catch (e) {
       addToast('error', 'Failed to save note');
     } finally {
@@ -335,6 +334,8 @@
   }
 
   async function deleteNote() {
+    if (!confirm('Move this note to trash?')) return;
+    
     try {
       await api.deleteNote(noteId);
       addToast('success', 'Note moved to trash');

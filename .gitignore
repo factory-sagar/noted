@@ -47,3 +47,4 @@ coverage/
 # Wails build artifacts
 backend/cmd/wails/build/bin/
 backend/cmd/wails/frontend/
+backend/main
