@@ -34,7 +34,17 @@ notes-droid/
 │   ├── cmd/server/main.go      # Entry point, routes
 │   └── internal/
 │       ├── handlers/           # HTTP request handlers
-│       │   ├── handlers.go     # Main CRUD handlers
+│       │   ├── handlers.go     # Base Handler struct
+│       │   ├── account.go      # Account handlers
+│       │   ├── note.go         # Note handlers
+│       │   ├── todo.go         # Todo handlers
+│       │   ├── tag.go          # Tag handlers
+│       │   ├── activity.go     # Activity handlers
+│       │   ├── attachment.go   # Attachment handlers
+│       │   ├── search.go       # Search handlers
+│       │   ├── analytics.go    # Analytics handlers
+│       │   ├── data.go         # Data management handlers
+│       │   ├── quick_capture.go # Quick Capture handlers
 │       │   └── calendar.go     # Google Calendar OAuth
 │       ├── models/             # Data structures & request/response types
 │       └── db/                 # Database setup, migrations, FTS4
@@ -50,9 +60,11 @@ notes-droid/
 │       │   └── settings/       # App settings, tags, templates
 │       └── lib/
 │           ├── stores/         # Svelte stores (state)
+│           ├── editor/         # TipTap extensions
 │           └── utils/
 │               ├── api.ts      # API client with types
 │               └── pdf.ts      # PDF generation (jsPDF)
+├── tests/                      # End-to-End Tests (Playwright)
 ├── .githooks/                  # Git hooks for code quality
 │   ├── pre-commit              # Linting and security checks
 │   ├── commit-msg              # Conventional commit validation
