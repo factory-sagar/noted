@@ -2,8 +2,8 @@
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "Noted",
   "outputfilename": "Noted",
-  "frontend:install": "echo 'Frontend already built'",
-  "frontend:build": "cd ../../../frontend && npm run build",
+  "frontend:install": "echo 'Frontend already copied'",
+  "frontend:build": "echo 'Frontend already copied'",
   "author": {
     "name": "Your Name",
     "email": "you@example.com"
