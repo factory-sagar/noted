@@ -22,6 +22,7 @@
   import { onMount } from 'svelte';
   import { api, type SearchResult } from '$lib/utils/api';
   import QuickCapture from '$lib/components/QuickCapture.svelte';
+  import { theme } from '$lib/stores/theme';
 
   let darkMode = false;
   let sidebarOpen = true;
@@ -44,12 +45,16 @@
 
   onMount(() => {
     if (typeof window !== 'undefined') {
+      // Dark mode initialization
       darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const saved = localStorage.getItem('darkMode');
-      if (saved !== null) {
-        darkMode = saved === 'true';
+      const savedDark = localStorage.getItem('darkMode');
+      if (savedDark !== null) {
+        darkMode = savedDark === 'true';
       }
       updateTheme();
+
+      // Theme initialization
+      theme.init();
     }
   });
 
@@ -217,19 +222,22 @@
           <Menu class="w-5 h-5" />
         </button>
 
-        <div class="flex-1 flex items-center justify-end gap-4">
-          <!-- Search -->
+        <!-- Centered Search Bar -->
+        <div class="flex-1 flex items-center justify-center px-4">
           <button 
-            class="btn-secondary"
+            class="w-full max-w-xl flex items-center gap-3 px-4 py-2.5 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] hover:border-[var(--color-accent)]/50 transition-colors text-left"
+            style="border-radius: var(--radius);"
             on:click={() => searchOpen = true}
           >
-            <Search class="w-4 h-4" strokeWidth={1.5} />
-            <span class="hidden sm:inline">Search</span>
-            <kbd class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+            <Search class="w-4 h-4 text-[var(--color-muted)]" strokeWidth={1.5} />
+            <span class="flex-1 text-[var(--color-muted)]">Search notes, accounts, todos...</span>
+            <kbd class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: var(--radius);">
               ⌘K
             </kbd>
           </button>
+        </div>
 
+        <div class="flex items-center gap-4">
           <!-- Quick Create -->
           <button 
             class="btn-primary"
@@ -259,7 +267,7 @@
       aria-label="Close search"
     ></button>
     
-    <div class="relative z-[101] w-full max-w-2xl mx-4 bg-[var(--color-card)] border border-[var(--color-border)] shadow-editorial-lg animate-scale-in" style="border-radius: 2px;">
+    <div class="relative z-[101] w-full max-w-2xl mx-4 bg-[var(--color-card)] border border-[var(--color-border)] shadow-editorial-lg animate-scale-in" style="border-radius: calc(var(--radius) + 4px);">
       <div class="flex items-center gap-4 px-6 py-4 border-b border-[var(--color-border)]">
         {#if searching}
           <Loader2 class="w-5 h-5 text-[var(--color-muted)] animate-spin" strokeWidth={1.5} />
@@ -275,7 +283,7 @@
           on:input={handleSearchInput}
           autofocus
         />
-        <kbd class="px-2 py-1 text-xs bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-muted)]" style="border-radius: 2px;">ESC</kbd>
+        <kbd class="px-2 py-1 text-xs bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-muted)]" style="border-radius: var(--radius);">ESC</kbd>
       </div>
       
       <div class="max-h-96 overflow-y-auto">
@@ -298,7 +306,7 @@
                 class="w-full flex items-start gap-4 p-4 hover:bg-[var(--color-card-hover)] transition-colors text-left group"
                 on:click={() => selectResult(result)}
               >
-                <div class="p-2 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: 2px;">
+                <div class="p-2 bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: var(--radius);">
                   <svelte:component 
                     this={getResultIcon(result.type)} 
                     class="w-4 h-4 text-[var(--color-muted)]" 

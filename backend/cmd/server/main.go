@@ -90,11 +90,15 @@ func main() {
 		api.GET("/analytics", h.GetAnalytics)
 		api.GET("/analytics/incomplete", h.GetIncompleteFields)
 
+		// Data management
+		api.GET("/export", h.ExportAllData)
+		api.DELETE("/data", h.ClearAllData)
+
 		// PDF Export
 		api.GET("/notes/:id/export", h.ExportNotePDF)
 
 		// Calendar
-		api.GET("/calendar/auth", h.GetCalendarAuthURL)
+		api.GET("/calendar/auth", h.CalendarAuthHandler) // Renamed from GetCalendarAuthURL
 		api.GET("/calendar/callback", h.HandleCalendarCallback)
 		api.GET("/calendar/config", h.GetCalendarConfig)
 		api.POST("/calendar/connect", h.ConnectCalendar)

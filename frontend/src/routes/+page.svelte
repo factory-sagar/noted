@@ -219,9 +219,9 @@
                 <p class="font-medium group-hover:text-[var(--color-accent)] transition-colors">{item.note_title}</p>
                 <p class="text-sm text-[var(--color-muted)]">{item.account_name}</p>
               </div>
-              <div class="flex flex-wrap gap-2 max-w-[200px]">
+              <div class="flex flex-wrap gap-1.5 justify-end">
                 {#each item.missing_fields as field}
-                  <span class="tag-default">
+                  <span class="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded whitespace-nowrap">
                     {field.replace('_', ' ')}
                   </span>
                 {/each}

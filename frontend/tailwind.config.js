@@ -5,52 +5,44 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Editorial Noir palette
         primary: {
-          50: '#fdf8f3',
-          100: '#f9efe3',
-          200: '#f2dcc4',
-          300: '#e8c49a',
-          400: '#dba76d',
-          500: '#c9a87c',
-          600: '#b8956a',
-          700: '#9a7a54',
-          800: '#7d6346',
-          900: '#66513a',
-          950: '#362a1e',
+          50: 'var(--color-primary-50)',
+          100: 'var(--color-primary-100)',
+          200: 'var(--color-primary-200)',
+          300: 'var(--color-primary-300)',
+          400: 'var(--color-primary-400)',
+          500: 'var(--color-primary-500)',
+          600: 'var(--color-primary-600)',
+          700: 'var(--color-primary-700)',
+          800: 'var(--color-primary-800)',
+          900: 'var(--color-primary-900)',
+          950: 'var(--color-primary-950)',
         },
-        cream: {
-          50: '#fefdfb',
-          100: '#faf9f6',
-          200: '#f5f3ed',
-          300: '#e8e6de',
-          400: '#d4d1c7',
-          500: '#b8b5ab',
-        },
-        charcoal: {
-          50: '#f6f6f6',
-          100: '#e7e7e7',
-          200: '#d1d1d1',
-          300: '#b0b0b0',
-          400: '#888888',
-          500: '#6d6d6d',
-          600: '#5d5d5d',
-          700: '#4f4f4f',
-          800: '#454545',
-          900: '#1a1a1a',
-          950: '#121212',
+        // Retaining specific palettes if useful for one-off usage
+        slate: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+          950: '#020617',
         },
         accent: {
-          copper: '#c9a87c',
-          gold: '#d4af37',
-          bronze: '#cd7f32',
-          rust: '#a45a3d',
+          blue: '#3b82f6',
+          indigo: '#6366f1',
+          teal: '#14b8a6',
+          sky: '#0ea5e9',
         }
       },
       fontFamily: {
-        serif: ['Playfair Display', 'Georgia', 'serif'],
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
+        serif: ['var(--font-serif)', 'serif'], // Added back for potential support
       },
       fontSize: {
         'display-xl': ['4.5rem', { lineHeight: '1', letterSpacing: '-0.02em' }],
@@ -59,12 +51,21 @@ export default {
         'title': ['1.75rem', { lineHeight: '1.3', letterSpacing: '-0.01em' }],
       },
       boxShadow: {
-        'editorial': '0 2px 40px -12px rgba(0,0,0,0.15)',
-        'editorial-lg': '0 25px 50px -12px rgba(0,0,0,0.25)',
+        'saas': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+        'saas-md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+        'saas-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
         'inner-glow': 'inset 0 1px 0 0 rgba(255,255,255,0.05)',
       },
+      borderRadius: {
+        'DEFAULT': 'var(--radius)', 
+        'md': 'var(--radius)',
+        'lg': 'calc(var(--radius) + 2px)',
+        'xl': 'calc(var(--radius) + 4px)',
+        '2xl': 'calc(var(--radius) + 8px)',
+        'sm': 'calc(var(--radius) - 2px)',
+      },
       backgroundImage: {
-        'grain': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")",
+        // Removed grain
       },
       animation: {
         'fade-up': 'fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',

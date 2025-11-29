@@ -8,7 +8,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/wailsapp/wails/v2 v2.11.0
-	golang.org/x/oauth2 v0.33.0
 	google.golang.org/api v0.256.0
 )
 
@@ -69,6 +68,7 @@ require (
 	golang.org/x/arch v0.5.0 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/oauth2 v0.33.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101 // indirect

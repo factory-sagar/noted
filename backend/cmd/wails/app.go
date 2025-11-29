@@ -77,7 +77,7 @@ func (a *App) startServer() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	h := handlers.New(database)
+	h := handlers.NewWithUploadsDir(database, uploadsDir)
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
@@ -129,6 +129,9 @@ func (a *App) startServer() {
 
 		api.GET("/analytics", h.GetAnalytics)
 		api.GET("/analytics/incomplete", h.GetIncompleteFields)
+
+		api.GET("/export", h.ExportAllData)
+		api.DELETE("/data", h.ClearAllData)
 
 		api.GET("/notes/:id/export", h.ExportNotePDF)
 

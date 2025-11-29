@@ -27,6 +27,7 @@
   let accounts: Account[] = [];
   let loading = true;
   let filter: 'all' | 'internal' | 'external' | 'suggestions' = 'all';
+  let sortBy: 'name' | 'company' | 'account' | 'recent' = 'name';
   let searchQuery = '';
   
   // Modals
@@ -147,14 +148,33 @@
     loadingNotes = false;
   }
 
-  $: filteredContacts = contacts.filter(c => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return c.email.toLowerCase().includes(q) ||
-           c.name.toLowerCase().includes(q) ||
-           c.company.toLowerCase().includes(q) ||
-           c.domain.toLowerCase().includes(q);
-  });
+  $: filteredContacts = contacts
+    .filter(c => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return c.email.toLowerCase().includes(q) ||
+             c.name.toLowerCase().includes(q) ||
+             c.company.toLowerCase().includes(q) ||
+             c.domain.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'company':
+          return a.company.localeCompare(b.company);
+        case 'account':
+          const aAccount = a.account_name || '';
+          const bAccount = b.account_name || '';
+          if (!aAccount && bAccount) return 1;
+          if (aAccount && !bAccount) return -1;
+          return aAccount.localeCompare(bAccount);
+        case 'recent':
+          return new Date(b.last_seen || b.created_at).getTime() - new Date(a.last_seen || a.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
 
   $: internalContacts = filteredContacts.filter(c => c.is_internal);
   $: externalContacts = filteredContacts.filter(c => !c.is_internal);
@@ -227,6 +247,15 @@
             <option value="internal">Internal Only</option>
             <option value="external">External Only</option>
             <option value="suggestions">Pending Suggestions</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-[var(--color-muted)]">Sort:</span>
+          <select class="input w-auto" bind:value={sortBy}>
+            <option value="name">Name</option>
+            <option value="company">Company</option>
+            <option value="account">Account</option>
+            <option value="recent">Recent</option>
           </select>
         </div>
       </div>
