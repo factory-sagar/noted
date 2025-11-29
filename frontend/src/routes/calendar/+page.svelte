@@ -32,7 +32,7 @@
 
   type ViewMode = 'month' | 'week' | 'agenda';
 
-  let viewMode: ViewMode = 'month';
+  let viewMode: ViewMode = 'week'; // Default to week view
   let notes: Note[] = [];
   let notesLoading = true;
   let refreshing = false;
@@ -82,19 +82,49 @@
   }
 
   async function connectCalendar() {
+    // Check if this is Apple Calendar (native app) or Google (browser)
+    const config = await api.getCalendarConfig();
+    if (config.type === 'apple') {
+      await connectAppleCalendar();
+    } else {
+      await connectGoogleCalendar();
+    }
+  }
+
+  async function connectGoogleCalendar() {
     try {
       const { url } = await api.getCalendarAuthURL();
       window.location.href = url;
     } catch (e: any) {
       if (e.message.includes('not configured')) {
-        addToast('error', 'Google OAuth not configured. Using Apple Calendar in native app.');
+        // Try Apple Calendar as fallback in native app
+        await connectAppleCalendar();
       } else {
         addToast('error', 'Failed to connect calendar');
       }
     }
   }
 
+  async function connectAppleCalendar() {
+    try {
+      const result = await api.connectAppleCalendar();
+      if (result.success) {
+        addToast('success', 'Apple Calendar connected!');
+        await calendarStore.init(); // Reinitialize store
+      } else {
+        addToast('error', result.message || 'Calendar access denied. Check System Settings > Privacy & Security > Calendars');
+      }
+    } catch (e: any) {
+      addToast('error', e.message || 'Failed to connect calendar');
+    }
+  }
+
   async function disconnectCalendar() {
+    const config = await api.getCalendarConfig();
+    if (config.type === 'apple') {
+      addToast('info', 'To revoke calendar access, go to System Settings > Privacy & Security > Calendars');
+      return;
+    }
     await calendarStore.disconnect();
     addToast('success', 'Calendar disconnected');
   }
