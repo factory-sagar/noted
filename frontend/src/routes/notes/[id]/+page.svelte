@@ -718,10 +718,10 @@
           </h3>
           <div class="space-y-2 mb-3">
             {#each externalParticipants as participant, i}
-              <div class="flex items-center justify-between px-3 py-2 bg-green-500/10 rounded-lg text-sm">
-                <span>{participant}</span>
+              <div class="flex items-center justify-between gap-2 px-3 py-2 bg-green-500/10 rounded-lg text-sm">
+                <span class="truncate flex-1" title={participant}>{participant}</span>
                 <button 
-                  class="btn-icon-sm hover:bg-green-500/20"
+                  class="btn-icon-sm hover:bg-green-500/20 shrink-0"
                   on:click={() => removeParticipant('external', i)}
                 >
                   <X class="w-3 h-3" />
@@ -738,7 +738,7 @@
               on:keypress={(e) => e.key === 'Enter' && addParticipant('external')}
             />
             <button 
-              class="btn-secondary btn-sm"
+              class="btn-secondary btn-sm shrink-0"
               on:click={() => addParticipant('external')}
             >
               <Plus class="w-4 h-4" />
@@ -754,10 +754,10 @@
           </h3>
           <div class="space-y-2 mb-3">
             {#each internalParticipants as participant, i}
-              <div class="flex items-center justify-between px-3 py-2 bg-primary-500/10 rounded-lg text-sm">
-                <span>{participant}</span>
+              <div class="flex items-center justify-between gap-2 px-3 py-2 bg-primary-500/10 rounded-lg text-sm">
+                <span class="truncate flex-1" title={participant}>{participant}</span>
                 <button 
-                  class="btn-icon-sm hover:bg-primary-500/20"
+                  class="btn-icon-sm hover:bg-primary-500/20 shrink-0"
                   on:click={() => removeParticipant('internal', i)}
                 >
                   <X class="w-3 h-3" />
@@ -774,7 +774,7 @@
               on:keypress={(e) => e.key === 'Enter' && addParticipant('internal')}
             />
             <button 
-              class="btn-secondary btn-sm"
+              class="btn-secondary btn-sm shrink-0"
               on:click={() => addParticipant('internal')}
             >
               <Plus class="w-4 h-4" />

@@ -118,22 +118,30 @@
   async function deleteAccount(accountId: string) {
     const stats = getAccountStats(accountId);
     if (!confirm(`Delete this account and ${stats.noteCount} notes?`)) return;
+    
     try {
       const deletedAccount = accounts.find(a => a.id === accountId);
-      // Optimistic update
+      
+      // Optimistic update - IMMEDIATE
       accounts = accounts.filter(a => a.id !== accountId);
+      notes = notes.filter(n => n.account_id !== accountId);
+      todos = todos.filter(t => t.account_id !== accountId);
+      
       if (deletedAccount) {
         deletedAccounts = [deletedAccount, ...deletedAccounts];
       }
+      
       if (selectedAccountId === accountId) {
         selectedAccountId = null;
       }
+      
       addToast('success', 'Account deleted');
       
+      // API call in background
       await api.deleteAccount(accountId);
     } catch (e) {
       addToast('error', 'Failed to delete account');
-      await loadData(); // Revert
+      await loadData(); // Revert on error
     }
   }
 
