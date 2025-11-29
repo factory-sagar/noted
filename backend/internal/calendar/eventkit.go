@@ -58,6 +58,9 @@ const char* getCalendars() {
         eventStore = [[EKEventStore alloc] init];
     }
 
+    // Refresh from remote sources (CalDAV, Exchange, etc.)
+    [eventStore refreshSourcesIfNecessary];
+
     NSArray<EKCalendar *> *calendars = [eventStore calendarsForEntityType:EKEntityTypeEvent];
     NSMutableArray *calendarList = [NSMutableArray array];
 
@@ -97,6 +100,9 @@ const char* getEvents(const char* startDate, const char* endDate, const char* ca
     if (eventStore == nil) {
         eventStore = [[EKEventStore alloc] init];
     }
+
+    // Refresh from remote sources (CalDAV, Exchange, etc.)
+    [eventStore refreshSourcesIfNecessary];
 
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ssZ"];
