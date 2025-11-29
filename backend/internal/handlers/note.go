@@ -89,15 +89,17 @@ func (h *Handler) GetNote(c *gin.Context) {
 		return
 	}
 	if err != nil {
+		// Log the error for debugging
+		log.Printf("GetNote error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := json.Unmarshal([]byte(internalJSON), &n.InternalParticipants); err != nil {
-		log.Printf("Error unmarshalling internal participants for note %s: %v", n.ID, err)
+		// log.Printf("Error unmarshalling internal participants for note %s: %v", n.ID, err)
 	}
 	if err := json.Unmarshal([]byte(externalJSON), &n.ExternalParticipants); err != nil {
-		log.Printf("Error unmarshalling external participants for note %s: %v", n.ID, err)
+		// log.Printf("Error unmarshalling external participants for note %s: %v", n.ID, err)
 	}
 
 	// Get linked todos
@@ -266,7 +268,6 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 		return
 	}
 
-	// Return updated note
 	h.GetNote(c)
 }
 

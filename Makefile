@@ -75,6 +75,13 @@ setup: setup-hooks
 	@echo ""
 	@echo "Setup complete! Run 'make dev' to start development servers."
 
+test:
+	@echo "Running backend tests..."
+	cd backend && go test -v ./internal/handlers/...
+	@echo ""
+	@echo "Running frontend tests..."
+	cd frontend && npx vitest run
+
 setup-hooks:
 	@echo "Configuring git hooks..."
 	git config core.hooksPath .githooks

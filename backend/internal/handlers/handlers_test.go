@@ -233,7 +233,17 @@ func TestUpdateNote(t *testing.T) {
 
 	// Setup
 	noteID := "note-to-update"
-	db.Exec("INSERT INTO notes (id, title, created_at, updated_at) VALUES (?, 'Original Title', ?, ?)", noteID, time.Now(), time.Now())
+	// Create dummy account to avoid NULL constraint issues if any, and linking
+	db.Exec("INSERT INTO accounts (id, name) VALUES ('acc-update-test', 'Test Acc')")
+	// Populate ALL non-nullable string fields
+	db.Exec(`
+		INSERT INTO notes (
+			id, title, account_id, template_type, internal_participants, external_participants, 
+			content, created_at, updated_at
+		) VALUES (
+			?, 'Original Title', 'acc-update-test', 'initial', '[]', '[]', 
+			'<p>Content</p>', ?, ?
+		)`, noteID, time.Now(), time.Now())
 
 	t.Run("Success", func(t *testing.T) {
 		newTitle := "Updated Title"
@@ -245,6 +255,7 @@ func TestUpdateNote(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
+		// This fails if GetNote fails internally or handler panics
 		assert.Equal(t, http.StatusOK, w.Code)
 		
 		// Verify DB
