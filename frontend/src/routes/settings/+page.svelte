@@ -153,10 +153,21 @@
 
   async function exportAllData() {
     addToast('info', 'Exporting all data...');
-    // TODO: Implement full data export
-    setTimeout(() => {
-      addToast('success', 'Data exported (mock)');
-    }, 1000);
+    try {
+      const data = await api.exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `noted-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      addToast('success', 'Data exported successfully');
+    } catch (e) {
+      addToast('error', 'Failed to export data');
+    }
   }
 
   async function clearAllData() {
@@ -164,10 +175,14 @@
     if (!confirm('This will permanently delete all accounts, notes, and todos. Continue?')) return;
 
     addToast('info', 'Clearing all data...');
-    // TODO: Implement data clearing
-    setTimeout(() => {
-      addToast('success', 'All data cleared');
-    }, 1000);
+    try {
+      await api.clearAllData();
+      addToast('success', 'All data cleared successfully');
+      // Reload the page to reset state
+      window.location.reload();
+    } catch (e) {
+      addToast('error', 'Failed to clear data');
+    }
   }
 </script>
 

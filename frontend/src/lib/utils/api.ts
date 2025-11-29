@@ -322,6 +322,10 @@ export const api = {
   getAnalytics: () => request<Analytics>('/analytics'),
   getIncompleteFields: () => request<IncompleteField[]>('/analytics/incomplete'),
 
+  // Data management
+  exportAllData: () => request<Record<string, unknown>>('/export'),
+  clearAllData: () => request<{ message: string }>('/data', { method: 'DELETE' }),
+
   // Calendar (supports both Google OAuth and Apple EventKit)
   getCalendarAuthURL: () => request<{ url: string }>('/calendar/auth'),
   getCalendarConfig: () => request<CalendarConfig>('/calendar/config'),
