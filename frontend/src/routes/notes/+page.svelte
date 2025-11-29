@@ -139,14 +139,18 @@
   async function deleteNote(noteId: string) {
     try {
       const deletedNote = notes.find(n => n.id === noteId);
-      await api.deleteNote(noteId);
+      // Optimistic update
       notes = notes.filter(n => n.id !== noteId);
       if (deletedNote) {
         deletedNotes = [deletedNote, ...deletedNotes];
       }
       addToast('success', 'Moved to trash');
+      
+      await api.deleteNote(noteId);
     } catch (e) {
+      // Revert on failure
       addToast('error', 'Failed to delete note');
+      await loadData(); // Reload to ensure consistent state
     }
   }
 

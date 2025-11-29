@@ -153,8 +153,9 @@
 
   async function deleteTodo(todoId: string, columnId: string) {
     try {
-      await api.deleteTodo(todoId);
       let deletedTodo: Todo | undefined;
+      
+      // Optimistic update
       if (columnId === 'completed') {
         deletedTodo = completedItems.find(t => t.id === todoId);
         completedItems = completedItems.filter(t => t.id !== todoId);
@@ -170,8 +171,11 @@
         deletedItems = [deletedTodo, ...deletedItems];
       }
       addToast('success', 'Moved to trash');
+      
+      await api.deleteTodo(todoId);
     } catch (e) {
       addToast('error', 'Failed to delete todo');
+      await loadData(); // Reload to revert
     }
   }
 

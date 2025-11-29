@@ -6,9 +6,12 @@
     CheckSquare, 
     Plus,
     ChevronRight,
+    ChevronDown,
     Users,
     DollarSign,
     Trash2,
+    Trash,
+    RefreshCw,
     Edit3,
     Search
   } from 'lucide-svelte';
@@ -16,9 +19,11 @@
   import { addToast } from '$lib/stores';
 
   let accounts: Account[] = [];
+  let deletedAccounts: Account[] = [];
   let notes: Note[] = [];
   let todos: Todo[] = [];
   let loading = true;
+  let showTrash = false;
   let searchQuery = '';
   let selectedAccountId: string | null = null;
   
@@ -35,12 +40,14 @@
   async function loadData() {
     try {
       loading = true;
-      const [accountsData, notesData, todosData] = await Promise.all([
+      const [accountsData, deleted, notesData, todosData] = await Promise.all([
         api.getAccounts(),
+        api.getDeletedAccounts(),
         api.getNotes(),
         api.getTodos()
       ]);
       accounts = accountsData;
+      deletedAccounts = deleted;
       notes = notesData;
       todos = todosData;
     } catch (e) {
@@ -48,6 +55,10 @@
     } finally {
       loading = false;
     }
+  }
+
+  async function requestDeletedAccounts() {
+      return api.getDeletedAccounts();
   }
 
   function getNotesForAccount(accountId: string): Note[] {
@@ -108,16 +119,52 @@
     const stats = getAccountStats(accountId);
     if (!confirm(`Delete this account and ${stats.noteCount} notes?`)) return;
     try {
-      await api.deleteAccount(accountId);
+      const deletedAccount = accounts.find(a => a.id === accountId);
+      // Optimistic update
       accounts = accounts.filter(a => a.id !== accountId);
-      notes = notes.filter(n => n.account_id !== accountId);
-      todos = todos.filter(t => t.account_id !== accountId);
+      if (deletedAccount) {
+        deletedAccounts = [deletedAccount, ...deletedAccounts];
+      }
       if (selectedAccountId === accountId) {
         selectedAccountId = null;
       }
       addToast('success', 'Account deleted');
+      
+      await api.deleteAccount(accountId);
     } catch (e) {
       addToast('error', 'Failed to delete account');
+      await loadData(); // Revert
+    }
+  }
+
+  async function restoreAccount(accountId: string) {
+    try {
+      const account = deletedAccounts.find(a => a.id === accountId);
+      // Optimistic update
+      deletedAccounts = deletedAccounts.filter(a => a.id !== accountId);
+      if (account) {
+        accounts = [...accounts, account];
+      }
+      addToast('success', 'Account restored');
+      
+      await api.restoreAccount(accountId);
+    } catch (e) {
+      addToast('error', 'Failed to restore account');
+      await loadData(); // Revert
+    }
+  }
+
+  async function permanentDeleteAccount(accountId: string) {
+    if (!confirm('Permanently delete this account? This cannot be undone.')) return;
+    try {
+      // Optimistic update
+      deletedAccounts = deletedAccounts.filter(a => a.id !== accountId);
+      addToast('success', 'Permanently deleted');
+      
+      await api.permanentDeleteAccount(accountId);
+    } catch (e) {
+      addToast('error', 'Failed to delete account');
+      await loadData(); // Revert
     }
   }
 
@@ -405,6 +452,56 @@
           </div>
         {/if}
       </div>
+    </div>
+  {/if}
+
+  <!-- Trash Section -->
+  {#if deletedAccounts.length > 0}
+    <div class="mt-12">
+      <button 
+        class="flex items-center gap-2 mb-4 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+        on:click={() => showTrash = !showTrash}
+      >
+        <Trash class="w-4 h-4" strokeWidth={1.5} />
+        <span class="font-medium">Trash</span>
+        <span class="text-sm">({deletedAccounts.length})</span>
+        <ChevronDown class="w-4 h-4 transition-transform {showTrash ? 'rotate-180' : ''}" strokeWidth={1.5} />
+      </button>
+      
+      {#if showTrash}
+        <div class="p-6 bg-[var(--color-card)] border border-dashed border-[var(--color-border)]" style="border-radius: 2px;">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {#each deletedAccounts as account (account.id)}
+              <div class="bg-[var(--color-bg)] border border-[var(--color-border)] p-4 opacity-60 hover:opacity-100 transition-opacity group" style="border-radius: 2px;">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <span class="font-medium line-through">{account.name}</span>
+                    {#if account.account_owner}
+                      <p class="text-xs text-[var(--color-muted)] mt-1">{account.account_owner}</p>
+                    {/if}
+                  </div>
+                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
+                    <button 
+                      class="btn-icon-sm btn-icon-success"
+                      title="Restore"
+                      on:click={() => restoreAccount(account.id)}
+                    >
+                      <RefreshCw class="w-3.5 h-3.5" strokeWidth={1.5} />
+                    </button>
+                    <button 
+                      class="btn-icon-sm btn-icon-danger"
+                      title="Delete permanently"
+                      on:click={() => permanentDeleteAccount(account.id)}
+                    >
+                      <Trash2 class="w-3.5 h-3.5" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

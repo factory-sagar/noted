@@ -276,6 +276,11 @@ export const api = {
     request<Account>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAccount: (id: string) =>
     request<{ message: string }>(`/accounts/${id}`, { method: 'DELETE' }),
+  restoreAccount: (id: string) =>
+    request<{ message: string }>(`/accounts/${id}/restore`, { method: 'POST' }),
+  permanentDeleteAccount: (id: string) =>
+    request<{ message: string }>(`/accounts/${id}/permanent`, { method: 'DELETE' }),
+  getDeletedAccounts: () => request<Account[]>('/accounts/deleted'),
 
   // Notes
   getNotes: () => request<Note[]>('/notes'),
