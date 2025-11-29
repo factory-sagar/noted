@@ -19,6 +19,8 @@
   } from 'lucide-svelte';
   import { addToast } from '$lib/stores';
   import { api, type CalendarConfig, type Tag as TagType } from '$lib/utils/api';
+  import ThemePicker from '$lib/components/ThemePicker.svelte';
+  import { Palette } from 'lucide-svelte';
 
   let darkMode = false;
   let autoSave = true;
@@ -242,6 +244,15 @@
           ></span>
         </button>
       </div>
+    </div>
+
+    <!-- Theme -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <Palette class="w-5 h-5" />
+        Theme
+      </h2>
+      <ThemePicker />
     </div>
 
     <!-- Notes Settings -->

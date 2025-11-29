@@ -5,20 +5,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Modern SaaS Palette
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#172554',
+          50: 'var(--color-primary-50)',
+          100: 'var(--color-primary-100)',
+          200: 'var(--color-primary-200)',
+          300: 'var(--color-primary-300)',
+          400: 'var(--color-primary-400)',
+          500: 'var(--color-primary-500)',
+          600: 'var(--color-primary-600)',
+          700: 'var(--color-primary-700)',
+          800: 'var(--color-primary-800)',
+          900: 'var(--color-primary-900)',
+          950: 'var(--color-primary-950)',
         },
+        // Retaining specific palettes if useful for one-off usage
         slate: {
           50: '#f8fafc',
           100: '#f1f5f9',
@@ -40,8 +40,9 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
+        serif: ['var(--font-serif)', 'serif'], // Added back for potential support
       },
       fontSize: {
         'display-xl': ['4.5rem', { lineHeight: '1', letterSpacing: '-0.02em' }],
@@ -56,11 +57,12 @@ export default {
         'inner-glow': 'inset 0 1px 0 0 rgba(255,255,255,0.05)',
       },
       borderRadius: {
-        'DEFAULT': '0.375rem', // 6px
-        'md': '0.375rem',
-        'lg': '0.5rem',    // 8px
-        'xl': '0.75rem',   // 12px
-        '2xl': '1rem',     // 16px
+        'DEFAULT': 'var(--radius)', 
+        'md': 'var(--radius)',
+        'lg': 'calc(var(--radius) + 2px)',
+        'xl': 'calc(var(--radius) + 4px)',
+        '2xl': 'calc(var(--radius) + 8px)',
+        'sm': 'calc(var(--radius) - 2px)',
       },
       backgroundImage: {
         // Removed grain
