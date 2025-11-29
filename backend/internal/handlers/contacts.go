@@ -411,6 +411,71 @@ func (h *Handler) ExtractContactsFromNote(internalParticipants, externalParticip
 	}
 }
 
+// GetContactNotes returns notes where this contact participated
+func (h *Handler) GetContactNotes(c *gin.Context) {
+	id := c.Param("id")
+
+	// First get the contact's email
+	var email string
+	err := h.db.QueryRow(`SELECT email FROM contacts WHERE id = ?`, id).Scan(&email)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contact not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Find notes where this email appears in participants
+	rows, err := h.db.Query(`
+		SELECT n.id, n.title, n.account_id, a.name, n.meeting_date, n.created_at
+		FROM notes n
+		LEFT JOIN accounts a ON n.account_id = a.id
+		WHERE n.deleted_at IS NULL
+		  AND (n.internal_participants LIKE ? OR n.external_participants LIKE ?)
+		ORDER BY COALESCE(n.meeting_date, n.created_at) DESC
+		LIMIT 50
+	`, "%"+email+"%", "%"+email+"%")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	type NoteRef struct {
+		ID          string     `json:"id"`
+		Title       string     `json:"title"`
+		AccountID   *string    `json:"account_id,omitempty"`
+		AccountName string     `json:"account_name,omitempty"`
+		MeetingDate *time.Time `json:"meeting_date,omitempty"`
+		CreatedAt   time.Time  `json:"created_at"`
+	}
+
+	notes := []NoteRef{}
+	for rows.Next() {
+		var note NoteRef
+		var accountID, accountName sql.NullString
+		var meetingDate sql.NullTime
+
+		err := rows.Scan(&note.ID, &note.Title, &accountID, &accountName, &meetingDate, &note.CreatedAt)
+		if err != nil {
+			continue
+		}
+
+		if accountID.Valid {
+			note.AccountID = &accountID.String
+			note.AccountName = accountName.String
+		}
+		if meetingDate.Valid {
+			note.MeetingDate = &meetingDate.Time
+		}
+
+		notes = append(notes, note)
+	}
+
+	c.JSON(http.StatusOK, notes)
+}
+
 // GetContactStats returns contact statistics
 func (h *Handler) GetContactStats(c *gin.Context) {
 	var stats struct {
