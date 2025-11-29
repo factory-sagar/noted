@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/factory-sagar/notes-droid/actions"><img src="https://img.shields.io/github/actions/workflow/status/factory-sagar/notes-droid/ci.yml?branch=main&style=flat-square" alt="Build Status"></a>
+  <a href="https://github.com/factory-sagar/notes-droid/actions"><img src="https://img.shields.io/github/actions/workflow/status/factory-sagar/notes-droid/test.yml?branch=main&style=flat-square" alt="Build Status"></a>
   <img src="https://img.shields.io/badge/Go-1.24+-00ADD8.svg?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/SvelteKit-2.x-FF3E00.svg?style=flat-square&logo=svelte" alt="SvelteKit">
   <img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License">
@@ -125,14 +125,27 @@ Built with performance and developer experience in mind.
     | **Frontend** | `http://localhost:5173` |
     | **Backend API** | `http://localhost:8080` |
 
-### 🐳 Docker
+### 📦 Native Mac App (Wails)
 
-Prefer containers? We've got you covered.
+For the best experience on macOS (including full Calendar integration), build the native app.
 
-```bash
-make docker
-# Access at http://localhost:3000
-```
+1.  **Install Wails CLI**
+    ```bash
+    go install github.com/wailsapp/wails/v2/cmd/wails@latest
+    ```
+
+2.  **Build & Install**
+    ```bash
+    make wails-build
+    make wails-install
+    ```
+    
+    This compiles the app and installs `Noted.app` to your `/Applications` folder.
+
+3.  **Run**
+    Launch **Noted** from Spotlight or your Applications folder.
+
+    > **Note**: The first launch may require you to approve "Calendar Access" in System Settings.
 
 ---
 
@@ -143,10 +156,10 @@ We strictly enforce code quality. All PRs must pass our pre-commit hooks.
 ### Common Commands
 
 ```bash
-make build          # Compile production binaries
-make setup-hooks    # Install git hooks (pre-commit)
+make dev            # Web development (fast refresh)
+make wails-dev      # Native app development (hot reload)
+make build          # Compile production binaries (web)
 make test           # Run all tests (Backend + Frontend)
-make clean          # Clean build artifacts
 ```
 
 ### 🛡️ Quality Gates
