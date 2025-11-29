@@ -162,19 +162,13 @@ make dev-frontend # Frontend only
 ## Screenshots
 
 <p align="center">
-  <i>Screenshots coming soon</i>
+  <img src="docs/screenshots/dashboard.png" width="80%" alt="Dashboard">
 </p>
 
-<!--
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" width="45%" alt="Dashboard">
   <img src="docs/screenshots/notes.png" width="45%" alt="Notes">
-</p>
-<p align="center">
-  <img src="docs/screenshots/kanban.png" width="45%" alt="Kanban">
   <img src="docs/screenshots/calendar.png" width="45%" alt="Calendar">
 </p>
--->
 
 ---
 
