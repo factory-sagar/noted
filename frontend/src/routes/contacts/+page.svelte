@@ -28,7 +28,7 @@
   let accounts: Account[] = [];
   let loading = true;
   let searchQuery = '';
-  let activeTab: 'suggestions' | 'all' | 'internal' = 'suggestions';
+  let activeTab: 'suggestions' | 'all' | 'external' | 'internal' | 'linked' = 'all';
   
   // Detail panel
   let selectedContact: Contact | null = null;
@@ -139,15 +139,19 @@
   }
 
   $: filteredContacts = contacts.filter(c => {
-    if (!searchQuery) {
-      if (activeTab === 'internal') return c.is_internal;
-      if (activeTab === 'all') return !c.is_internal;
-      return false;
+    // Search overrides tab filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return c.email.toLowerCase().includes(q) ||
+             c.name.toLowerCase().includes(q) ||
+             c.company.toLowerCase().includes(q);
     }
-    const q = searchQuery.toLowerCase();
-    return c.email.toLowerCase().includes(q) ||
-           c.name.toLowerCase().includes(q) ||
-           c.company.toLowerCase().includes(q);
+    // Tab filters
+    if (activeTab === 'all') return true;
+    if (activeTab === 'internal') return c.is_internal;
+    if (activeTab === 'external') return !c.is_internal;
+    if (activeTab === 'linked') return c.account_id != null;
+    return false;
   });
 
   $: unlinkedGroups = domainGroups.filter(g => !g.linked_account_id);
@@ -175,25 +179,37 @@
         <p class="page-subtitle">People from your meetings and calendar events</p>
       </div>
 
-      <!-- Stats -->
+      <!-- Stats - Clickable filters -->
       {#if stats}
-        <div class="grid grid-cols-4 gap-4 mb-6">
-          <div class="card p-4 text-center">
+        <div class="grid grid-cols-4 gap-3 mb-6">
+          <button 
+            class="card p-4 text-center transition-all hover:border-primary-500 {activeTab === 'all' ? 'border-primary-500 ring-1 ring-primary-500' : ''}"
+            on:click={() => activeTab = 'all'}
+          >
             <div class="text-2xl font-bold">{stats.total_contacts}</div>
             <div class="text-sm text-[var(--color-muted)]">Total</div>
-          </div>
-          <div class="card p-4 text-center">
+          </button>
+          <button 
+            class="card p-4 text-center transition-all hover:border-blue-500 {activeTab === 'internal' ? 'border-blue-500 ring-1 ring-blue-500' : ''}"
+            on:click={() => activeTab = 'internal'}
+          >
             <div class="text-2xl font-bold text-blue-500">{stats.internal_contacts}</div>
             <div class="text-sm text-[var(--color-muted)]">Internal</div>
-          </div>
-          <div class="card p-4 text-center">
+          </button>
+          <button 
+            class="card p-4 text-center transition-all hover:border-green-500 {activeTab === 'external' ? 'border-green-500 ring-1 ring-green-500' : ''}"
+            on:click={() => activeTab = 'external'}
+          >
             <div class="text-2xl font-bold text-green-500">{stats.external_contacts}</div>
             <div class="text-sm text-[var(--color-muted)]">External</div>
-          </div>
-          <div class="card p-4 text-center">
+          </button>
+          <button 
+            class="card p-4 text-center transition-all hover:border-purple-500 {activeTab === 'linked' ? 'border-purple-500 ring-1 ring-purple-500' : ''}"
+            on:click={() => activeTab = 'linked'}
+          >
             <div class="text-2xl font-bold text-purple-500">{stats.linked_contacts}</div>
             <div class="text-sm text-[var(--color-muted)]">Linked</div>
-          </div>
+          </button>
         </div>
       {/if}
 
@@ -208,33 +224,38 @@
         />
       </div>
 
-      <!-- Tabs -->
-      <div class="flex gap-1 mb-6 border-b border-[var(--color-border)]">
+      <!-- Suggestions Banner -->
+      {#if unlinkedGroups.length > 0 && activeTab !== 'suggestions'}
         <button
-          class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px {activeTab === 'suggestions' ? 'border-primary-500 text-primary-600' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'}"
+          class="w-full mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-left flex items-center justify-between hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
           on:click={() => activeTab = 'suggestions'}
         >
-          Suggestions {#if unlinkedGroups.length > 0}<span class="ml-1 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">{unlinkedGroups.length}</span>{/if}
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+              <Globe class="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <div class="font-medium text-amber-800 dark:text-amber-200">{unlinkedGroups.length} domain{unlinkedGroups.length !== 1 ? 's' : ''} need linking</div>
+              <div class="text-sm text-amber-600 dark:text-amber-400">Click to review and link to accounts</div>
+            </div>
+          </div>
+          <ChevronRight class="w-5 h-5 text-amber-500" />
         </button>
-        <button
-          class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px {activeTab === 'all' ? 'border-primary-500 text-primary-600' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'}"
-          on:click={() => activeTab = 'all'}
-        >
-          External
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px {activeTab === 'internal' ? 'border-primary-500 text-primary-600' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]'}"
-          on:click={() => activeTab = 'internal'}
-        >
-          Internal
-        </button>
-      </div>
+      {/if}
 
       {#if loading}
         <div class="flex justify-center py-12">
           <div class="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div>
         </div>
       {:else if activeTab === 'suggestions'}
+        <!-- Back button -->
+        <button
+          class="flex items-center gap-2 text-[var(--color-muted)] hover:text-[var(--color-text)] mb-4"
+          on:click={() => activeTab = 'all'}
+        >
+          <ChevronRight class="w-4 h-4 rotate-180" />
+          Back to all contacts
+        </button>
         <!-- Domain Groups with Suggestions -->
         {#if unlinkedGroups.length === 0}
           <div class="card p-8 text-center">
@@ -247,46 +268,46 @@
             {#each unlinkedGroups as group}
               <div class="card overflow-hidden">
                 <div class="p-4">
-                  <div class="flex items-center justify-between">
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                     <button 
-                      class="flex items-center gap-3 text-left"
+                      class="flex items-center gap-3 text-left flex-1 min-w-0"
                       on:click={() => toggleDomain(group.domain)}
                     >
                       {#if expandedDomains.has(group.domain)}
-                        <ChevronDown class="w-4 h-4 text-[var(--color-muted)]" />
+                        <ChevronDown class="w-4 h-4 text-[var(--color-muted)] shrink-0" />
                       {:else}
-                        <ChevronRight class="w-4 h-4 text-[var(--color-muted)]" />
+                        <ChevronRight class="w-4 h-4 text-[var(--color-muted)] shrink-0" />
                       {/if}
-                      <Globe class="w-5 h-5 text-[var(--color-muted)]" />
-                      <div>
-                        <div class="font-medium">{group.domain}</div>
+                      <Globe class="w-5 h-5 text-[var(--color-muted)] shrink-0" />
+                      <div class="min-w-0">
+                        <div class="font-medium truncate">{group.domain}</div>
                         <div class="text-sm text-[var(--color-muted)]">{group.contact_count} contact{group.contact_count !== 1 ? 's' : ''}</div>
                       </div>
                     </button>
                     
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 shrink-0 flex-wrap">
                       {#if group.suggested_account}
                         <button
-                          class="btn-primary btn-sm flex items-center gap-2"
+                          class="btn-primary btn-sm flex items-center gap-2 whitespace-nowrap"
                           on:click={() => linkDomainToAccount(group.domain, group.suggested_account.id)}
                         >
                           <Link class="w-3 h-3" />
-                          Link to {group.suggested_account.name}
+                          <span class="truncate max-w-[120px]">Link to {group.suggested_account.name}</span>
                         </button>
                       {:else}
                         <button
-                          class="btn-secondary btn-sm"
+                          class="btn-secondary btn-sm whitespace-nowrap"
                           on:click={() => linkingDomain = group}
                         >
                           Link to Account
                         </button>
                       {/if}
                       <button
-                        class="btn-secondary btn-sm flex items-center gap-2"
+                        class="btn-secondary btn-sm flex items-center gap-2 whitespace-nowrap"
                         on:click={() => createAccountFromDomain(group.domain)}
                       >
                         <Plus class="w-3 h-3" />
-                        Create Account
+                        Create
                       </button>
                     </div>
                   </div>
@@ -318,7 +339,14 @@
           </div>
         {/if}
       {:else}
-        <!-- Contact List -->
+        <!-- Contact List Header -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-sm text-[var(--color-muted)]">
+            {filteredContacts.length} contact{filteredContacts.length !== 1 ? 's' : ''}
+            {#if searchQuery}matching "{searchQuery}"{/if}
+          </div>
+        </div>
+        
         {#if filteredContacts.length === 0}
           <div class="card p-8 text-center">
             <Users class="w-12 h-12 mx-auto mb-4 text-[var(--color-muted)]" />
