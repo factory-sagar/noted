@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://github.com/factory-sagar/noted">
-    <img src="https://raw.githubusercontent.com/factory-sagar/noted/main/frontend/src/lib/assets/logo-notion-style.svg" width="120" height="120" alt="Noted Logo">
+  <a href="https://github.com/factory-sagar/notes-droid">
+    <img src="https://raw.githubusercontent.com/factory-sagar/notes-droid/main/frontend/src/lib/assets/logo-notion-style.svg" width="120" height="120" alt="Noted Logo">
   </a>
 </p>
 
@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/factory-sagar/noted/actions"><img src="https://img.shields.io/github/actions/workflow/status/factory-sagar/noted/ci.yml?branch=main&style=flat-square" alt="Build Status"></a>
+  <a href="https://github.com/factory-sagar/notes-droid/actions"><img src="https://img.shields.io/github/actions/workflow/status/factory-sagar/notes-droid/ci.yml?branch=main&style=flat-square" alt="Build Status"></a>
   <img src="https://img.shields.io/badge/Go-1.24+-00ADD8.svg?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/SvelteKit-2.x-FF3E00.svg?style=flat-square&logo=svelte" alt="SvelteKit">
   <img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License">
@@ -92,8 +92,8 @@ Built with performance and developer experience in mind.
 
 1.  **Clone & Setup**
     ```bash
-    git clone https://github.com/factory-sagar/noted.git
-    cd noted
+    git clone https://github.com/factory-sagar/notes-droid.git
+    cd notes-droid
     make setup
     ```
 
