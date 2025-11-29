@@ -38,6 +38,8 @@
   let moveTargetAccountId = '';
   let mergeSourceAccountId = '';
   let mergeTargetAccountId = '';
+  let deletingNoteId: string | null = null;
+  let deletingAccountId: string | null = null;
   
   type ViewMode = 'folders' | 'cards' | 'organized';
   let viewMode: ViewMode = 'folders';
@@ -124,29 +126,30 @@
     }
   }
 
-  async function deleteAccount(accountId: string) {
-    if (!confirm('Delete this account and all its notes?')) return;
+  async function confirmDeleteAccount() {
+    if (!deletingAccountId) return;
     try {
-      await api.deleteAccount(accountId);
-      accounts = accounts.filter(a => a.id !== accountId);
-      notes = notes.filter(n => n.account_id !== accountId);
+      await api.deleteAccount(deletingAccountId);
+      accounts = accounts.filter(a => a.id !== deletingAccountId);
+      notes = notes.filter(n => n.account_id !== deletingAccountId);
       addToast('success', 'Account deleted');
+      deletingAccountId = null;
     } catch (e) {
       addToast('error', 'Failed to delete account');
     }
   }
 
-  async function deleteNote(noteId: string) {
-    if (!confirm('Move this note to trash?')) return;
-    
+  async function confirmDeleteNote() {
+    if (!deletingNoteId) return;
     try {
-      await api.deleteNote(noteId);
-      const deletedNote = notes.find(n => n.id === noteId);
-      notes = notes.filter(n => n.id !== noteId);
+      await api.deleteNote(deletingNoteId);
+      const deletedNote = notes.find(n => n.id === deletingNoteId);
+      notes = notes.filter(n => n.id !== deletingNoteId);
       if (deletedNote) {
         deletedNotes = [deletedNote, ...deletedNotes];
       }
       addToast('success', 'Moved to trash');
+      deletingNoteId = null;
     } catch (e) {
       addToast('error', 'Failed to delete note');
     }
@@ -430,7 +433,7 @@
               {/if}
               <button 
                 class="btn-icon btn-icon-danger opacity-0 group-hover:opacity-100"
-                on:click|stopPropagation={() => deleteAccount(account.id)}
+                on:click|stopPropagation={() => deletingAccountId = account.id}
                 aria-label="Delete account"
               >
                 <Trash2 class="w-4 h-4" strokeWidth={1.5} />
@@ -464,7 +467,7 @@
                     <button 
                       class="btn-icon-sm btn-icon-danger opacity-0 group-hover/note:opacity-100"
                       title="Delete"
-                      on:click|preventDefault|stopPropagation={() => deleteNote(note.id)}
+                      on:click|preventDefault|stopPropagation={() => deletingNoteId = note.id}
                     >
                       <Trash2 class="w-4 h-4" strokeWidth={1.5} />
                     </button>
@@ -511,7 +514,7 @@
               <button 
                 class="btn-icon-sm btn-icon-danger opacity-0 group-hover:opacity-100"
                 title="Delete"
-                on:click|preventDefault|stopPropagation={() => deleteNote(note.id)}
+                on:click|preventDefault|stopPropagation={() => deletingNoteId = note.id}
               >
                 <Trash2 class="w-4 h-4" strokeWidth={1.5} />
               </button>
@@ -580,7 +583,7 @@
                       <button 
                         class="btn-icon-sm btn-icon-danger"
                         title="Delete"
-                        on:click|preventDefault|stopPropagation={() => deleteNote(note.id)}
+                        on:click|preventDefault|stopPropagation={() => deletingNoteId = note.id}
                       >
                         <Trash2 class="w-3.5 h-3.5" strokeWidth={1.5} />
                       </button>
@@ -796,6 +799,44 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Note Confirmation Modal -->
+{#if deletingNoteId}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => deletingNoteId = null}
+      aria-label="Close"
+    ></button>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Note?</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">This note will be moved to trash.</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-secondary" on:click={() => deletingNoteId = null}>Cancel</button>
+        <button class="btn-danger" on:click={confirmDeleteNote}>Delete</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Account Confirmation Modal -->
+{#if deletingAccountId}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => deletingAccountId = null}
+      aria-label="Close"
+    ></button>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Account?</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">This will delete the account and all its notes.</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-secondary" on:click={() => deletingAccountId = null}>Cancel</button>
+        <button class="btn-danger" on:click={confirmDeleteAccount}>Delete</button>
+      </div>
     </div>
   </div>
 {/if}

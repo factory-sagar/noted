@@ -48,6 +48,8 @@
   let editingTodo: Todo | null = null;
   let editTitle = '';
   let editDescription = '';
+  let deletingTodo: { id: string; columnId: string } | null = null;
+  let permanentDeletingTodoId: string | null = null;
 
   const flipDurationMs = 200;
 
@@ -151,11 +153,14 @@
     }
   }
 
-  async function deleteTodo(todoId: string, columnId: string) {
+  async function confirmDeleteTodo() {
+    if (!deletingTodo) return;
+    const { id: todoId, columnId } = deletingTodo;
+    
     try {
-      let deletedTodo: Todo | undefined;
+      await api.deleteTodo(todoId);
       
-      // Optimistic update
+      let deletedTodo: Todo | undefined;
       if (columnId === 'completed') {
         deletedTodo = completedItems.find(t => t.id === todoId);
         completedItems = completedItems.filter(t => t.id !== todoId);
@@ -171,11 +176,9 @@
         deletedItems = [deletedTodo, ...deletedItems];
       }
       addToast('success', 'Moved to trash');
-      
-      await api.deleteTodo(todoId);
+      deletingTodo = null;
     } catch (e) {
       addToast('error', 'Failed to delete todo');
-      await loadData(); // Reload to revert
     }
   }
 
@@ -242,12 +245,13 @@
     }
   }
 
-  async function permanentDelete(todoId: string) {
-    if (!confirm('Permanently delete this todo?')) return;
+  async function confirmPermanentDelete() {
+    if (!permanentDeletingTodoId) return;
     try {
-      await api.permanentDeleteTodo(todoId);
-      deletedItems = deletedItems.filter(t => t.id !== todoId);
+      await api.permanentDeleteTodo(permanentDeletingTodoId);
+      deletedItems = deletedItems.filter(t => t.id !== permanentDeletingTodoId);
       addToast('success', 'Permanently deleted');
+      permanentDeletingTodoId = null;
     } catch (e) {
       addToast('error', 'Failed to delete');
     }
@@ -464,7 +468,7 @@
                     <button 
                       class="btn-icon-sm btn-icon-danger"
                       title="Delete"
-                      on:click|stopPropagation={() => deleteTodo(todo.id, column.id)}
+                      on:click|stopPropagation={() => deletingTodo = { id: todo.id, columnId: column.id }}
                     >
                       <Trash2 class="w-4 h-4" strokeWidth={1.5} />
                     </button>
@@ -577,7 +581,7 @@
                 <button 
                   class="btn-icon-sm btn-icon-danger"
                   title="Delete"
-                  on:click|stopPropagation={() => deleteTodo(todo.id, 'completed')}
+                  on:click|stopPropagation={() => deletingTodo = { id: todo.id, columnId: 'completed' }}
                 >
                   <Trash2 class="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
@@ -631,7 +635,7 @@
                       <button 
                         class="btn-icon-sm btn-icon-danger"
                         title="Delete permanently"
-                        on:click={() => permanentDelete(todo.id)}
+                        on:click={() => permanentDeletingTodoId = todo.id}
                       >
                         <Trash2 class="w-3.5 h-3.5" strokeWidth={1.5} />
                       </button>
@@ -775,6 +779,44 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Todo Confirmation Modal -->
+{#if deletingTodo}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => deletingTodo = null}
+      aria-label="Close"
+    ></button>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Todo?</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">This todo will be moved to trash.</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-secondary" on:click={() => deletingTodo = null}>Cancel</button>
+        <button class="btn-danger" on:click={confirmDeleteTodo}>Delete</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Permanent Delete Todo Confirmation Modal -->
+{#if permanentDeletingTodoId}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => permanentDeletingTodoId = null}
+      aria-label="Close"
+    ></button>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Permanently Delete?</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">This cannot be undone.</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-secondary" on:click={() => permanentDeletingTodoId = null}>Cancel</button>
+        <button class="btn-danger" on:click={confirmPermanentDelete}>Delete Forever</button>
+      </div>
     </div>
   </div>
 {/if}

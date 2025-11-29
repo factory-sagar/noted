@@ -59,6 +59,7 @@
   let todos: Todo[] = [];
   let showNewTodoModal = false;
   let newTodoTitle = '';
+  let showDeleteConfirm = false;
   let newTodoDescription = '';
 
   $: noteId = $page.params.id as string;
@@ -334,12 +335,11 @@
     }
   }
 
-  async function deleteNote() {
-    if (!confirm('Move this note to trash?')) return;
-    
+  async function confirmDeleteNote() {
     try {
       await api.deleteNote(noteId);
       addToast('success', 'Note moved to trash');
+      showDeleteConfirm = false;
       goto('/notes');
     } catch (e) {
       addToast('error', 'Failed to delete note');
@@ -485,7 +485,7 @@
         <button 
           class="btn-icon btn-icon-danger"
           title="Delete note"
-          on:click={deleteNote}
+          on:click={() => showDeleteConfirm = true}
         >
           <Trash2 class="w-5 h-5" />
         </button>
@@ -834,6 +834,25 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Note Confirmation Modal -->
+{#if showDeleteConfirm}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => showDeleteConfirm = false}
+      aria-label="Close"
+    ></button>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Note?</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">This note will be moved to trash.</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-secondary" on:click={() => showDeleteConfirm = false}>Cancel</button>
+        <button class="btn-danger" on:click={confirmDeleteNote}>Delete</button>
+      </div>
     </div>
   </div>
 {/if}

@@ -32,6 +32,8 @@
   let editingAccount: Account | null = null;
   let newAccountName = '';
   let newAccountOwner = '';
+  let deletingAccountId: string | null = null;
+  let permanentDeletingAccountId: string | null = null;
 
   onMount(async () => {
     await loadData();
@@ -120,33 +122,29 @@
     }
   }
 
-  async function deleteAccount(accountId: string) {
-    const stats = getAccountStats(accountId);
-    if (!confirm(`Delete this account and ${stats.noteCount} notes?`)) return;
+  async function confirmDeleteAccount() {
+    if (!deletingAccountId) return;
     
     try {
-      const deletedAccount = accounts.find(a => a.id === accountId);
+      await api.deleteAccount(deletingAccountId);
       
-      // Optimistic update - IMMEDIATE
-      accounts = accounts.filter(a => a.id !== accountId);
-      notes = notes.filter(n => n.account_id !== accountId);
-      todos = todos.filter(t => t.account_id !== accountId);
+      const deletedAccount = accounts.find(a => a.id === deletingAccountId);
+      accounts = accounts.filter(a => a.id !== deletingAccountId);
+      notes = notes.filter(n => n.account_id !== deletingAccountId);
+      todos = todos.filter(t => t.account_id !== deletingAccountId);
       
       if (deletedAccount) {
         deletedAccounts = [deletedAccount, ...deletedAccounts];
       }
       
-      if (selectedAccountId === accountId) {
+      if (selectedAccountId === deletingAccountId) {
         selectedAccountId = null;
       }
       
       addToast('success', 'Account deleted');
-      
-      // API call in background
-      await api.deleteAccount(accountId);
+      deletingAccountId = null;
     } catch (e) {
       addToast('error', 'Failed to delete account');
-      await loadData(); // Revert on error
     }
   }
 
@@ -167,17 +165,15 @@
     }
   }
 
-  async function permanentDeleteAccount(accountId: string) {
-    if (!confirm('Permanently delete this account? This cannot be undone.')) return;
+  async function confirmPermanentDeleteAccount() {
+    if (!permanentDeletingAccountId) return;
     try {
-      // Optimistic update
-      deletedAccounts = deletedAccounts.filter(a => a.id !== accountId);
+      await api.permanentDeleteAccount(permanentDeletingAccountId);
+      deletedAccounts = deletedAccounts.filter(a => a.id !== permanentDeletingAccountId);
       addToast('success', 'Permanently deleted');
-      
-      await api.permanentDeleteAccount(accountId);
+      permanentDeletingAccountId = null;
     } catch (e) {
       addToast('error', 'Failed to delete account');
-      await loadData(); // Revert
     }
   }
 
@@ -328,7 +324,7 @@
                   </button>
                   <button 
                     class="btn-icon btn-icon-danger"
-                    on:click={() => deleteAccount(selectedAccount.id)}
+                    on:click={() => deletingAccountId = selectedAccount.id}
                   >
                     <Trash2 class="w-4 h-4" strokeWidth={1.5} />
                   </button>
@@ -504,7 +500,7 @@
                     <button 
                       class="btn-icon-sm btn-icon-danger"
                       title="Delete permanently"
-                      on:click={() => permanentDeleteAccount(account.id)}
+                      on:click={() => permanentDeletingAccountId = account.id}
                     >
                       <Trash2 class="w-3.5 h-3.5" strokeWidth={1.5} />
                     </button>
@@ -597,6 +593,44 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Account Confirmation Modal -->
+{#if deletingAccountId}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => deletingAccountId = null}
+      aria-label="Close"
+    ></button>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Account?</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">This will delete the account and all its notes.</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-secondary" on:click={() => deletingAccountId = null}>Cancel</button>
+        <button class="btn-danger" on:click={confirmDeleteAccount}>Delete</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Permanent Delete Account Confirmation Modal -->
+{#if permanentDeletingAccountId}
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button 
+      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      on:click={() => permanentDeletingAccountId = null}
+      aria-label="Close"
+    ></button>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Permanently Delete?</h3>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">This cannot be undone.</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-secondary" on:click={() => permanentDeletingAccountId = null}>Cancel</button>
+        <button class="btn-danger" on:click={confirmPermanentDeleteAccount}>Delete Forever</button>
+      </div>
     </div>
   </div>
 {/if}
