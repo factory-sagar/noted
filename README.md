@@ -1,259 +1,297 @@
-# Noted
+<p align="center">
+  <img src="https://raw.githubusercontent.com/factory-sagar/noted/main/frontend/src/lib/assets/favicon.svg" width="80" height="80" alt="Noted Logo">
+</p>
 
-A local-first notes application for Solutions Engineers to organize meeting notes, track follow-ups, and manage customer accounts.
+<h1 align="center">Noted</h1>
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+<p align="center">
+  <strong>A beautiful, local-first notes app for Solutions Engineers</strong>
+</p>
+
+<p align="center">
+  Organize meeting notes • Track follow-ups • Manage customer accounts
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#screenshots">Screenshots</a> •
+  <a href="#tech-stack">Tech Stack</a> •
+  <a href="#api">API</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+  <img src="https://img.shields.io/badge/platform-macOS-lightgrey.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/Go-1.24+-00ADD8.svg?logo=go" alt="Go">
+  <img src="https://img.shields.io/badge/SvelteKit-2.x-FF3E00.svg?logo=svelte" alt="SvelteKit">
+  <img src="https://img.shields.io/badge/SQLite-FTS4-003B57.svg?logo=sqlite" alt="SQLite">
+</p>
+
+---
+
+## Why Noted?
+
+Built specifically for **Solutions Engineers** who juggle dozens of customer conversations. Stop losing context between meetings. Keep everything organized, searchable, and actionable.
+
+```
+📝 Meeting notes with rich text editing
+📊 Kanban board for follow-ups  
+📅 Calendar integration
+🔍 Instant full-text search
+🎨 Beautiful themes
+```
+
+---
 
 ## Features
 
-- **Notes Management**
-  - Rich text editor (TipTap) with code blocks and formatting
-  - Organize notes by customer account
-  - Initial call and follow-up templates (customizable)
-  - Three view modes: Folders, Cards, Organized
-  - Pin important notes, archive old ones
-  - Soft delete with trash/restore functionality
-  - File attachments support
-  - Export to PDF (full or minimal)
-  - Drag-to-reorder notes within accounts
+<table>
+<tr>
+<td width="50%">
 
-- **Kanban Todo Board**
-  - 4-column workflow: Not Started, In Progress, Stuck, Completed
-  - Drag-and-drop cards between columns
-  - Link todos to multiple notes
-  - Priority levels (High/Medium/Low) with colored badges
-  - High priority items auto-sort to top
-  - Account tagging on todo cards
-  - Pin important todos
-  - Trash/restore for deleted todos
-  - Filter by account, priority, linked notes
-  - Bulk operations (select, move, delete)
+### 📝 Smart Notes
+- Rich text editor with code blocks
+- Organize by customer account
+- Pin, archive, and tag notes
+- File attachments
+- Export to PDF
+- Drag-to-reorder
 
-- **Dashboard & Analytics**
-  - Overview of notes, accounts, and todos
-  - Clickable stat cards for quick navigation
-  - Incomplete fields tracker
-  - Notes by account breakdown
-  - Todo status breakdown and completion rate
+</td>
+<td width="50%">
 
-- **Quick Capture**
-  - Fast note or todo creation from anywhere
-  - Keyboard shortcut accessible
+### ✅ Kanban Todos
+- 4-column workflow board
+- Drag-and-drop cards
+- Link todos to notes
+- Priority badges (H/M/L)
+- Filter & bulk operations
 
-- **Google Calendar Integration**
-  - OAuth-based Google Calendar sync
-  - View calendar events
-  - Create notes from calendar events
-  - Auto-populate participants by email domain
+</td>
+</tr>
+<tr>
+<td width="50%">
 
-- **Activities Timeline**
-  - Track activity history per account
-  - Automatic logging of key actions
+### 📅 Calendar Sync
+- Apple Calendar integration
+- Week, Month, Agenda views
+- Create notes from events
+- Auto-populate participants
 
-- **Modern UI**
-  - Light and dark mode
-  - Smooth animations
-  - Minimalist Asana/Factory.ai inspired design
-  - Global search (Cmd+K) with fuzzy matching
-  - Responsive sidebar
+</td>
+<td width="50%">
 
-## Quick Start
+### 👥 Contact Management
+- Auto-extract from meetings
+- Internal vs external tracking
+- Domain-based suggestions
+- Meeting history per contact
 
-### Using Docker (Recommended)
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 📊 Dashboard
+- Overview stats at a glance
+- Incomplete fields tracker
+- Activity timeline
+- Quick navigation
+
+</td>
+<td width="50%">
+
+### 🎨 Themes
+- Modern SaaS (default)
+- Liquid Glass
+- Retro / Nordic / Corporate
+- Dark mode support
+
+</td>
+</tr>
+</table>
+
+---
+
+## Installation
+
+### 🖥️ Native macOS App (Recommended)
+
+Download the latest release or build from source:
 
 ```bash
-# Clone the repository
-git clone https://github.com/factory-sagar/notes-droid.git
-cd notes-droid
+# Clone and build
+git clone https://github.com/factory-sagar/noted.git
+cd noted
+make wails-build
 
-# Start with Docker Compose
+# Install
+cp -r backend/cmd/wails/build/bin/Noted.app /Applications/
+```
+
+### 🐳 Docker
+
+```bash
 docker-compose up
-
-# App available at http://localhost:3000
+# Open http://localhost:3000
 ```
 
-### Manual Setup
+### 🛠️ Development
 
-#### Prerequisites
-- Go 1.24+
-- Node.js 20+
-- SQLite (usually pre-installed on macOS/Linux)
+**Prerequisites:** Go 1.24+, Node.js 20+
 
-#### Backend
 ```bash
-cd backend
-go mod download
-go run ./cmd/server/
-# Server runs on http://localhost:8080
+# Backend (port 8080)
+cd backend && go run ./cmd/server/
+
+# Frontend (port 5173)  
+cd frontend && npm install && npm run dev
 ```
 
-#### Frontend
+Or use Make:
 ```bash
-cd frontend
-npm install
-npm run dev
-# App runs on http://localhost:5173
+make dev          # Run both
+make dev-backend  # Backend only
+make dev-frontend # Frontend only
 ```
 
-### Using Make
-```bash
-# Development (runs both)
-make dev
+---
 
-# Or separately
-make dev-backend
-make dev-frontend
+## Screenshots
 
-# Build for production
-make build
+<p align="center">
+  <i>Screenshots coming soon</i>
+</p>
 
-# Docker
-make docker
-```
+<!--
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="45%" alt="Dashboard">
+  <img src="docs/screenshots/notes.png" width="45%" alt="Notes">
+</p>
+<p align="center">
+  <img src="docs/screenshots/kanban.png" width="45%" alt="Kanban">
+  <img src="docs/screenshots/calendar.png" width="45%" alt="Calendar">
+</p>
+-->
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | SvelteKit 2.x, Tailwind CSS, TipTap Editor |
+| **Backend** | Go 1.24+, Gin Framework |
+| **Database** | SQLite with FTS4 (full-text search) |
+| **Native App** | Wails v2 (macOS) |
+| **Calendar** | Apple EventKit |
+
+---
 
 ## Project Structure
 
 ```
-notes-droid/
-├── backend/                 # Go API server
-│   ├── cmd/server/          # Entry point
+noted/
+├── backend/
+│   ├── cmd/
+│   │   ├── server/          # HTTP server
+│   │   └── wails/           # Native app
 │   └── internal/
-│       ├── handlers/        # HTTP handlers
-│       ├── models/          # Data models
-│       └── db/              # SQLite + FTS4
-├── frontend/                # SvelteKit app
+│       ├── handlers/        # API handlers
+│       ├── calendar/        # EventKit bridge
+│       └── db/              # SQLite + migrations
+├── frontend/
 │   └── src/
-│       ├── routes/          # Pages (dashboard, notes, todos, accounts, calendar, settings)
-│       └── lib/
-│           ├── components/  # UI components
-│           ├── stores/      # State management
-│           └── utils/       # API client
-├── .githooks/               # Git hooks (pre-commit, commit-msg, post-commit)
-├── docs/                    # Documentation
-├── data/                    # SQLite database + uploads (gitignored)
-├── docker-compose.yml
-└── Makefile
+│       ├── routes/          # Pages
+│       ├── lib/components/  # UI components
+│       └── lib/stores/      # State management
+└── docs/                    # API documentation
 ```
 
-## API Endpoints
+---
 
-### Core Resources
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/accounts` | List all accounts |
-| POST | `/api/accounts` | Create account |
-| GET | `/api/accounts/:id` | Get account |
-| PUT | `/api/accounts/:id` | Update account |
-| DELETE | `/api/accounts/:id` | Delete account |
-| GET | `/api/notes` | List all notes |
-| POST | `/api/notes` | Create note |
-| GET | `/api/notes/:id` | Get note with todos and tags |
-| PUT | `/api/notes/:id` | Update note |
-| DELETE | `/api/notes/:id` | Soft delete note |
-| GET | `/api/todos` | List todos (optional `?status=` filter) |
-| POST | `/api/todos` | Create todo |
-| GET | `/api/todos/:id` | Get todo |
-| PUT | `/api/todos/:id` | Update todo |
-| DELETE | `/api/todos/:id` | Soft delete todo |
+## API
 
-### Trash/Restore
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/notes/deleted` | List deleted notes |
-| POST | `/api/notes/:id/restore` | Restore deleted note |
-| DELETE | `/api/notes/:id/permanent` | Permanently delete note |
-| GET | `/api/todos/deleted` | List deleted todos |
-| POST | `/api/todos/:id/restore` | Restore deleted todo |
-| DELETE | `/api/todos/:id/permanent` | Permanently delete todo |
+Full REST API with 70+ endpoints. See [docs/API.md](docs/API.md) for complete documentation.
 
-### Pin/Archive
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/notes/:id/pin` | Toggle note pin status |
-| POST | `/api/notes/:id/archive` | Toggle note archive status |
-| POST | `/api/todos/:id/pin` | Toggle todo pin status |
-| GET | `/api/notes/archived` | List archived notes |
+<details>
+<summary><strong>Quick Reference</strong></summary>
 
-### Tags & Linking
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tags` | List all tags |
-| POST | `/api/tags` | Create tag |
-| PUT | `/api/tags/:id` | Update tag |
-| DELETE | `/api/tags/:id` | Delete tag |
-| POST | `/api/notes/:id/tags/:tagId` | Add tag to note |
-| DELETE | `/api/notes/:id/tags/:tagId` | Remove tag from note |
-| POST | `/api/todos/:id/notes/:noteId` | Link todo to note |
-| DELETE | `/api/todos/:id/notes/:noteId` | Unlink todo from note |
+| Resource | Endpoints |
+|----------|-----------|
+| Accounts | `GET/POST/PUT/DELETE /api/accounts` |
+| Notes | `GET/POST/PUT/DELETE /api/notes` |
+| Todos | `GET/POST/PUT/DELETE /api/todos` |
+| Tags | `GET/POST/PUT/DELETE /api/tags` |
+| Contacts | `GET/POST/PUT/DELETE /api/contacts` |
+| Calendar | `GET /api/calendar/events` |
+| Search | `GET /api/search?q=term` |
+| Analytics | `GET /api/analytics` |
+| Export | `GET /api/export` |
 
-### Activities & Attachments
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/accounts/:id/activities` | Get account activity timeline |
-| POST | `/api/activities` | Create activity |
-| GET | `/api/notes/:id/attachments` | List note attachments |
-| POST | `/api/notes/:id/attachments` | Upload attachment |
-| DELETE | `/api/notes/:id/attachments/:attachmentId` | Delete attachment |
+</details>
 
-### Search, Analytics & Utilities
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/search?q=term` | Full-text search (fuzzy, FTS4) |
-| GET | `/api/analytics` | Dashboard statistics |
-| GET | `/api/analytics/incomplete` | Notes with missing fields |
-| GET | `/api/notes/:id/export` | Export note for PDF |
-| POST | `/api/quick-capture` | Quick create note or todo |
-| POST | `/api/accounts/:id/notes/reorder` | Reorder notes in account |
+---
 
-### Calendar (Google OAuth)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/calendar/auth` | Get OAuth URL |
-| GET | `/api/calendar/callback` | OAuth callback |
-| GET | `/api/calendar/config` | Get connection status |
-| DELETE | `/api/calendar/disconnect` | Disconnect calendar |
-| GET | `/api/calendar/events` | List calendar events |
-| GET | `/api/calendar/events/:eventId` | Get single event |
-| POST | `/api/calendar/parse-participants` | Parse attendees by domain |
+## Configuration
 
-## Environment Variables
-
-### Backend
 | Variable | Default | Description |
 |----------|---------|-------------|
-| PORT | 8080 | Server port |
-| GOOGLE_CLIENT_ID | - | Google OAuth client ID (for calendar) |
-| GOOGLE_CLIENT_SECRET | - | Google OAuth client secret |
+| `PORT` | 8080 | Server port |
+| `INTERNAL_DOMAIN` | example.com | Your company's email domain |
 
-### Frontend
-| Variable | Default | Description |
-|----------|---------|-------------|
-| PUBLIC_API_URL | http://localhost:8080 | Backend API URL |
+```bash
+# Example: Set your company domain for contact classification
+export INTERNAL_DOMAIN=mycompany.com
+```
 
-## Tech Stack
+---
 
-- **Frontend**: SvelteKit 2.x, Tailwind CSS 3.x, TipTap (rich text), svelte-dnd-action
-- **Backend**: Go 1.24+, Gin framework, SQLite with FTS4
-- **Containerization**: Docker, Docker Compose
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `⌘ K` | Global search |
+| `⌘ ⇧ C` | Quick capture |
+| `⌘ S` | Save note |
+
+---
 
 ## Roadmap
 
-- [x] Google Calendar OAuth integration
-- [x] Auto-populate participants from calendar
-- [x] PDF export with proper formatting
-- [x] Full-text search with fuzzy matching
-- [x] Note templates customization
-- [x] Trash/recycle bin with restore
-- [x] Pin and archive functionality
-- [x] File attachments
-- [x] Quick capture
-- [x] Activity timeline
+- [x] Apple Calendar integration
+- [x] Contact management
+- [x] Multiple themes
+- [x] Data export/import
 - [ ] Multi-user support
-- [ ] Mobile responsive improvements
-- [ ] Unit and integration tests
+- [ ] iOS/Android companion app
+- [ ] AI-powered note summaries
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+```bash
+# Setup hooks
+make setup-hooks
+
+# Run checks before committing
+npm run check        # Frontend
+go vet ./...         # Backend
+```
+
+---
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
 
+---
 
+<p align="center">
+  <sub>Built with ☕ for Solutions Engineers everywhere</sub>
+</p>
