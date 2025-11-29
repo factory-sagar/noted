@@ -15,21 +15,27 @@
     RefreshCw,
     List,
     Grid3X3,
-    X
+    X,
+    Video,
+    MapPin
   } from 'lucide-svelte';
-  import { api, type Note, type CalendarEvent, type CalendarConfig } from '$lib/utils/api';
+  import { api, type Note, type CalendarEvent } from '$lib/utils/api';
   import { addToast } from '$lib/stores';
+  import { 
+    calendarStore, 
+    calendarEvents, 
+    calendarLoading, 
+    calendarConnected,
+    calendarConfig,
+    currentMonth 
+  } from '$lib/stores/calendar';
 
-  type ViewMode = 'month' | 'agenda';
+  type ViewMode = 'month' | 'week' | 'agenda';
 
   let viewMode: ViewMode = 'month';
-  let currentDate = new Date();
   let notes: Note[] = [];
-  let calendarEvents: CalendarEvent[] = [];
-  let loading = true;
-  let loadingEvents = false;
+  let notesLoading = true;
   let refreshing = false;
-  let calendarConfig: CalendarConfig = { connected: false };
   
   // Modal states
   let showEventModal = false;
@@ -39,65 +45,38 @@
   let selectedDay: Date | null = null;
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDaysFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 
                   'July', 'August', 'September', 'October', 'November', 'December'];
 
   onMount(async () => {
+    // Check for OAuth callback
     if ($page.url.searchParams.get('calendar') === 'connected') {
-      addToast('success', 'Google Calendar connected!');
+      addToast('success', 'Calendar connected!');
       goto('/calendar', { replaceState: true });
     }
     
-    await Promise.all([
-      loadCalendarConfig(),
-      loadNotes()
-    ]);
-  });
-
-  async function loadCalendarConfig() {
+    // Initialize calendar store
+    await calendarStore.init();
+    
+    // Load notes
     try {
-      calendarConfig = await api.getCalendarConfig();
-      if (calendarConfig.connected) {
-        await loadCalendarEvents();
-      }
-    } catch (e) {
-      console.error('Failed to load calendar config:', e);
-    }
-  }
-
-  async function loadNotes() {
-    try {
-      loading = true;
       notes = await api.getNotes();
     } catch (e) {
-      addToast('error', 'Failed to load notes');
+      console.error('Failed to load notes:', e);
     } finally {
-      loading = false;
+      notesLoading = false;
     }
-  }
-
-  async function loadCalendarEvents() {
-    if (!calendarConfig.connected) return;
-    
-    try {
-      loadingEvents = true;
-      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
-      
-      calendarEvents = await api.getCalendarEvents(
-        start.toISOString(),
-        end.toISOString()
-      );
-    } catch (e) {
-      console.error('Failed to load calendar events:', e);
-    } finally {
-      loadingEvents = false;
-    }
-  }
+  });
 
   async function refreshCalendar() {
     refreshing = true;
-    await Promise.all([loadCalendarEvents(), loadNotes()]);
+    await calendarStore.refresh();
+    try {
+      notes = await api.getNotes();
+    } catch (e) {
+      console.error('Failed to refresh notes:', e);
+    }
     refreshing = false;
     addToast('success', 'Calendar refreshed');
   }
@@ -108,7 +87,7 @@
       window.location.href = url;
     } catch (e: any) {
       if (e.message.includes('not configured')) {
-        addToast('error', 'Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.');
+        addToast('error', 'Google OAuth not configured. Using Apple Calendar in native app.');
       } else {
         addToast('error', 'Failed to connect calendar');
       }
@@ -116,14 +95,8 @@
   }
 
   async function disconnectCalendar() {
-    try {
-      await api.disconnectCalendar();
-      calendarConfig = { connected: false };
-      calendarEvents = [];
-      addToast('success', 'Calendar disconnected');
-    } catch (e) {
-      addToast('error', 'Failed to disconnect calendar');
-    }
+    await calendarStore.disconnect();
+    addToast('success', 'Calendar disconnected');
   }
 
   function getDaysInMonth(date: Date): (Date | null)[] {
@@ -136,14 +109,34 @@
 
     const days: (Date | null)[] = [];
     
+    // Add empty cells for days before the first
     for (let i = 0; i < startingDay; i++) {
       days.push(null);
     }
     
+    // Add all days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(new Date(year, month, i));
     }
 
+    // Add empty cells to complete the last row
+    const remaining = 7 - (days.length % 7);
+    if (remaining < 7) {
+      for (let i = 0; i < remaining; i++) {
+        days.push(null);
+      }
+    }
+
+    return days;
+  }
+
+  function getWeekDays(date: Date): Date[] {
+    const day = date.getDay();
+    const diff = date.getDate() - day;
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(new Date(date.getFullYear(), date.getMonth(), diff + i));
+    }
     return days;
   }
 
@@ -155,40 +148,19 @@
     });
   }
 
-  function getEventsForDate(date: Date): CalendarEvent[] {
-    return calendarEvents.filter(event => {
+  function getEventsForDate(date: Date, events: CalendarEvent[]): CalendarEvent[] {
+    return events.filter(event => {
       const eventDate = new Date(event.start_time);
       return eventDate.toDateString() === date.toDateString();
-    });
+    }).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
   }
 
-  function getUpcomingEvents(): CalendarEvent[] {
+  function getUpcomingEvents(events: CalendarEvent[]): CalendarEvent[] {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    return calendarEvents
+    return events
       .filter(e => new Date(e.start_time) >= now)
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
-  }
-
-  function previousMonth() {
-    currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    if (calendarConfig.connected) {
-      loadCalendarEvents();
-    }
-  }
-
-  function nextMonth() {
-    currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-    if (calendarConfig.connected) {
-      loadCalendarEvents();
-    }
-  }
-
-  function goToToday() {
-    currentDate = new Date();
-    if (calendarConfig.connected) {
-      loadCalendarEvents();
-    }
   }
 
   function isToday(date: Date): boolean {
@@ -196,9 +168,17 @@
     return date.toDateString() === today.toDateString();
   }
 
+  function isCurrentMonth(date: Date, currentDate: Date): boolean {
+    return date.getMonth() === currentDate.getMonth();
+  }
+
   function formatTime(dateStr: string): string {
     const date = new Date(dateStr);
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function formatTimeRange(start: string, end: string): string {
+    return `${formatTime(start)} - ${formatTime(end)}`;
   }
 
   function formatDateHeader(dateStr: string): string {
@@ -265,7 +245,7 @@
       });
       
       showEventModal = false;
-      addToast('success', 'Note created from calendar event');
+      addToast('success', 'Note created');
       goto(`/notes/${note.id}`);
     } catch (e) {
       addToast('error', 'Failed to create note');
@@ -274,7 +254,6 @@
     }
   }
 
-  // Group events by date for agenda view
   function groupEventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
     const grouped = new Map<string, CalendarEvent[]>();
     for (const event of events) {
@@ -287,9 +266,24 @@
     return grouped;
   }
 
-  $: calendarDays = getDaysInMonth(currentDate);
-  $: monthYear = `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-  $: upcomingEvents = getUpcomingEvents();
+  function getEventColor(event: CalendarEvent): string {
+    // Simple hash-based color assignment
+    const colors = [
+      'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-l-blue-500',
+      'bg-green-500/20 text-green-700 dark:text-green-300 border-l-green-500',
+      'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-l-purple-500',
+      'bg-orange-500/20 text-orange-700 dark:text-orange-300 border-l-orange-500',
+      'bg-pink-500/20 text-pink-700 dark:text-pink-300 border-l-pink-500',
+      'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-l-cyan-500',
+    ];
+    const hash = event.title.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  }
+
+  $: calendarDays = getDaysInMonth($currentMonth);
+  $: weekDaysForView = getWeekDays($currentMonth);
+  $: monthYear = `${months[$currentMonth.getMonth()]} ${$currentMonth.getFullYear()}`;
+  $: upcomingEvents = getUpcomingEvents($calendarEvents);
   $: groupedEvents = groupEventsByDate(upcomingEvents);
 </script>
 
@@ -297,236 +291,256 @@
   <title>Calendar - Noted</title>
 </svelte:head>
 
-<div class="max-w-7xl mx-auto">
-  <div class="flex items-center justify-between mb-8">
-    <div>
-      <h1 class="page-title">Calendar</h1>
-      <p class="page-subtitle">
-        {#if calendarConfig.connected && calendarConfig.email}
-          Connected to {calendarConfig.email}
-        {:else}
-          View meetings and linked notes
-        {/if}
-      </p>
-    </div>
-    <div class="flex items-center gap-3">
-      {#if calendarConfig.connected}
+<div class="h-full flex flex-col">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4 px-1">
+    <div class="flex items-center gap-4">
+      <h1 class="text-2xl font-semibold">{monthYear}</h1>
+      <div class="flex items-center">
         <button 
-          class="btn-secondary" 
-          on:click={refreshCalendar}
-          disabled={refreshing}
-          title="Refresh calendar"
+          class="p-2 hover:bg-[var(--color-border)] rounded-lg transition-colors" 
+          on:click={() => calendarStore.previousMonth()}
+          title="Previous"
         >
-          <RefreshCw class="w-4 h-4 {refreshing ? 'animate-spin' : ''}" />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
+          <ChevronLeft class="w-5 h-5" />
         </button>
-        <button class="btn-danger" on:click={disconnectCalendar}>
-          <Unlink class="w-4 h-4" />
+        <button 
+          class="p-2 hover:bg-[var(--color-border)] rounded-lg transition-colors" 
+          on:click={() => calendarStore.nextMonth()}
+          title="Next"
+        >
+          <ChevronRight class="w-5 h-5" />
+        </button>
+      </div>
+      <button 
+        class="px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-border)] transition-colors" 
+        on:click={() => calendarStore.goToToday()}
+      >
+        Today
+      </button>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <!-- View Toggle -->
+      <div class="flex items-center border border-[var(--color-border)] rounded-lg overflow-hidden">
+        <button
+          class="px-3 py-1.5 text-sm transition-colors {viewMode === 'month' ? 'bg-[var(--color-border)]' : 'hover:bg-[var(--color-border)]/50'}"
+          on:click={() => viewMode = 'month'}
+        >
+          Month
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm transition-colors {viewMode === 'week' ? 'bg-[var(--color-border)]' : 'hover:bg-[var(--color-border)]/50'}"
+          on:click={() => viewMode = 'week'}
+        >
+          Week
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm transition-colors {viewMode === 'agenda' ? 'bg-[var(--color-border)]' : 'hover:bg-[var(--color-border)]/50'}"
+          on:click={() => viewMode = 'agenda'}
+        >
+          Agenda
+        </button>
+      </div>
+
+      <button 
+        class="p-2 hover:bg-[var(--color-border)] rounded-lg transition-colors" 
+        on:click={refreshCalendar}
+        disabled={refreshing}
+        title="Refresh"
+      >
+        <RefreshCw class="w-5 h-5 {refreshing ? 'animate-spin' : ''}" />
+      </button>
+      
+      {#if $calendarConnected}
+        <button 
+          class="px-3 py-1.5 text-sm text-red-500 border border-red-200 dark:border-red-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          on:click={disconnectCalendar}
+        >
           Disconnect
         </button>
       {:else}
-        <button class="btn-secondary" on:click={connectCalendar}>
-          <CalendarIcon class="w-4 h-4" />
-          Connect Google Calendar
+        <button 
+          class="btn-primary btn-sm"
+          on:click={connectCalendar}
+        >
+          Connect Calendar
         </button>
       {/if}
     </div>
   </div>
 
-  <!-- Calendar Header -->
-  <div class="card mb-6">
-    <div class="flex items-center justify-between flex-wrap gap-4">
-      <div class="flex items-center gap-4">
-        <button class="btn-icon btn-icon-ghost" on:click={previousMonth} title="Previous month">
-          <ChevronLeft class="w-5 h-5" />
-        </button>
-        <h2 class="text-xl font-semibold min-w-[200px] text-center">{monthYear}</h2>
-        <button class="btn-icon btn-icon-ghost" on:click={nextMonth} title="Next month">
-          <ChevronRight class="w-5 h-5" />
-        </button>
-      </div>
-      <div class="flex items-center gap-2">
-        <!-- View Toggle -->
-        <div class="flex items-center border border-[var(--color-border)] rounded-lg overflow-hidden">
-          <button
-            class="px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors {viewMode === 'month' ? 'bg-primary-500 text-white' : 'hover:bg-[var(--color-border)]'}"
-            on:click={() => viewMode = 'month'}
-          >
-            <Grid3X3 class="w-4 h-4" />
-            Month
-          </button>
-          <button
-            class="px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors {viewMode === 'agenda' ? 'bg-primary-500 text-white' : 'hover:bg-[var(--color-border)]'}"
-            on:click={() => viewMode = 'agenda'}
-          >
-            <List class="w-4 h-4" />
-            Agenda
-          </button>
-        </div>
-        <button class="btn-secondary btn-sm" on:click={goToToday}>
-          Today
-        </button>
-        {#if loadingEvents}
-          <span class="text-sm text-[var(--color-muted)]">Loading...</span>
-        {/if}
+  <!-- Calendar Status -->
+  {#if $calendarConfig.email}
+    <p class="text-sm text-[var(--color-muted)] mb-4 px-1">
+      Connected to {$calendarConfig.email}
+    </p>
+  {:else if $calendarConfig.connected && $calendarConfig.type === 'apple'}
+    <p class="text-sm text-[var(--color-muted)] mb-4 px-1">
+      Connected to Apple Calendar
+    </p>
+  {/if}
+
+  <!-- Loading indicator -->
+  {#if $calendarLoading && $calendarEvents.length === 0}
+    <div class="flex-1 flex items-center justify-center">
+      <div class="text-center">
+        <RefreshCw class="w-8 h-8 mx-auto mb-3 animate-spin text-[var(--color-muted)]" />
+        <p class="text-[var(--color-muted)]">Loading calendar...</p>
       </div>
     </div>
-  </div>
-
-  {#if loading}
-    <div class="card animate-pulse">
-      <div class="grid grid-cols-7 gap-4">
-        {#each Array(35) as _}
-          <div class="h-24 bg-[var(--color-border)] rounded"></div>
-        {/each}
+  {:else if !$calendarConnected}
+    <!-- Not connected state -->
+    <div class="flex-1 flex items-center justify-center">
+      <div class="text-center max-w-md">
+        <CalendarIcon class="w-16 h-16 mx-auto mb-4 text-[var(--color-muted)]" />
+        <h2 class="text-xl font-semibold mb-2">Connect Your Calendar</h2>
+        <p class="text-[var(--color-muted)] mb-6">
+          Connect your calendar to see meetings, create notes from events, and keep track of your schedule.
+        </p>
+        <button class="btn-primary" on:click={connectCalendar}>
+          <CalendarIcon class="w-4 h-4" />
+          Connect Calendar
+        </button>
       </div>
     </div>
   {:else if viewMode === 'month'}
     <!-- Month View -->
-    <div class="card p-0 overflow-hidden">
-      <div class="grid grid-cols-7 border-b border-[var(--color-border)]">
+    <div class="flex-1 border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-card)]">
+      <!-- Week day headers -->
+      <div class="grid grid-cols-7 border-b border-[var(--color-border)] bg-[var(--color-bg)]">
         {#each weekDays as day}
-          <div class="py-3 text-center text-sm font-medium text-[var(--color-muted)]">
+          <div class="py-2 text-center text-xs font-medium text-[var(--color-muted)] uppercase tracking-wide">
             {day}
           </div>
         {/each}
       </div>
 
-      <div class="grid grid-cols-7">
+      <!-- Calendar grid -->
+      <div class="grid grid-cols-7 flex-1">
         {#each calendarDays as day, i}
+          {@const dayEvents = day ? getEventsForDate(day, $calendarEvents) : []}
+          {@const dayNotes = day ? getNotesForDate(day) : []}
+          {@const totalItems = dayEvents.length + dayNotes.length}
+          
           <div 
-            class="min-h-[100px] p-2 border-b border-r border-[var(--color-border)] last:border-r-0"
-            class:bg-[var(--color-bg)]={day && isToday(day)}
+            class="min-h-[100px] p-1 border-b border-r border-[var(--color-border)] {day && isToday(day) ? 'bg-blue-50 dark:bg-blue-900/10' : ''}"
           >
             {#if day}
-              {@const dayEvents = getEventsForDate(day)}
-              {@const dayNotes = getNotesForDate(day)}
-              {@const totalItems = dayEvents.length + dayNotes.length}
-              
-              <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center justify-between mb-1 px-1">
                 <span 
-                  class="text-sm font-medium"
-                  class:text-primary-500={isToday(day)}
+                  class="text-sm w-7 h-7 flex items-center justify-center rounded-full {isToday(day) ? 'bg-blue-500 text-white font-semibold' : ''}"
                 >
                   {day.getDate()}
                 </span>
-                {#if isToday(day)}
-                  <span class="text-xs bg-primary-500 text-white px-1.5 py-0.5 rounded">Today</span>
-                {/if}
               </div>
               
-              <div class="space-y-1">
-                {#each dayEvents.slice(0, 2) as event}
+              <div class="space-y-0.5">
+                {#each dayEvents.slice(0, 3) as event}
                   <button 
-                    class="block w-full text-left text-xs p-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded truncate hover:bg-blue-500/20 transition-colors"
+                    class="block w-full text-left text-xs px-1.5 py-0.5 rounded truncate border-l-2 {getEventColor(event)} hover:opacity-80 transition-opacity"
                     on:click={() => openEventModal(event)}
                   >
-                    <span class="font-medium">{formatTime(event.start_time)}</span> {event.title}
+                    {formatTime(event.start_time)} {event.title}
                   </button>
                 {/each}
                 
-                {#each dayNotes.slice(0, dayEvents.length >= 2 ? 0 : 1) as note}
-                  <a 
-                    href="/notes/{note.id}"
-                    class="block text-xs p-1 bg-primary-500/10 text-primary-600 dark:text-primary-400 rounded truncate hover:bg-primary-500/20 transition-colors"
-                  >
-                    <FileText class="w-3 h-3 inline mr-1" />
-                    {note.title}
-                  </a>
-                {/each}
-                
-                {#if totalItems > 2}
+                {#if totalItems > 3}
                   <button 
-                    class="text-xs text-[var(--color-muted)] hover:text-primary-500 transition-colors"
-                    on:click={() => openDayModal(day)}
+                    class="text-xs text-blue-500 hover:underline px-1.5"
+                    on:click={() => day && openDayModal(day)}
                   >
-                    +{totalItems - 2} more
+                    +{totalItems - 3} more
                   </button>
                 {/if}
               </div>
             {/if}
+          </div>
+        {/each}
+      </div>
+    </div>
+  {:else if viewMode === 'week'}
+    <!-- Week View -->
+    <div class="flex-1 border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-card)]">
+      <div class="grid grid-cols-7 border-b border-[var(--color-border)] bg-[var(--color-bg)]">
+        {#each weekDaysForView as day, i}
+          <div class="py-3 text-center border-r border-[var(--color-border)] last:border-r-0 {isToday(day) ? 'bg-blue-50 dark:bg-blue-900/10' : ''}">
+            <div class="text-xs font-medium text-[var(--color-muted)] uppercase">{weekDays[i]}</div>
+            <div class="text-2xl font-light {isToday(day) ? 'text-blue-500' : ''}">{day.getDate()}</div>
+          </div>
+        {/each}
+      </div>
+      
+      <div class="grid grid-cols-7 flex-1 min-h-[400px]">
+        {#each weekDaysForView as day, i}
+          {@const dayEvents = getEventsForDate(day, $calendarEvents)}
+          <div class="p-2 border-r border-[var(--color-border)] last:border-r-0 {isToday(day) ? 'bg-blue-50/50 dark:bg-blue-900/5' : ''}">
+            <div class="space-y-2">
+              {#each dayEvents as event}
+                <button 
+                  class="block w-full text-left p-2 rounded border-l-2 text-sm {getEventColor(event)} hover:opacity-80 transition-opacity"
+                  on:click={() => openEventModal(event)}
+                >
+                  <div class="font-medium truncate">{event.title}</div>
+                  <div class="text-xs opacity-75">{formatTime(event.start_time)}</div>
+                </button>
+              {/each}
+            </div>
           </div>
         {/each}
       </div>
     </div>
   {:else}
     <!-- Agenda View -->
-    <div class="space-y-4">
+    <div class="flex-1 overflow-auto">
       {#if upcomingEvents.length === 0}
-        <div class="card p-12 text-center">
+        <div class="text-center py-16">
           <CalendarIcon class="w-12 h-12 mx-auto mb-4 text-[var(--color-muted)]" />
           <h3 class="text-lg font-medium mb-2">No upcoming events</h3>
-          <p class="text-[var(--color-muted)]">
-            {#if calendarConfig.connected}
-              No events found for this month
-            {:else}
-              Connect your calendar to see events
-            {/if}
-          </p>
+          <p class="text-[var(--color-muted)]">Your schedule is clear</p>
         </div>
       {:else}
-        {#each [...groupedEvents.entries()] as [dateKey, events]}
-          <div class="card">
-            <h3 class="font-semibold text-lg mb-4 pb-2 border-b border-[var(--color-border)]">
-              {formatDateHeader(events[0].start_time)}
-            </h3>
-            <div class="space-y-3">
-              {#each events as event}
-                <div
-                  class="w-full text-left p-4 rounded-lg border border-[var(--color-border)] hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors cursor-pointer"
-                  role="button"
-                  tabindex="0"
-                  on:click={() => openEventModal(event)}
-                  on:keydown={(e) => e.key === 'Enter' && openEventModal(event)}
-                >
-                  <div class="flex items-start justify-between gap-4">
+        <div class="space-y-6">
+          {#each [...groupedEvents.entries()] as [dateKey, events]}
+            <div>
+              <h3 class="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wide mb-3 px-1">
+                {formatDateHeader(events[0].start_time)}
+              </h3>
+              <div class="space-y-2">
+                {#each events as event}
+                  <div
+                    class="flex items-start gap-4 p-4 rounded-lg border border-[var(--color-border)] hover:border-blue-300 dark:hover:border-blue-700 transition-colors cursor-pointer bg-[var(--color-card)]"
+                    role="button"
+                    tabindex="0"
+                    on:click={() => openEventModal(event)}
+                    on:keydown={(e) => e.key === 'Enter' && openEventModal(event)}
+                  >
+                    <div class="text-sm text-[var(--color-muted)] w-20 shrink-0 pt-0.5">
+                      {formatTime(event.start_time)}
+                    </div>
                     <div class="flex-1 min-w-0">
-                      <div class="font-medium truncate">{event.title}</div>
-                      <div class="text-sm text-[var(--color-muted)] flex items-center gap-2 mt-1">
-                        <Clock class="w-3.5 h-3.5" />
-                        {formatTime(event.start_time)}
-                        {#if event.attendees && event.attendees.length > 0}
-                          <span class="mx-1">-</span>
+                      <div class="font-medium">{event.title}</div>
+                      {#if event.attendees && event.attendees.length > 0}
+                        <div class="text-sm text-[var(--color-muted)] mt-1 flex items-center gap-1">
                           <Users class="w-3.5 h-3.5" />
                           {event.attendees.length} attendees
-                        {/if}
-                      </div>
+                        </div>
+                      {/if}
                     </div>
                     <button
                       class="btn-primary btn-sm shrink-0"
                       on:click|stopPropagation={() => { selectedEvent = event; createNoteFromEvent(); }}
                     >
-                      <Plus class="w-3.5 h-3.5" />
+                      <Plus class="w-4 h-4" />
                       Note
                     </button>
                   </div>
-                </div>
-              {/each}
+                {/each}
+              </div>
             </div>
-          </div>
-        {/each}
+          {/each}
+        </div>
       {/if}
-    </div>
-  {/if}
-
-  <!-- Info Card when not connected -->
-  {#if !calendarConfig.connected}
-    <div class="card mt-6 border-primary-500/50 bg-primary-500/5">
-      <div class="flex items-start gap-4">
-        <div class="p-3 bg-primary-500/10 rounded-lg">
-          <CalendarIcon class="w-6 h-6 text-primary-500" />
-        </div>
-        <div>
-          <h3 class="font-medium mb-1">Connect Google Calendar</h3>
-          <p class="text-sm text-[var(--color-muted)] mb-3">
-            Connect your Google Calendar to automatically sync meetings, see upcoming calls, 
-            and quickly create notes from calendar events with auto-populated participants.
-          </p>
-          <button class="btn-primary btn-sm" on:click={connectCalendar}>
-            Connect Now
-          </button>
-        </div>
-      </div>
     </div>
   {/if}
 </div>
@@ -539,76 +553,83 @@
       on:click={() => showEventModal = false}
       aria-label="Close modal"
     ></button>
-    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-6 w-full max-w-lg animate-slide-up">
-      <h2 class="text-lg font-semibold mb-2">{selectedEvent.title}</h2>
-      
-      <div class="space-y-3 mb-6">
-        <div class="flex items-center gap-2 text-sm text-[var(--color-muted)]">
-          <Clock class="w-4 h-4" />
-          {new Date(selectedEvent.start_time).toLocaleString('en-US', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-          })}
-        </div>
+    <div class="relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl w-full max-w-lg animate-slide-up overflow-hidden">
+      <!-- Header with color bar -->
+      <div class="h-2 bg-blue-500"></div>
+      <div class="p-6">
+        <h2 class="text-xl font-semibold mb-4">{selectedEvent.title}</h2>
         
-        {#if selectedEvent.attendees && selectedEvent.attendees.length > 0}
-          <div class="flex items-start gap-2 text-sm">
-            <Users class="w-4 h-4 mt-0.5 text-[var(--color-muted)]" />
-            <div class="flex-1">
-              <p class="text-[var(--color-muted)] mb-1">Attendees:</p>
-              <div class="flex flex-wrap gap-1">
-                {#each selectedEvent.attendees.slice(0, 5) as attendee}
-                  <span class="px-2 py-0.5 bg-[var(--color-bg)] rounded text-xs">
-                    {attendee}
-                  </span>
-                {/each}
-                {#if selectedEvent.attendees.length > 5}
-                  <span class="px-2 py-0.5 text-xs text-[var(--color-muted)]">
-                    +{selectedEvent.attendees.length - 5} more
-                  </span>
-                {/if}
+        <div class="space-y-4 mb-6">
+          <div class="flex items-center gap-3 text-sm">
+            <Clock class="w-5 h-5 text-[var(--color-muted)]" />
+            <div>
+              <div>{new Date(selectedEvent.start_time).toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+              })}</div>
+              <div class="text-[var(--color-muted)]">
+                {formatTimeRange(selectedEvent.start_time, selectedEvent.end_time)}
               </div>
             </div>
           </div>
-        {/if}
+          
+          {#if selectedEvent.meet_link}
+            <a 
+              href={selectedEvent.meet_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center gap-3 text-sm text-blue-500 hover:underline"
+            >
+              <Video class="w-5 h-5" />
+              Join video call
+            </a>
+          {/if}
+          
+          {#if selectedEvent.attendees && selectedEvent.attendees.length > 0}
+            <div class="flex items-start gap-3 text-sm">
+              <Users class="w-5 h-5 text-[var(--color-muted)] mt-0.5" />
+              <div class="flex-1">
+                <div class="text-[var(--color-muted)] mb-2">{selectedEvent.attendees.length} attendees</div>
+                <div class="flex flex-wrap gap-1.5">
+                  {#each selectedEvent.attendees.slice(0, 8) as attendee}
+                    <span class="px-2 py-1 bg-[var(--color-bg)] rounded text-xs">
+                      {attendee}
+                    </span>
+                  {/each}
+                  {#if selectedEvent.attendees.length > 8}
+                    <span class="px-2 py-1 text-xs text-[var(--color-muted)]">
+                      +{selectedEvent.attendees.length - 8} more
+                    </span>
+                  {/if}
+                </div>
+              </div>
+            </div>
+          {/if}
+          
+          {#if selectedEvent.description}
+            <div class="pt-4 border-t border-[var(--color-border)]">
+              <p class="text-sm text-[var(--color-muted)] whitespace-pre-wrap">{selectedEvent.description.slice(0, 500)}{selectedEvent.description.length > 500 ? '...' : ''}</p>
+            </div>
+          {/if}
+        </div>
         
-        {#if selectedEvent.meet_link}
-          <a 
-            href={selectedEvent.meet_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 text-sm text-primary-500 hover:underline"
+        <div class="flex justify-end gap-3">
+          <button 
+            class="btn-secondary"
+            on:click={() => showEventModal = false}
           >
-            <ExternalLink class="w-4 h-4" />
-            Join Meeting
-          </a>
-        {/if}
-        
-        {#if selectedEvent.description}
-          <div class="text-sm text-[var(--color-muted)] border-t border-[var(--color-border)] pt-3 mt-3">
-            <p class="whitespace-pre-wrap">{selectedEvent.description.slice(0, 300)}{selectedEvent.description.length > 300 ? '...' : ''}</p>
-          </div>
-        {/if}
-      </div>
-      
-      <div class="flex justify-end gap-3">
-        <button 
-          class="btn-secondary"
-          on:click={() => showEventModal = false}
-        >
-          Close
-        </button>
-        <button 
-          class="btn-primary"
-          on:click={createNoteFromEvent}
-          disabled={creatingNote}
-        >
-          <Plus class="w-4 h-4" />
-          {creatingNote ? 'Creating...' : 'Create Note'}
-        </button>
+            Close
+          </button>
+          <button 
+            class="btn-primary"
+            on:click={createNoteFromEvent}
+            disabled={creatingNote}
+          >
+            <FileText class="w-4 h-4" />
+            {creatingNote ? 'Creating...' : 'Create Note'}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -616,7 +637,7 @@
 
 <!-- Day Detail Modal -->
 {#if showDayModal && selectedDay}
-  {@const dayEvents = getEventsForDate(selectedDay)}
+  {@const dayEvents = getEventsForDate(selectedDay, $calendarEvents)}
   {@const dayNotes = getNotesForDate(selectedDay)}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <button 
@@ -647,7 +668,7 @@
                 <div class="text-xs text-[var(--color-muted)] mt-1">
                   {formatTime(event.start_time)}
                   {#if event.attendees && event.attendees.length > 0}
-                    - {event.attendees.length} attendees
+                    · {event.attendees.length} attendees
                   {/if}
                 </div>
               </button>
@@ -673,6 +694,10 @@
             {/each}
           </div>
         </div>
+      {/if}
+      
+      {#if dayEvents.length === 0 && dayNotes.length === 0}
+        <p class="text-center text-[var(--color-muted)] py-8">No events or notes for this day</p>
       {/if}
     </div>
   </div>
