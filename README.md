@@ -57,9 +57,26 @@ Generic note-taking apps treat every document the same. Noted understands the SE
 *   **Prioritization**: Visual H/M/L priority indicators.
 
 ### 📅 Calendar Intelligence
-*   **Deep Sync**: Integrates with **Apple Calendar** & **Google Calendar**.
+*   **Apple Calendar Integration**: Native macOS EventKit integration.
 *   **One-Click Notes**: Create a pre-filled note from any calendar event instantly.
 *   **Participant Extraction**: Automatically captures attendee details.
+
+### 👥 Contact Management
+*   **Auto-Extraction**: Contacts automatically captured from meeting participants.
+*   **Domain Intelligence**: Smart account suggestions based on email domains.
+*   **Internal/External Classification**: Mark contacts as internal team or external customers.
+*   **Bulk Operations**: Manage multiple contacts efficiently.
+
+### 🗑️ Unified Trash
+*   **Chrome-Style Management**: View all deleted items in one place.
+*   **Category Tabs**: Filter by Notes, Todos, Accounts, or Contacts.
+*   **Restore or Delete**: Recover items or permanently remove them.
+*   **Empty by Category**: Clear trash selectively or all at once.
+
+### 🎨 Theme System
+*   **11 Built-in Themes**: Modern, Minimal, Nordic, Noir, Cyber, Monokai, Retro, Dracula, Solarized, Ocean, Forest.
+*   **Dark/Light Mode**: Each theme supports both modes.
+*   **Instant Switching**: Change themes without restart.
 
 ### 📊 Account Hub & Analytics
 *   **360° View**: See all notes, tasks, and activity for a specific customer in one place.
