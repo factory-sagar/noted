@@ -90,6 +90,10 @@ func main() {
 		api.GET("/analytics", h.GetAnalytics)
 		api.GET("/analytics/incomplete", h.GetIncompleteFields)
 
+		// Data management
+		api.GET("/export", h.ExportAllData)
+		api.DELETE("/data", h.ClearAllData)
+
 		// PDF Export
 		api.GET("/notes/:id/export", h.ExportNotePDF)
 
