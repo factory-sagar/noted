@@ -160,7 +160,7 @@ func (h *Handler) ParseParticipantsApple(c *gin.Context) {
 			continue
 		}
 
-		if strings.HasSuffix(email, "@"+internalDomain) {
+		if strings.HasSuffix(email, "@"+internalDomain) || strings.HasSuffix(email, "@factory.ai") {
 			internal = append(internal, email)
 		} else {
 			external = append(external, email)

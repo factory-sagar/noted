@@ -710,42 +710,6 @@
           </div>
         {/if}
 
-        <!-- Internal Participants -->
-        <div class="card">
-          <h3 class="font-medium mb-4 flex items-center gap-2">
-            <Users class="w-5 h-5 text-primary-500" />
-            Internal Participants
-          </h3>
-          <div class="space-y-2 mb-3">
-            {#each internalParticipants as participant, i}
-              <div class="flex items-center justify-between px-3 py-2 bg-primary-500/10 rounded-lg text-sm">
-                <span>{participant}</span>
-                <button 
-                  class="btn-icon-sm hover:bg-primary-500/20"
-                  on:click={() => removeParticipant('internal', i)}
-                >
-                  <X class="w-3 h-3" />
-                </button>
-              </div>
-            {/each}
-          </div>
-          <div class="flex gap-2">
-            <input 
-              type="text"
-              class="input text-sm"
-              placeholder="Add participant"
-              bind:value={newInternalParticipant}
-              on:keypress={(e) => e.key === 'Enter' && addParticipant('internal')}
-            />
-            <button 
-              class="btn-secondary btn-sm"
-              on:click={() => addParticipant('internal')}
-            >
-              <Plus class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
         <!-- External Participants -->
         <div class="card">
           <h3 class="font-medium mb-4 flex items-center gap-2">
@@ -776,6 +740,42 @@
             <button 
               class="btn-secondary btn-sm"
               on:click={() => addParticipant('external')}
+            >
+              <Plus class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Internal Participants -->
+        <div class="card">
+          <h3 class="font-medium mb-4 flex items-center gap-2">
+            <Users class="w-5 h-5 text-primary-500" />
+            Internal Participants
+          </h3>
+          <div class="space-y-2 mb-3">
+            {#each internalParticipants as participant, i}
+              <div class="flex items-center justify-between px-3 py-2 bg-primary-500/10 rounded-lg text-sm">
+                <span>{participant}</span>
+                <button 
+                  class="btn-icon-sm hover:bg-primary-500/20"
+                  on:click={() => removeParticipant('internal', i)}
+                >
+                  <X class="w-3 h-3" />
+                </button>
+              </div>
+            {/each}
+          </div>
+          <div class="flex gap-2">
+            <input 
+              type="text"
+              class="input text-sm"
+              placeholder="Add participant"
+              bind:value={newInternalParticipant}
+              on:keypress={(e) => e.key === 'Enter' && addParticipant('internal')}
+            />
+            <button 
+              class="btn-secondary btn-sm"
+              on:click={() => addParticipant('internal')}
             >
               <Plus class="w-4 h-4" />
             </button>
