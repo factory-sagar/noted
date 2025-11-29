@@ -16,10 +16,34 @@
       colors: ['#3ba381', '#fafaf9', '#1c1917']
     },
     { 
+      id: 'retro', 
+      name: 'Retro Pop', 
+      description: 'Vibrant 80s vibe with brutalist shadows and pinks.',
+      colors: ['#d946ef', '#fff1f2', '#171717']
+    },
+    { 
+      id: 'nordic', 
+      name: 'Nordic Wood', 
+      description: 'Organic, earthy pine and cream. Cozy and serif.',
+      colors: ['#547a76', '#f4f1ea', '#2c3333']
+    },
+    { 
+      id: 'corporate', 
+      name: 'Enterprise', 
+      description: 'Dense, high contrast navy and white. Serious business.',
+      colors: ['#0f172a', '#f1f5f9', '#0369a1']
+    },
+    { 
       id: 'cyber', 
       name: 'Cyber Dev', 
       description: 'High contrast, monospaced, and technical. Neon Lime.',
       colors: ['#84cc16', '#050505', '#eeeeee']
+    },
+    { 
+      id: 'monokai', 
+      name: 'Monokai IDE', 
+      description: 'Code editor aesthetic. Dark grey with vivid accents.',
+      colors: ['#f92672', '#272822', '#f8f8f2']
     },
     { 
       id: 'noir', 

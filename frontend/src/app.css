@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Roboto:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -236,6 +236,225 @@
   --grain-opacity: 0.04;
 }
 
+
+/* 
+  THEME 5: Retro Pop (80s/90s)
+  - Purple/Pink/Cyan palette
+  - Space Grotesk font
+  - Brutalist shadows, thick borders, high saturation
+*/
+.theme-retro {
+  /* Fonts */
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  
+  /* Radius */
+  --radius: 0.5rem; /* 8px */
+
+  /* Semantic Colors */
+  --color-bg: #fff1f2; /* rose-50 */
+  --color-bg-elevated: #ffffff;
+  --color-card: #ffffff;
+  --color-card-hover: #fff0f5; /* pink-50 (lighter) */
+  --color-border: #171717; /* neutral-900 (brutalist black borders) */
+  --color-border-subtle: #e5e7eb;
+  --color-text: #171717;
+  --color-text-secondary: #404040;
+  --color-muted: #737373;
+
+  /* Primary Palette (Vibrant Pink/Purple) */
+  --color-primary-50: #fdf2f8;
+  --color-primary-100: #fce7f3;
+  --color-primary-200: #fbcfe8;
+  --color-primary-300: #f9a8d4;
+  --color-primary-400: #f472b6;
+  --color-primary-500: #ec4899;
+  --color-primary-600: #db2777;
+  --color-primary-700: #be185d;
+  --color-primary-800: #9d174d;
+  --color-primary-900: #831843;
+  --color-primary-950: #500724;
+
+  --color-accent: #d946ef; /* fuchsia-500 */
+  --color-accent-hover: #c026d3; /* fuchsia-600 */
+  
+  --shadow-hard: 4px 4px 0px 0px #171717;
+  --shadow-hard-sm: 2px 2px 0px 0px #171717;
+}
+
+.dark.theme-retro {
+  --color-bg: #11001c; /* deep plum */
+  --color-bg-elevated: #2a0a2e;
+  --color-card: #2a0a2e;
+  --color-card-hover: #3b0d40;
+  --color-border: #fbcfe8; /* light pink borders */
+  --color-text: #fbcfe8;
+  --color-text-secondary: #f9a8d4;
+  --color-muted: #f472b6;
+  
+  --color-accent: #e879f9; /* fuchsia-400 */
+  --color-accent-hover: #f0abfc;
+  
+  --shadow-hard: 4px 4px 0px 0px #fbcfe8;
+  --shadow-hard-sm: 2px 2px 0px 0px #fbcfe8;
+}
+
+/* 
+  THEME 6: Nordic Wood
+  - Earthy, Pine, Cream palette
+  - Lora (Serif) headers, Inter body
+  - Soft, organic feel
+*/
+.theme-nordic {
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Lora', serif;
+  
+  /* Radius */
+  --radius: 0.25rem; /* 4px */
+
+  /* Semantic Colors */
+  --color-bg: #f4f1ea; /* warm grey/beige */
+  --color-bg-elevated: #fbfaf8;
+  --color-card: #fbfaf8;
+  --color-card-hover: #ffffff;
+  --color-border: #d6d3cd;
+  --color-border-subtle: #e5e2dc;
+  --color-text: #2c3333; /* dark slate/green */
+  --color-text-secondary: #525b5b;
+  --color-muted: #8a9292;
+
+  /* Primary Palette (Pine Green) */
+  --color-primary-50: #f2f7f6;
+  --color-primary-100: #e1ebe9;
+  --color-primary-200: #c5d8d6;
+  --color-primary-300: #9db9b6;
+  --color-primary-400: #729692;
+  --color-primary-500: #547a76;
+  --color-primary-600: #43605d;
+  --color-primary-700: #384d4b;
+  --color-primary-800: #303e3d;
+  --color-primary-900: #2a3433;
+  --color-primary-950: #161d1d;
+
+  --color-accent: #354f52; /* deep pine */
+  --color-accent-hover: #2f3a3a;
+}
+
+.dark.theme-nordic {
+  --color-bg: #1a1d1d;
+  --color-bg-elevated: #232727;
+  --color-card: #232727;
+  --color-card-hover: #2c3333;
+  --color-border: #384040;
+  --color-border-subtle: #2f3535;
+  --color-text: #e5e7eb;
+  --color-text-secondary: #9ca3af;
+  --color-muted: #6b7280;
+  
+  --color-accent: #547a76; /* lighter pine */
+  --color-accent-hover: #729692;
+}
+
+/* 
+  THEME 7: Corporate (Enterprise)
+  - Navy/White/Red palette
+  - Roboto font
+  - High density, sharp-ish
+*/
+.theme-corporate {
+  /* Fonts */
+  --font-sans: 'Roboto', system-ui, sans-serif;
+  
+  /* Radius */
+  --radius: 0.125rem; /* 2px */
+
+  /* Semantic Colors */
+  --color-bg: #f1f5f9; /* slate-100 */
+  --color-bg-elevated: #ffffff;
+  --color-card: #ffffff;
+  --color-card-hover: #f8fafc;
+  --color-border: #cbd5e1; /* slate-300 */
+  --color-border-subtle: #e2e8f0;
+  --color-text: #0f172a; /* slate-900 */
+  --color-text-secondary: #475569; /* slate-600 */
+  --color-muted: #94a3b8;
+
+  /* Primary Palette (Navy Blue) */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+  --color-primary-950: #082f49;
+
+  --color-accent: #0f172a; /* Navy Black */
+  --color-accent-hover: #1e293b;
+}
+
+.dark.theme-corporate {
+  --color-bg: #020617;
+  --color-bg-elevated: #0f172a;
+  --color-card: #0f172a;
+  --color-card-hover: #1e293b;
+  --color-border: #334155;
+  --color-text: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  
+  --color-accent: #38bdf8; /* Light blue accent in dark mode */
+  --color-accent-hover: #7dd3fc;
+}
+
+/* 
+  THEME 8: Monokai (IDE)
+  - Dark grey, Yellow/Magenta accents
+  - JetBrains Mono
+  - Terminal feel
+*/
+.theme-monokai {
+  --font-sans: 'JetBrains Mono', monospace;
+  --radius: 0.25rem; /* 4px */
+  
+  /* Always Dark-ish */
+  --color-bg: #272822;
+  --color-bg-elevated: #3e3d32;
+  --color-card: #3e3d32;
+  --color-card-hover: #49483e;
+  --color-border: #75715e;
+  --color-border-subtle: #49483e;
+  --color-text: #f8f8f2;
+  --color-text-secondary: #cfcfc2;
+  --color-muted: #75715e;
+
+  /* Monokai uses multiple accents, we pick Magenta/Pink as primary accent */
+  --color-primary-50: #fdf4ff;
+  --color-primary-100: #fae8ff;
+  --color-primary-200: #f5d0fe;
+  --color-primary-300: #f0abfc;
+  --color-primary-400: #e879f9;
+  --color-primary-500: #d946ef;
+  --color-primary-600: #c026d3;
+  --color-primary-700: #a21caf;
+  --color-primary-800: #86198f;
+  --color-primary-900: #701a75;
+  --color-primary-950: #4a044e;
+
+  --color-accent: #f92672; /* Monokai Pink */
+  --color-accent-hover: #ff4081;
+}
+
+.dark.theme-monokai {
+  /* Same as light for this theme */
+  --color-bg: #272822;
+  --color-bg-elevated: #3e3d32;
+  --color-card: #3e3d32;
+  --color-card-hover: #49483e;
+  --color-border: #75715e;
+}
 
 html {
   -webkit-font-smoothing: antialiased;
