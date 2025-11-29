@@ -41,6 +41,12 @@ vi.mock('$lib/stores', () => ({
 
 // Mock Tiptap and Lowlight
 vi.mock('@tiptap/core', () => ({
+  Extension: {
+    create: (config: any) => ({ ...config })
+  },
+  NodeView: class {
+    constructor() {}
+  },
   Editor: class {
     constructor(options: any) {
       this.options = options;
@@ -58,7 +64,8 @@ vi.mock('@tiptap/core', () => ({
           toggleOrderedList: () => ({ run: () => {} }),
           toggleBlockquote: () => ({ run: () => {} }),
           toggleCode: () => ({ run: () => {} }),
-          setHorizontalRule: () => ({ run: () => {} })
+          setHorizontalRule: () => ({ run: () => {} }),
+          setImage: () => ({ run: () => {} })
         }) 
       }; 
     }
