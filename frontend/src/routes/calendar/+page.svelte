@@ -242,7 +242,7 @@
         external_participants: external,
         meeting_id: selectedEvent.id,
         meeting_date: selectedEvent.start_time,
-        content: selectedEvent.description || '<p>Meeting notes...</p>'
+        content: '<p>Meeting notes...</p>'
       });
       
       showEventModal = false;

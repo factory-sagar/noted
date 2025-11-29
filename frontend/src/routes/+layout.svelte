@@ -222,19 +222,22 @@
           <Menu class="w-5 h-5" />
         </button>
 
-        <div class="flex-1 flex items-center justify-end gap-4">
-          <!-- Search -->
+        <!-- Centered Search Bar -->
+        <div class="flex-1 flex items-center justify-center px-4">
           <button 
-            class="btn-secondary"
+            class="w-full max-w-xl flex items-center gap-3 px-4 py-2.5 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] hover:border-[var(--color-accent)]/50 transition-colors text-left"
+            style="border-radius: var(--radius);"
             on:click={() => searchOpen = true}
           >
-            <Search class="w-4 h-4" strokeWidth={1.5} />
-            <span class="hidden sm:inline">Search</span>
+            <Search class="w-4 h-4 text-[var(--color-muted)]" strokeWidth={1.5} />
+            <span class="flex-1 text-[var(--color-muted)]">Search notes, accounts, todos...</span>
             <kbd class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-[var(--color-bg)] border border-[var(--color-border)]" style="border-radius: var(--radius);">
               ⌘K
             </kbd>
           </button>
+        </div>
 
+        <div class="flex items-center gap-4">
           <!-- Quick Create -->
           <button 
             class="btn-primary"
