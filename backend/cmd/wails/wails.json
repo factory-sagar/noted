@@ -1,0 +1,18 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Noted",
+  "outputfilename": "Noted",
+  "frontend:install": "echo 'Frontend already built'",
+  "frontend:build": "echo 'Frontend already built'",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "info": {
+    "companyName": "Noted",
+    "productName": "Noted",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright 2024",
+    "comments": "A local-first notes app for Solutions Engineers"
+  }
+}

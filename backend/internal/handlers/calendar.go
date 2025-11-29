@@ -87,7 +87,7 @@ func (h *Handler) HandleCalendarCallback(c *gin.Context) {
 	tokenJSON, _ := json.Marshal(token)
 
 	_, err = h.db.Exec(`
-		INSERT OR REPLACE INTO settings (key, value) 
+		INSERT OR REPLACE INTO settings (key, value)
 		VALUES ('google_oauth_token', ?)
 	`, string(tokenJSON))
 
@@ -96,8 +96,36 @@ func (h *Handler) HandleCalendarCallback(c *gin.Context) {
 		return
 	}
 
-	// Redirect to frontend settings page
-	c.Redirect(http.StatusFound, "http://localhost:5173/settings?calendar=connected")
+	// Check if running in native app (no referer from localhost:5173) or dev mode
+	referer := c.Request.Referer()
+	if strings.Contains(referer, "localhost:5173") || strings.Contains(referer, "127.0.0.1:5173") {
+		// Dev mode - redirect to frontend
+		c.Redirect(http.StatusFound, "http://localhost:5173/settings?calendar=connected")
+		return
+	}
+
+	// Native app - show success page that user can close
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, `<!DOCTYPE html>
+<html>
+<head>
+	<title>Calendar Connected</title>
+	<style>
+		body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+		.card { background: white; padding: 40px 60px; border-radius: 16px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+		h1 { color: #22c55e; margin: 0 0 10px 0; }
+		p { color: #666; margin: 0; }
+		.check { font-size: 48px; margin-bottom: 20px; }
+	</style>
+</head>
+<body>
+	<div class="card">
+		<div class="check">✓</div>
+		<h1>Calendar Connected!</h1>
+		<p>You can close this window and return to Noted.</p>
+	</div>
+</body>
+</html>`)
 }
 
 func (h *Handler) GetCalendarConfig(c *gin.Context) {

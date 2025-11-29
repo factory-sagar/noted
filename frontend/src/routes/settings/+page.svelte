@@ -2,9 +2,9 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { 
-    Moon, 
-    Sun, 
+  import {
+    Moon,
+    Sun,
     Calendar,
     FileText,
     Database,
@@ -24,12 +24,12 @@
   let autoSave = true;
   let defaultTemplate = 'initial';
   let calendarConfig: CalendarConfig = { connected: false };
-  
+
   // Default view settings
   let defaultNotesView = 'folders'; // folders, cards, organized
   let defaultTodosView = 'kanban'; // kanban, list
   let defaultAccountsView = 'split'; // split, grid
-  
+
   // Tags
   let tags: TagType[] = [];
   let newTagName = '';
@@ -53,13 +53,13 @@
       defaultTodosView = localStorage.getItem('defaultTodosView') || 'kanban';
       defaultAccountsView = localStorage.getItem('defaultAccountsView') || 'split';
     }
-    
+
     // Check for OAuth callback
     if ($page.url.searchParams.get('calendar') === 'connected') {
       addToast('success', 'Google Calendar connected!');
       goto('/settings', { replaceState: true });
     }
-    
+
     // Load calendar config and tags
     try {
       calendarConfig = await api.getCalendarConfig();
@@ -131,6 +131,15 @@
   }
 
   async function connectCalendar() {
+    // Check if this is Apple Calendar (native app) or Google (browser)
+    if (calendarConfig.type === 'apple') {
+      await connectAppleCalendar();
+    } else {
+      await connectGoogleCalendar();
+    }
+  }
+
+  async function connectGoogleCalendar() {
     try {
       const { url } = await api.getCalendarAuthURL();
       window.location.href = url;
@@ -143,7 +152,26 @@
     }
   }
 
+  async function connectAppleCalendar() {
+    try {
+      const result = await api.connectAppleCalendar();
+      if (result.success) {
+        calendarConfig = { connected: true, type: 'apple' };
+        addToast('success', 'Apple Calendar connected!');
+      } else {
+        addToast('error', result.message || 'Calendar access denied');
+      }
+    } catch (e: any) {
+      addToast('error', e.message || 'Failed to connect calendar');
+    }
+  }
+
   async function disconnectCalendar() {
+    // Apple Calendar can't be disconnected from the app - it's a system permission
+    if (calendarConfig.type === 'apple') {
+      addToast('info', 'To revoke calendar access, go to System Settings > Privacy & Security > Calendars');
+      return;
+    }
     try {
       await api.disconnectCalendar();
       calendarConfig = { connected: false };
@@ -164,7 +192,7 @@
   async function clearAllData() {
     if (!confirm('Are you sure you want to delete ALL data? This cannot be undone.')) return;
     if (!confirm('This will permanently delete all accounts, notes, and todos. Continue?')) return;
-    
+
     addToast('info', 'Clearing all data...');
     // TODO: Implement data clearing
     setTimeout(() => {
@@ -194,20 +222,20 @@
         {/if}
         Appearance
       </h2>
-      
+
       <div class="flex items-center justify-between py-3 border-b border-[var(--color-border)]">
         <div>
           <p class="font-medium">Dark Mode</p>
           <p class="text-sm text-[var(--color-muted)]">Use dark theme for reduced eye strain</p>
         </div>
-        <button 
+        <button
           class="relative w-12 h-6 rounded-full transition-colors"
           class:bg-primary-600={darkMode}
           class:bg-[var(--color-border)]={!darkMode}
           on:click={toggleDarkMode}
           aria-label="Toggle dark mode"
         >
-          <span 
+          <span
             class="absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow"
             class:translate-x-1={!darkMode}
             class:translate-x-7={darkMode}
@@ -222,20 +250,20 @@
         <FileText class="w-5 h-5" />
         Notes
       </h2>
-      
+
       <div class="flex items-center justify-between py-3 border-b border-[var(--color-border)]">
         <div>
           <p class="font-medium">Auto-save</p>
           <p class="text-sm text-[var(--color-muted)]">Automatically save notes while editing</p>
         </div>
-        <button 
+        <button
           class="relative w-12 h-6 rounded-full transition-colors"
           class:bg-primary-600={autoSave}
           class:bg-[var(--color-border)]={!autoSave}
           on:click={() => { autoSave = !autoSave; saveAutoSave(); }}
           aria-label="Toggle auto-save"
         >
-          <span 
+          <span
             class="absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow"
             class:translate-x-1={!autoSave}
             class:translate-x-7={autoSave}
@@ -250,7 +278,7 @@
             <p class="text-sm text-[var(--color-muted)]">Template to use when creating new notes</p>
           </div>
         </div>
-        <select 
+        <select
           class="input mt-2"
           bind:value={defaultTemplate}
           on:change={saveDefaultTemplate}
@@ -277,7 +305,7 @@
         <LayoutGrid class="w-5 h-5" />
         Default Views
       </h2>
-      
+
       <div class="py-3 border-b border-[var(--color-border)]">
         <div class="flex items-center justify-between mb-2">
           <div>
@@ -285,7 +313,7 @@
             <p class="text-sm text-[var(--color-muted)]">Default view when opening notes page</p>
           </div>
         </div>
-        <select 
+        <select
           class="input mt-2"
           bind:value={defaultNotesView}
           on:change={saveNotesView}
@@ -303,7 +331,7 @@
             <p class="text-sm text-[var(--color-muted)]">Default layout for todos page</p>
           </div>
         </div>
-        <select 
+        <select
           class="input mt-2"
           bind:value={defaultTodosView}
           on:change={saveTodosView}
@@ -320,7 +348,7 @@
             <p class="text-sm text-[var(--color-muted)]">Default layout for accounts page</p>
           </div>
         </div>
-        <select 
+        <select
           class="input mt-2"
           bind:value={defaultAccountsView}
           on:change={saveAccountsView}
@@ -338,7 +366,7 @@
         Tags
       </h2>
       <p class="text-sm text-[var(--color-muted)] mb-4">Create tags to organize your notes</p>
-      
+
       {#if tags.length === 0}
         <div class="text-center py-6 text-[var(--color-muted)]">
           No tags yet. Create your first tag to get started.
@@ -346,13 +374,13 @@
       {:else}
         <div class="flex flex-wrap gap-2 mb-4">
           {#each tags as tag}
-            <div 
+            <div
               class="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm group"
               style="background-color: {tag.color}20; color: {tag.color}; border: 1px solid {tag.color}40"
             >
               <span class="w-2 h-2 rounded-full" style="background-color: {tag.color}"></span>
               {tag.name}
-              <button 
+              <button
                 class="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
                 on:click={() => deleteTag(tag.id)}
               >
@@ -362,7 +390,7 @@
           {/each}
         </div>
       {/if}
-      
+
       <button class="btn-secondary btn-sm" on:click={() => showTagModal = true}>
         <Tag class="w-4 h-4" />
         Create Tag
@@ -375,15 +403,23 @@
         <Calendar class="w-5 h-5" />
         Calendar Integration
       </h2>
-      
+
       <div class="flex items-center justify-between py-3">
         <div>
-          <p class="font-medium">Google Calendar</p>
+          <p class="font-medium">
+            {#if calendarConfig.type === 'apple'}
+              Apple Calendar
+            {:else}
+              Google Calendar
+            {/if}
+          </p>
           <p class="text-sm text-[var(--color-muted)]">
             {#if calendarConfig.connected && calendarConfig.email}
               Connected as {calendarConfig.email}
             {:else if calendarConfig.connected}
-              Connected
+              Connected - Access your calendar events
+            {:else if calendarConfig.type === 'apple'}
+              Connect to access your Apple Calendar events
             {:else}
               Connect to sync meetings and auto-populate participants
             {/if}
@@ -395,9 +431,11 @@
               <Check class="w-4 h-4" />
               Connected
             </span>
-            <button class="btn-secondary btn-sm" on:click={disconnectCalendar}>
-              Disconnect
-            </button>
+            {#if calendarConfig.type !== 'apple'}
+              <button class="btn-secondary btn-sm" on:click={disconnectCalendar}>
+                Disconnect
+              </button>
+            {/if}
           </div>
         {:else}
           <button class="btn-primary btn-sm" on:click={connectCalendar}>
@@ -413,7 +451,7 @@
         <Database class="w-5 h-5" />
         Data Management
       </h2>
-      
+
       <div class="flex items-center justify-between py-3 border-b border-[var(--color-border)]">
         <div>
           <p class="font-medium">Export All Data</p>
@@ -430,7 +468,7 @@
           <p class="font-medium text-red-500">Delete All Data</p>
           <p class="text-sm text-[var(--color-muted)]">Permanently remove all accounts, notes, and todos</p>
         </div>
-        <button 
+        <button
           class="btn-danger btn-sm"
           on:click={clearAllData}
         >
@@ -455,7 +493,7 @@
 <!-- Create Tag Modal -->
 {#if showTagModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <button 
+    <button
       class="absolute inset-0 bg-black/50 backdrop-blur-sm"
       on:click={() => showTagModal = false}
       aria-label="Close modal"
@@ -469,7 +507,7 @@
         <div class="mb-4">
           <label class="label" for="new-tag-name">Tag Name</label>
           <!-- svelte-ignore a11y-autofocus -->
-          <input 
+          <input
             id="new-tag-name"
             type="text"
             class="input"
@@ -498,7 +536,7 @@
           </div>
           <div class="mt-3 flex items-center gap-2">
             <span class="text-sm text-[var(--color-muted)]">Preview:</span>
-            <span 
+            <span
               class="px-3 py-1 rounded-full text-sm"
               style="background-color: {newTagColor}20; color: {newTagColor}; border: 1px solid {newTagColor}40"
             >
@@ -507,7 +545,7 @@
           </div>
         </div>
         <div class="flex justify-end gap-3">
-          <button 
+          <button
             type="button"
             class="btn-secondary"
             on:click={() => showTagModal = false}

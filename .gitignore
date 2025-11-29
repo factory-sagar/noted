@@ -43,3 +43,7 @@ coverage/
 
 # Dashcode queue (for offline commits)
 .dashcode_queue/
+
+# Wails build artifacts
+backend/cmd/wails/build/bin/
+backend/cmd/wails/frontend/

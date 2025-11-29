@@ -1,7 +1,46 @@
-const API_BASE = 'http://localhost:8080/api';
+// Detect if running in Wails (embedded in native app)
+declare global {
+  interface Window {
+    go?: {
+      main?: {
+        App?: {
+          GetServerPort: () => Promise<number>;
+        };
+      };
+    };
+  }
+}
+
+let cachedPort: number | null = null;
+
+async function getApiBase(): Promise<string> {
+  // Browser development mode
+  if (typeof window === 'undefined' || !window.go?.main?.App) {
+    return 'http://localhost:8080/api';
+  }
+
+  // Wails mode - get dynamic port from Go backend
+  if (cachedPort === null) {
+    try {
+      cachedPort = await window.go.main.App.GetServerPort();
+    } catch {
+      cachedPort = 8080;
+    }
+  }
+  return `http://127.0.0.1:${cachedPort}/api`;
+}
+
+// For sync access (fallback to default)
+function getApiBaseSync(): string {
+  if (cachedPort !== null) {
+    return `http://127.0.0.1:${cachedPort}/api`;
+  }
+  return 'http://localhost:8080/api';
+}
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const apiBase = await getApiBase();
+  const response = await fetch(`${apiBase}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -117,6 +156,14 @@ export interface SearchResult {
 export interface CalendarConfig {
   connected: boolean;
   email?: string;
+  type?: 'google' | 'apple';
+}
+
+export interface AppleCalendar {
+  id: string;
+  title: string;
+  color: string;
+  type: string;
 }
 
 export interface CalendarEvent {
@@ -194,7 +241,7 @@ export const api = {
   // Accounts
   getAccounts: () => request<Account[]>('/accounts'),
   getAccount: (id: string) => request<Account>(`/accounts/${id}`),
-  createAccount: (data: CreateAccountRequest) => 
+  createAccount: (data: CreateAccountRequest) =>
     request<Account>('/accounts', { method: 'POST', body: JSON.stringify(data) }),
   updateAccount: (id: string, data: Partial<CreateAccountRequest>) =>
     request<Account>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -220,7 +267,7 @@ export const api = {
     request<any>(`/notes/${id}/export?type=${type}`),
 
   // Todos
-  getTodos: (status?: string) => 
+  getTodos: (status?: string) =>
     request<Todo[]>(`/todos${status ? `?status=${status}` : ''}`),
   getTodo: (id: string) => request<Todo>(`/todos/${id}`),
   createTodo: (data: CreateTodoRequest) =>
@@ -246,14 +293,17 @@ export const api = {
   getAnalytics: () => request<Analytics>('/analytics'),
   getIncompleteFields: () => request<IncompleteField[]>('/analytics/incomplete'),
 
-  // Calendar
+  // Calendar (supports both Google OAuth and Apple EventKit)
   getCalendarAuthURL: () => request<{ url: string }>('/calendar/auth'),
   getCalendarConfig: () => request<CalendarConfig>('/calendar/config'),
   disconnectCalendar: () => request<{ message: string }>('/calendar/disconnect', { method: 'DELETE' }),
-  getCalendarEvents: (start?: string, end?: string) => {
+  connectAppleCalendar: () => request<{ success: boolean; message: string }>('/calendar/connect', { method: 'POST' }),
+  getAppleCalendars: () => request<AppleCalendar[]>('/calendar/calendars'),
+  getCalendarEvents: (start?: string, end?: string, calendarId?: string) => {
     const params = new URLSearchParams();
     if (start) params.append('start', start);
     if (end) params.append('end', end);
+    if (calendarId) params.append('calendar_id', calendarId);
     const query = params.toString();
     return request<CalendarEvent[]>(`/calendar/events${query ? `?${query}` : ''}`);
   },
@@ -289,7 +339,8 @@ export const api = {
   uploadAttachment: async (noteId: string, file: File): Promise<Attachment> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch(`${API_BASE}/notes/${noteId}/attachments`, {
+    const apiBase = await getApiBase();
+    const response = await fetch(`${apiBase}/notes/${noteId}/attachments`, {
       method: 'POST',
       body: formData,
     });
@@ -327,5 +378,7 @@ export const api = {
 };
 
 // Helper for attachment download URL
-export const getAttachmentUrl = (filename: string) =>
-  `http://localhost:8080/uploads/${filename}`;
+export const getAttachmentUrl = (filename: string) => {
+  const base = getApiBaseSync().replace('/api', '');
+  return `${base}/uploads/${filename}`;
+};
