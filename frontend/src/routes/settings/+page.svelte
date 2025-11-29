@@ -58,7 +58,7 @@
 
     // Check for OAuth callback
     if ($page.url.searchParams.get('calendar') === 'connected') {
-      addToast('success', 'Google Calendar connected!');
+      addToast('success', 'Calendar connected!');
       goto('/settings', { replaceState: true });
     }
 
