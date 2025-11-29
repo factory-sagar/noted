@@ -425,7 +425,18 @@ export const api = {
     request<{ message: string }>(`/contacts/${id}/confirm-suggestion`, { method: 'POST', body: JSON.stringify({ confirm }) }),
   linkContactToAccount: (contactId: string, accountId: string) =>
     request<{ message: string }>(`/contacts/${contactId}/link/${accountId}`, { method: 'POST' }),
+  getContactNotes: (id: string) =>
+    request<ContactNote[]>(`/contacts/${id}/notes`),
 };
+
+export interface ContactNote {
+  id: string;
+  title: string;
+  account_id?: string;
+  account_name?: string;
+  meeting_date?: string;
+  created_at: string;
+}
 
 // Helper for attachment download URL
 export const getAttachmentUrl = (filename: string) => {

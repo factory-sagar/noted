@@ -172,6 +172,7 @@ func (a *App) startServer() {
 		api.DELETE("/contacts/:id", h.DeleteContact)
 		api.POST("/contacts/:id/confirm-suggestion", h.ConfirmAccountSuggestion)
 		api.POST("/contacts/:id/link/:accountId", h.LinkContactToAccount)
+		api.GET("/contacts/:id/notes", h.GetContactNotes)
 	}
 
 	// Use fixed port 8080 for OAuth compatibility

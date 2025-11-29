@@ -140,6 +140,7 @@ func main() {
 		api.DELETE("/contacts/:id", h.DeleteContact)
 		api.POST("/contacts/:id/confirm-suggestion", h.ConfirmAccountSuggestion)
 		api.POST("/contacts/:id/link/:accountId", h.LinkContactToAccount)
+		api.GET("/contacts/:id/notes", h.GetContactNotes)
 	}
 
 	// Get port from environment or default
