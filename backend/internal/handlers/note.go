@@ -696,3 +696,15 @@ func (h *Handler) ReorderNotes(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Notes reordered"})
 }
+
+// EmptyNotesTrash permanently deletes all soft-deleted notes
+func (h *Handler) EmptyNotesTrash(c *gin.Context) {
+	result, err := h.db.Exec(`DELETE FROM notes WHERE deleted_at IS NOT NULL`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	c.JSON(http.StatusOK, gin.H{"message": "Trash emptied", "count": rows})
+}

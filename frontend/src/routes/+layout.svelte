@@ -17,7 +17,8 @@
     Loader2,
     Plus,
     ArrowRight,
-    Users
+    Users,
+    Trash2
   } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { api, type SearchResult } from '$lib/utils/api';
@@ -44,6 +45,7 @@
     { href: '/accounts', label: 'Accounts', icon: Building2 },
     { href: '/contacts', label: 'Contacts', icon: Users },
     { href: '/calendar', label: 'Calendar', icon: Calendar },
+    { href: '/trash', label: 'Trash', icon: Trash2 },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 

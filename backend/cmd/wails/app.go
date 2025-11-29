@@ -169,17 +169,28 @@ func (a *App) startServer() {
 		// Contacts
 		api.GET("/contacts", h.GetContacts)
 		api.GET("/contacts/stats", h.GetContactStats)
+		api.GET("/contacts/deleted", h.GetDeletedContacts)
 		api.POST("/contacts/bulk", h.BulkContactsOperation)
+		api.POST("/contacts/bulk-delete", h.BulkDeleteContacts)
+		api.DELETE("/contacts/trash", h.EmptyContactsTrash)
 		api.GET("/contacts/:id", h.GetContact)
 		api.POST("/contacts", h.CreateContact)
 		api.PUT("/contacts/:id", h.UpdateContact)
 		api.DELETE("/contacts/:id", h.DeleteContact)
+		api.POST("/contacts/:id/restore", h.RestoreContact)
+		api.DELETE("/contacts/:id/permanent", h.PermanentDeleteContact)
+		api.POST("/contacts/:id/internal", h.ToggleContactInternal)
 		api.POST("/contacts/:id/confirm-suggestion", h.ConfirmAccountSuggestion)
 		api.POST("/contacts/:id/link/:accountId", h.LinkContactToAccount)
 		api.GET("/contacts/:id/notes", h.GetContactNotes)
 		api.GET("/contacts/domain-groups", h.GetContactDomainGroups)
 		api.POST("/contacts/domain/:domain/link/:accountId", h.LinkDomainToAccount)
 		api.POST("/contacts/domain/:domain/create-account", h.CreateAccountFromDomain)
+
+		// Trash management
+		api.DELETE("/notes/trash", h.EmptyNotesTrash)
+		api.DELETE("/todos/trash", h.EmptyTodosTrash)
+		api.DELETE("/accounts/trash", h.EmptyAccountsTrash)
 	}
 
 	// Use fixed port 8080 for OAuth compatibility

@@ -239,3 +239,15 @@ func (h *Handler) GetDeletedAccounts(c *gin.Context) {
 
 	c.JSON(http.StatusOK, accounts)
 }
+
+// EmptyAccountsTrash permanently deletes all soft-deleted accounts
+func (h *Handler) EmptyAccountsTrash(c *gin.Context) {
+	result, err := h.db.Exec(`DELETE FROM accounts WHERE deleted_at IS NOT NULL`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	c.JSON(http.StatusOK, gin.H{"message": "Trash emptied", "count": rows})
+}

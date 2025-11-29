@@ -438,3 +438,15 @@ func (h *Handler) ToggleTodoPin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"pinned": newPinned == 1})
 }
+
+// EmptyTodosTrash permanently deletes all soft-deleted todos
+func (h *Handler) EmptyTodosTrash(c *gin.Context) {
+	result, err := h.db.Exec(`DELETE FROM todos WHERE deleted_at IS NOT NULL`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	c.JSON(http.StatusOK, gin.H{"message": "Trash emptied", "count": rows})
+}

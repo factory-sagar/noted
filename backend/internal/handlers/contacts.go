@@ -72,7 +72,7 @@ func (h *Handler) GetContacts(c *gin.Context) {
 		FROM contacts c
 		LEFT JOIN accounts a ON c.account_id = a.id
 		LEFT JOIN accounts sa ON c.suggested_account_id = sa.id
-		WHERE 1=1
+		WHERE c.deleted_at IS NULL
 	`
 	args := []interface{}{}
 
@@ -248,8 +248,46 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Contact updated"})
 }
 
-// DeleteContact deletes a contact
+// DeleteContact soft deletes a contact
 func (h *Handler) DeleteContact(c *gin.Context) {
+	id := c.Param("id")
+
+	result, err := h.db.Exec(`UPDATE contacts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contact not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Contact deleted"})
+}
+
+// RestoreContact restores a soft-deleted contact
+func (h *Handler) RestoreContact(c *gin.Context) {
+	id := c.Param("id")
+
+	result, err := h.db.Exec(`UPDATE contacts SET deleted_at = NULL WHERE id = ?`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contact not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Contact restored"})
+}
+
+// PermanentDeleteContact permanently deletes a contact
+func (h *Handler) PermanentDeleteContact(c *gin.Context) {
 	id := c.Param("id")
 
 	result, err := h.db.Exec(`DELETE FROM contacts WHERE id = ?`, id)
@@ -264,7 +302,121 @@ func (h *Handler) DeleteContact(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Contact deleted"})
+	c.JSON(http.StatusOK, gin.H{"message": "Contact permanently deleted"})
+}
+
+// GetDeletedContacts returns all soft-deleted contacts
+func (h *Handler) GetDeletedContacts(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT c.id, c.email, c.name, c.company, c.domain, c.is_internal,
+		       c.account_id, COALESCE(a.name, ''), c.deleted_at
+		FROM contacts c
+		LEFT JOIN accounts a ON c.account_id = a.id
+		WHERE c.deleted_at IS NOT NULL
+		ORDER BY c.deleted_at DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	contacts := []gin.H{}
+	for rows.Next() {
+		var id, email, name, company, domain, accountName string
+		var accountID sql.NullString
+		var isInternal bool
+		var deletedAt sql.NullString
+		if err := rows.Scan(&id, &email, &name, &company, &domain, &isInternal, &accountID, &accountName, &deletedAt); err != nil {
+			continue
+		}
+		contacts = append(contacts, gin.H{
+			"id":           id,
+			"email":        email,
+			"name":         name,
+			"company":      company,
+			"domain":       domain,
+			"is_internal":  isInternal,
+			"account_id":   accountID.String,
+			"account_name": accountName,
+			"deleted_at":   deletedAt.String,
+		})
+	}
+
+	c.JSON(http.StatusOK, contacts)
+}
+
+// ToggleContactInternal toggles a contact's internal status
+func (h *Handler) ToggleContactInternal(c *gin.Context) {
+	id := c.Param("id")
+
+	var req struct {
+		IsInternal bool `json:"is_internal"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := h.db.Exec(`UPDATE contacts SET is_internal = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, req.IsInternal, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contact not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Internal status updated"})
+}
+
+// BulkDeleteContacts soft deletes multiple contacts
+func (h *Handler) BulkDeleteContacts(c *gin.Context) {
+	var req struct {
+		IDs []string `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No IDs provided"})
+		return
+	}
+
+	// Build placeholders
+	placeholders := make([]string, len(req.IDs))
+	args := make([]interface{}, len(req.IDs))
+	for i, id := range req.IDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := `UPDATE contacts SET deleted_at = CURRENT_TIMESTAMP WHERE id IN (` + strings.Join(placeholders, ",") + `) AND deleted_at IS NULL`
+	result, err := h.db.Exec(query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	c.JSON(http.StatusOK, gin.H{"message": "Contacts deleted", "count": rows})
+}
+
+// EmptyContactsTrash permanently deletes all soft-deleted contacts
+func (h *Handler) EmptyContactsTrash(c *gin.Context) {
+	result, err := h.db.Exec(`DELETE FROM contacts WHERE deleted_at IS NOT NULL`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	c.JSON(http.StatusOK, gin.H{"message": "Trash emptied", "count": rows})
 }
 
 // ConfirmAccountSuggestion confirms or rejects an account suggestion

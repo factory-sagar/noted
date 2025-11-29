@@ -450,6 +450,18 @@ export const api = {
     request<{ message: string }>(`/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteContact: (id: string) =>
     request<{ message: string }>(`/contacts/${id}`, { method: 'DELETE' }),
+  restoreContact: (id: string) =>
+    request<{ message: string }>(`/contacts/${id}/restore`, { method: 'POST' }),
+  permanentDeleteContact: (id: string) =>
+    request<{ message: string }>(`/contacts/${id}/permanent`, { method: 'DELETE' }),
+  getDeletedContacts: () =>
+    request<Contact[]>('/contacts/deleted'),
+  toggleContactInternal: (id: string, isInternal: boolean) =>
+    request<{ message: string }>(`/contacts/${id}/internal`, { method: 'POST', body: JSON.stringify({ is_internal: isInternal }) }),
+  bulkDeleteContacts: (ids: string[]) =>
+    request<{ message: string; count: number }>('/contacts/bulk-delete', { method: 'POST', body: JSON.stringify({ ids }) }),
+  emptyContactsTrash: () =>
+    request<{ message: string; count: number }>('/contacts/trash', { method: 'DELETE' }),
   confirmContactSuggestion: (id: string, confirm: boolean) =>
     request<{ message: string }>(`/contacts/${id}/confirm-suggestion`, { method: 'POST', body: JSON.stringify({ confirm }) }),
   linkContactToAccount: (contactId: string, accountId: string) =>
@@ -472,6 +484,14 @@ export const api = {
       `/contacts/domain/${encodeURIComponent(domain)}/create-account`, 
       { method: 'POST', body: JSON.stringify({ account_name: accountName }) }
     ),
+
+  // Trash management
+  emptyNotesTrash: () =>
+    request<{ message: string; count: number }>('/notes/trash', { method: 'DELETE' }),
+  emptyTodosTrash: () =>
+    request<{ message: string; count: number }>('/todos/trash', { method: 'DELETE' }),
+  emptyAccountsTrash: () =>
+    request<{ message: string; count: number }>('/accounts/trash', { method: 'DELETE' }),
 };
 
 export interface DomainGroup {
