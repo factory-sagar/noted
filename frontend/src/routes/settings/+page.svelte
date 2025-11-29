@@ -133,54 +133,22 @@
   }
 
   async function connectCalendar() {
-    // Check if this is Apple Calendar (native app) or Google (browser)
-    if (calendarConfig.type === 'apple') {
-      await connectAppleCalendar();
-    } else {
-      await connectGoogleCalendar();
-    }
-  }
-
-  async function connectGoogleCalendar() {
-    try {
-      const { url } = await api.getCalendarAuthURL();
-      window.location.href = url;
-    } catch (e: any) {
-      if (e.message.includes('not configured')) {
-        addToast('error', 'Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.');
-      } else {
-        addToast('error', 'Failed to connect calendar');
-      }
-    }
-  }
-
-  async function connectAppleCalendar() {
     try {
       const result = await api.connectAppleCalendar();
       if (result.success) {
         calendarConfig = { connected: true, type: 'apple' };
-        addToast('success', 'Apple Calendar connected!');
+        addToast('success', 'Calendar connected!');
       } else {
-        addToast('error', result.message || 'Calendar access denied');
+        addToast('error', result.message || 'Calendar access denied. Check System Settings > Privacy & Security > Calendars');
       }
-    } catch (e: any) {
-      addToast('error', e.message || 'Failed to connect calendar');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to connect calendar';
+      addToast('error', message);
     }
   }
 
-  async function disconnectCalendar() {
-    // Apple Calendar can't be disconnected from the app - it's a system permission
-    if (calendarConfig.type === 'apple') {
-      addToast('info', 'To revoke calendar access, go to System Settings > Privacy & Security > Calendars');
-      return;
-    }
-    try {
-      await api.disconnectCalendar();
-      calendarConfig = { connected: false };
-      addToast('success', 'Calendar disconnected');
-    } catch (e) {
-      addToast('error', 'Failed to disconnect calendar');
-    }
+  function manageCalendarAccess() {
+    addToast('info', 'To manage calendar access, go to System Settings > Privacy & Security > Calendars');
   }
 
   async function exportAllData() {
@@ -417,22 +385,12 @@
 
       <div class="flex items-center justify-between py-3">
         <div>
-          <p class="font-medium">
-            {#if calendarConfig.type === 'apple'}
-              Apple Calendar
-            {:else}
-              Google Calendar
-            {/if}
-          </p>
+          <p class="font-medium">Apple Calendar</p>
           <p class="text-sm text-[var(--color-muted)]">
-            {#if calendarConfig.connected && calendarConfig.email}
-              Connected as {calendarConfig.email}
-            {:else if calendarConfig.connected}
-              Connected - Access your calendar events
-            {:else if calendarConfig.type === 'apple'}
-              Connect to access your Apple Calendar events
+            {#if calendarConfig.connected}
+              Connected - Your calendar events are synced
             {:else}
-              Connect to sync meetings and auto-populate participants
+              Connect to access your calendar events (Google Calendar syncs through Apple Calendar)
             {/if}
           </p>
         </div>
@@ -442,15 +400,13 @@
               <Check class="w-4 h-4" />
               Connected
             </span>
-            {#if calendarConfig.type !== 'apple'}
-              <button class="btn-secondary btn-sm" on:click={disconnectCalendar}>
-                Disconnect
-              </button>
-            {/if}
+            <button class="btn-secondary btn-sm" on:click={manageCalendarAccess}>
+              Manage Access
+            </button>
           </div>
         {:else}
           <button class="btn-primary btn-sm" on:click={connectCalendar}>
-            Connect
+            Connect Apple Calendar
           </button>
         {/if}
       </div>

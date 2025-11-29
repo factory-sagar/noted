@@ -97,6 +97,7 @@ func main() {
 		api.GET("/calendar/auth", h.GetCalendarAuthURL)
 		api.GET("/calendar/callback", h.HandleCalendarCallback)
 		api.GET("/calendar/config", h.GetCalendarConfig)
+		api.POST("/calendar/connect", h.ConnectCalendar)
 		api.DELETE("/calendar/disconnect", h.DisconnectCalendar)
 		api.GET("/calendar/events", h.GetCalendarEvents)
 		api.GET("/calendar/events/:eventId", h.GetCalendarEvent)

@@ -164,6 +164,14 @@ func (h *Handler) DisconnectCalendar(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Calendar disconnected"})
 }
 
+// ConnectCalendar is a fallback for non-Apple platforms (tells user to use OAuth)
+func (h *Handler) ConnectCalendar(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"success": false,
+		"message": "Please use 'Connect Google Calendar' button to connect via OAuth",
+	})
+}
+
 func (h *Handler) getCalendarService() (*calendar.Service, error) {
 	var tokenStr string
 	err := h.db.QueryRow(`SELECT value FROM settings WHERE key = 'google_oauth_token'`).Scan(&tokenStr)
